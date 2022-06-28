@@ -7,10 +7,10 @@ license = "Apache License 2.0"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
-keyring = "^23.6.0"
-pandas = "^1.4.3"
-requests = "^2.28.0"
+python = ">=3.9"
+keyring = ">=23.6.0"
+pandas = ">=1.4.3"
+requests = ">=2.28.0"
 
 [tool.poetry.dev-dependencies]
 

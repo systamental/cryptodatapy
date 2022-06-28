@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.1.0"
+version = "0.1.1"
 description = "Cryptoasset data library"
 authors = ["Nick Latinovic"]
 license = "Apache License 2.0"

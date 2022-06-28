@@ -210,6 +210,8 @@ class CryptoCompare(DataVendor):
         else:
             # format response
             onchain = pd.DataFrame(r.json()['Data']).T
+            # format date
+            onchain['data_available_from'] = pd.to_datetime(onchain.data_available_from, unit='s')
             # add index name
             onchain.index.name = 'ticker'
             # asset list

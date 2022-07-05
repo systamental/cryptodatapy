@@ -96,7 +96,7 @@ class DataVendor(ABC):
         """
         Sets a list of available assets for the data vendor.
         """
-        raise AttributeError('Assets cannot be set. Use the method get_assets() to retrieve available assets.')
+        raise AttributeError('Assets cannot be set. Use the method get_assets_info() to retrieve available assets.')
 
     @abstractmethod
     def get_assets_info(self):
@@ -165,11 +165,11 @@ class DataVendor(ABC):
             markets = [markets]
         # check if valid market types
         for mkt in markets:
-            if mkt in ['spot', 'perpetual_futures', 'futures', 'options']:
+            if mkt in ['spot', 'perpetual_future', 'future', 'option']:
                 mkt_types.append(mkt)
             else:
-                raise ValueError(f"{mkt} is an invalid market type. Valid market types are: 'spot', 'futures', "
-                                 f"'perpetual_futures' and 'options'")
+                raise ValueError(f"{mkt} is an invalid market type. Valid market types are: 'spot', 'future', "
+                                 f"'perpetual_future' and 'option'")
                 # set categories
         self._market_types = mkt_types
 
@@ -188,7 +188,7 @@ class DataVendor(ABC):
         raise AttributeError('Fields cannot be set. Use the method get_fields() to retrieve available fields.')
 
     @abstractmethod
-    def get_fields(self, data_type: Optional[str]):
+    def get_fields_info(self, data_type: Optional[str]):
         """
         Gets a list of available fields from the data vendor.
         """
@@ -206,17 +206,18 @@ class DataVendor(ABC):
         """
         Sets a list of available data frequencies for the data vendor.
         """
+        valid_freq = [None, 'tick', 'block', '1s', '1min', '5min', '10min', '15min', '30min', '1h', '2h', '4h', '8h',
+                      'b', 'd', 'w', 'm', 'q']
         freq = []
         # convert str to list
         if isinstance(frequencies, str):
             frequencies = [frequencies]
         # check if valid data frequency
         for frequency in frequencies:
-            if frequency in ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm']:
+            if frequency in valid_freq:
                 freq.append(frequency)
             else:
-                raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: 'tick', '1min', "
-                                 f"'5min', '10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm'.")
+                raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: {valid_freq}.")
         # set categories
         self._frequencies = freq
 

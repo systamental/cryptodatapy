@@ -15,10 +15,12 @@ class DataRequest():
             freq: str = 'd',
             quote_ccy: Optional[str] = None,
             exch: Optional[str] = None,
+            mkt_type: Optional[str] = None,
             start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
             end_date: Optional[Union[str, datetime, pd.Timestamp]] = datetime.utcnow(),
             fields: Union[list[str], str] = ['close'],
             tz: str = 'UTC',
+            inst: Optional[str] = None,
             cat: Optional[str] = None,
             trials: Optional[int] = 3,
             pause: Optional[float] = 0.1,
@@ -40,6 +42,8 @@ class DataRequest():
             Quote currency for asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD aka bitcoin in dollars, etc.
         exch: str,  optional, default None
             Exchange from which to pull data (e.g. 'Binance', 'FTX', 'IEX', ...)
+        mkt_type: str, optional, default None
+            Market type, e.g. 'spot ', 'futures', 'perpetual_futures', 'options'.
         start_date: str, datetime or pd.Timestamp, optional, default None
             Start date for data request in 'YYYY-MM-DD' string, datetime or pd.Timestamp format,
             e.g. '2010-01-01' for January 1st 2010, datetime(2010,1,1) or pd.Timestamp('2010-01-01').
@@ -50,6 +54,8 @@ class DataRequest():
             Fields for data request. OHLCV bars/fields are most common for market data.
         tz: str, {'UTC', 'America/New_York', 'Europe/London', ...}, default 'UTC'
             Timezone for the start/end dates.
+        inst: str, optional, default None
+            Name of institution, e.g. 'grayscale'.
         cat: str, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}
             Category of data, e.g. crypto, fx, rates, or macro.
         trials: int, optional, default None
@@ -72,10 +78,12 @@ class DataRequest():
         self.freq = freq  # frequency
         self.quote_ccy = quote_ccy  # quote ccy
         self.exch = exch  # exchange
+        self.mkt_type = mkt_type  # market type
         self.start_date = start_date  # start date
         self.end_date = end_date  # end date
         self.fields = fields  # fields
         self.tz = tz  # tz
+        self.inst = inst  # institution
         self.cat = cat  # category of asset class or time series
         self.trials = trials  # number of times to try query request
         self.pause = pause  # number of seconds to pause between query request trials
@@ -119,10 +127,27 @@ class DataRequest():
         """
         Sets frequency of observations for data request.
         """
-        if frequency not in [None, 'tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h', '8h',
-                             'd', 'w', 'm']:
-            raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: 'tick', '1min', "
-                             f"'5min', '10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm'.")
+        freq_dict = {'tick': 'executed trade or bid/ask quote',
+                     'block': 'record of the most recent batch or block of transactions validated by the network',
+                     '1s': 'one second frequency',
+                     '1min': 'one minute frequency',
+                     '5min': 'five minute frequency',
+                     '10min': 'ten minute frequency',
+                     '15min': 'fifteen minute frequency',
+                     '30min': 'thirty minute frequency',
+                     '1h': 'one hour frequency',
+                     '2h': 'two hour frequency',
+                     '4h': 'four hour frequency',
+                     '8h': 'eight hour frequency',
+                     'b': 'business day frequency',
+                     'd': 'daily frequency',
+                     'w': 'weekly frequency',
+                     'm': 'monthly frequency',
+                     'q': 'quarterly frequency'
+                     }
+        if frequency not in [None, 'tick', 'block', '1s', '1min', '5min', '10min', '15min', '30min',
+                             '1h', '2h', '4h', '8h', 'b', 'd', 'w', 'm', 'q']:
+            raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}")
         else:
             # set categories
             self._frequency = frequency
@@ -168,6 +193,27 @@ class DataRequest():
             self._exch = exch
         else:
             raise TypeError('Exchange must be a string.')
+
+    @property
+    def mkt_type(self):
+        """
+        Returns exchange for data request.
+        """
+        return self._mkt_type
+
+    @mkt_type.setter
+    def mkt_type(self, mkt_type):
+        """
+        Sets exchange for data request.
+        """
+        # none
+        if mkt_type is None:
+            self._mkt_type = mkt_type
+        # str
+        elif isinstance(mkt_type, str):
+            self._mkt_type = mkt_type
+        else:
+            raise TypeError('Market type must be a string.')
 
     @property
     def start_date(self):
@@ -249,6 +295,27 @@ class DataRequest():
             fields = [fields]
 
         self._fields = fields
+
+    @property
+    def inst(self):
+        """
+        Returns institution's name for data request.
+        """
+        return self._inst
+
+    @inst.setter
+    def inst(self, inst):
+        """
+        Sets institution's name for data request.
+        """
+        # none
+        if inst is None:
+            self._inst = inst
+        # str
+        elif isinstance(inst, str):
+            self._inst = inst
+        else:
+            raise TypeError('Institution must be a string.')
 
     @property
     def tz(self):

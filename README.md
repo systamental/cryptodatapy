@@ -19,10 +19,11 @@ and more time analyzing it.
 Our library's intuitive interface facilitates each step of the ETL (extract-transform-load) process:
 
 - Extracting data from a wide range of data sources and file formats.
-- Wrangling data into a pandas DataFrame ready for data analysis (tidy format).
-- Detecting, scrubbing and repairing 'dirty data' which can 
-reduce the accuracy of predictive models.
-- Storing clean data and metadata for easy access.
+- Wrangling data into a pandas DataFrame ready for data analysis and 
+visualization, a.k.a [tidy data](https://www.jstatsoft.org/article/view/v059i10).
+- Detecting, scrubbing and repairing 'dirty data', improving the accuracy 
+of predictive models.
+- Storing clean data and metadata for easy access and retrieval.
 
 ## Installation
 
@@ -71,17 +72,21 @@ supported data sources are provided in cryptodatapy/docs/
 ## Supported Data Sources
 
 - [CryptoCompare](https://min-api.cryptocompare.com/documentation)
-- [CoinGecko](https://www.coingecko.com/en/api/documentation)
+- CoinGecko (v0.1.1)
 - [Coin Metrics](https://docs.coinmetrics.io/api/v4/)
-- [Glassnode](https://docs.glassnode.com/basic-api/api)
+- Glassnode (v0.1.1)
 - [investPy](https://investpy.readthedocs.io/)
-- [Tiingo](https://api.tiingo.com/documentation/general/overview)
+- Tiingo (v0.1.1)
 
 ## Contributing
 
-Interested in contributing? Check out the contributing guidelines. Please note that this project is released with a Code of Conduct. By contributing to this project, you agree to abide by its terms.
+Interested in contributing? Check out the contributing guidelines and 
+contact us at info@systamental.com. Please note that this project is 
+released with a Code of Conduct. By contributing to this project, you agree 
+to abide by its terms.
 
 ## License
 
-`cryptodatapy` was created by Nick Latinovic. It is licensed under the terms of the Apache License 2.0 license.
+`cryptodatapy` was created by Systamental. 
+It is licensed under the terms of the Apache License 2.0 license.
 

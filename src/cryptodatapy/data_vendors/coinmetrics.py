@@ -10,7 +10,6 @@ from cryptodatapy.util.datacredentials import *
 from cryptodatapy.util.convertparams import *
 from cryptodatapy.data_vendors.datavendor import DataVendor
 from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.cryptocompare import CryptoCompare
 from coinmetrics.api_client import CoinMetricsClient
 
 # data credentials
@@ -55,7 +54,7 @@ class CoinMetrics(DataVendor):
         assets: list[str]
             List of available assets, e.g. ['btc', 'eth']
         indexes: list[str]
-            List of available indexes, e.g. ['mvda', 'bvin']
+            List of available indexes, e.g. ['cmbi10', 'cmbi10e']
         markets: list[str]
             List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
         market_types: list[str]
@@ -74,7 +73,7 @@ class CoinMetrics(DataVendor):
             Cryptocompare api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'
             If not provided, the data_cred.cryptocompare_api_key is read from DataCredentials
         max_obs_per_call: int, default 2000
-            Maxiumu number of observations returns per API call.
+            Maximum number of observations returns per API call.
         rate_limit: pd.DataFrame
             Number of API calls made and left by frequency.
         """
@@ -165,19 +164,20 @@ class CoinMetrics(DataVendor):
 
             return indexes
 
-    def get_institutions_info(self, as_dict=False) -> Union[pd.DataFrame, list[str]]:
+    def get_institutions_info(self, as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
         """
-        Gets available institutions info.
+        Gets available info on institutions.
 
         Parameters
         ----------
-        as_list: bool, default False
-            If True, returns available indexes as list.
+        as_dict: bool, default False
+            If True, returns available indexes as dictionary with institution names (keys),
+            and list of fields (values) pairs.
 
         Returns
         -------
-        indexes: Union[pd.DataFrame, list[str]]
-            Info on available institutions.
+        indexes: Union[pd.DataFrame, dict[str, list[str]]]
+            Info on available institutions and fields.
         """
         try:
             inst = client.catalog_institutions()  # get institutions info
@@ -248,10 +248,10 @@ class CoinMetrics(DataVendor):
         fields: Union[dict, list[str]]
             Info on available fields.
         """
-        try:  # on-chain fields
-            metrics_dict = client.catalog_metrics()  # get fields info
-            ohlcv_list = self.fetch_ohlcv(DataRequest()).columns.to_list()
-            inst_list = list(self.get_institutions_info(as_dict=True).values())[0]
+        try:  # gather all fields
+            inst_list = list(self.get_institutions_info(as_dict=True).values())[0]  # inst fields
+            ohlcv_list = list(client.get_market_candles(markets=['binance-btc-usdt-spot']).to_dataframe().columns)
+            metrics_dict = client.catalog_metrics()  # get all metrics info
 
         except AssertionError as e:
             logging.warning(e)
@@ -286,7 +286,7 @@ class CoinMetrics(DataVendor):
             return fields
 
     # get list of supported assets for selected fields
-    def filter_assets_by_fields(self, data_req: DataRequest) -> list[str]:
+    def avail_assets_for_fields(self, data_req: DataRequest) -> list[str]:
 
         """
         Returns a list of available assets for list of selected fields.
@@ -318,11 +318,11 @@ class CoinMetrics(DataVendor):
             else:
                 # add to dict
                 fields_dict[field] = df['frequencies'][0]['assets']
-                # asset list
-                asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
 
         # return asset list if dict not empty
         if len(fields_dict) != 0:
+            # asset list
+            asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
             return asset_list
         else:
             raise Exception('No fields were found. Check available fields and try again.')
@@ -366,7 +366,7 @@ class CoinMetrics(DataVendor):
         rate_limit: pd.DataFrame
             DataFrame with API calls made and left by period (hour, day, month).
         """
-        return
+        return None
 
     def convert_data_req_params(self, data_req: DataRequest) -> dict[str, Union[str, int, list]]:
         """
@@ -379,8 +379,8 @@ class CoinMetrics(DataVendor):
 
         Returns
         -------
-        cc_data_req: dict[str, Union[str, int, list]]
-            Dictionary with data request parameters in Cryptocommpare format.
+        cm_data_req: dict[str, Union[str, int, list]]
+            Dictionary with data request parameters in CoinMetrics format.
         """
         # convert freq format
         if data_req.freq is None:
@@ -422,9 +422,9 @@ class CoinMetrics(DataVendor):
         # convert tickers to markets
         mkts_list = []
         for ticker in data_req.tickers:
-            if mkt_type == 'spot' and ticker.lower() in self.assets:
+            if mkt_type == 'spot' and ticker in self.assets:
                 mkts_list.append(exch + '-' + ticker.lower() + '-' + quote_ccy.lower() + '-' + mkt_type.lower())
-            elif mkt_type == 'perpetual_future' and ticker.lower() in self.assets:
+            elif mkt_type == 'perpetual_future' and ticker in self.assets:
                 if exch == 'binance' or exch == 'bybit' or exch == 'bitmex':
                     mkts_list.append(exch + '-' + ticker.upper() + quote_ccy.upper() + '-' + 'future')
                 elif exch == 'ftx':
@@ -438,17 +438,17 @@ class CoinMetrics(DataVendor):
                 elif exch == 'hitbtc':
                     mkts_list.append(exch + '-' + ticker.upper() + quote_ccy.upper() + '_' + 'PERP' + '-' + 'future')
             # TO DO: create deliverable future and option markets list
-            elif mkt_type == 'future' and ticker.lower() in self.assets:
+            elif mkt_type == 'future':
                 pass
 
         # add to params dict
-        cc_data_req = {'tickers': data_req.tickers, 'markets': mkts_list, 'frequency': freq,
+        cm_data_req = {'tickers': data_req.tickers, 'markets': mkts_list, 'frequency': freq,
                        'quote_ccy': quote_ccy, 'exchange': exch, 'mkt_type': mkt_type,
                        'start_time': data_req.start_date, 'end_time': data_req.end_date, 'fields': data_req.fields}
 
-        return cc_data_req
+        return cm_data_req
 
-    def fetch_indexes(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_indexes(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for indexes data.
 
@@ -456,6 +456,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -484,21 +486,22 @@ class CoinMetrics(DataVendor):
                              f" Use '.indexes' property to get a list of available indexes.")
 
         try:
-            df0 = client.get_index_levels(indexes=tickers, frequency=cm_data_req['frequency'],
-                                          start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
-                                          timezone=data_req.tz).to_dataframe()
+            df = client.get_index_levels(indexes=tickers, frequency=cm_data_req['frequency'],
+                                         start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+                                         timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {tickers}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_institutions(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_institutions(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for institutions data.
 
@@ -506,6 +509,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -536,22 +541,23 @@ class CoinMetrics(DataVendor):
                              f" Use the '.fields' property to get a list of avaialable fields.")
 
         try:
-            df0 = client.get_institution_metrics(institutions=data_req.inst, metrics=cm_data_req['fields'],
-                                                 frequency=cm_data_req['frequency'],
-                                                 start_time=cm_data_req['start_time'],
-                                                 end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_institution_metrics(institutions=data_req.inst, metrics=cm_data_req['fields'],
+                                                frequency=cm_data_req['frequency'],
+                                                start_time=cm_data_req['start_time'],
+                                                end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {tickers}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_ohlcv(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for OHLCV (candles) data.
 
@@ -559,6 +565,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -587,21 +595,22 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch OHLCV data
-            df0 = client.get_market_candles(markets=cm_data_req['markets'], frequency=cm_data_req['frequency'],
-                                            start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
-                                            timezone=data_req.tz).to_dataframe()
+            df = client.get_market_candles(markets=cm_data_req['markets'], frequency=cm_data_req['frequency'],
+                                           start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+                                           timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {cm_data_req['tickers']}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_onchain(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_onchain(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for on-chain data.
 
@@ -609,6 +618,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -649,21 +660,22 @@ class CoinMetrics(DataVendor):
                              f" to get info on available assets.")
 
         try:  # fetch on-chain data
-            df0 = client.get_asset_metrics(assets=tickers, metrics=fields_list, frequency=cm_data_req['frequency'],
-                                           start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
-                                           timezone=data_req.tz).to_dataframe()
+            df = client.get_asset_metrics(assets=tickers, metrics=fields_list, frequency=cm_data_req['frequency'],
+                                          start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+                                          timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {fields_list}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_open_interest(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_open_interest(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for open interest data.
 
@@ -671,6 +683,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -698,20 +712,21 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch open interest data
-            df0 = client.get_market_open_interest(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                                  end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_open_interest(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
+                                                 end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {cm_data_req['tickers']}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_funding_rates(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_funding_rates(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for funding rates data.
 
@@ -719,6 +734,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -746,20 +763,21 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch open interest data
-            df0 = client.get_market_funding_rates(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                                  end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_funding_rates(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
+                                                 end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {cm_data_req['tickers']}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_trades(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_trades(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for trades (transactions) data.
 
@@ -767,6 +785,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -794,20 +814,21 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch quote data
-            df0 = client.get_market_trades(markets=cm_data_req['markets'],
-                                           start_time=datetime.utcnow() - pd.Timedelta('1h')).to_dataframe()
+            df = client.get_market_trades(markets=cm_data_req['markets'],
+                                          start_time=datetime.utcnow() - pd.Timedelta('1h')).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {cm_data_req['tickers']}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
-    def fetch_quotes(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_quotes(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API client for quotes (order book) data.
 
@@ -815,6 +836,8 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -842,18 +865,19 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch quote data
-            df0 = client.get_market_quotes(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                           end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_quotes(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
+                                          end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
             logging.warning(f"Failed to pull data for {cm_data_req['tickers']}.")
 
         else:
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+            if tidy_data:
+                # wrangle data resp
+                df = self.wrangle_data_resp(data_req, df)
 
-            return df1
+            return df
 
     def fetch_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -871,15 +895,7 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to CryptoCompare format
         cm_data_req = self.convert_data_req_params(data_req)
 
-        # fields lists
-        fields_list = self.fields
-
-        # check if data request fields are available
-        if not all(field in fields_list for field in cm_data_req['fields']):
-            raise ValueError(f"Check available fields and try again."
-                             f" Use the '.fields' property to get a list of available fields.")
-
-            # store in empty df
+        # store in empty df
         df = pd.DataFrame()
 
         # fetch indexes data
@@ -913,14 +929,10 @@ class CoinMetrics(DataVendor):
         # filter df for desired fields and sort index by date
         fields = [field for field in cm_data_req['fields'] if field in df.columns]
         df = df.loc[:, fields]
-        # remove ticker if only 1 ticker
-        if len(data_req.tickers) == 1:
-            df = df.droplevel('ticker')
 
         return df.sort_index()
 
-    @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame):
+    def wrangle_data_resp(self, data_req, data_resp: pd.DataFrame()):
         """
         Wrangles data response.
 
@@ -963,10 +975,9 @@ class CoinMetrics(DataVendor):
             for col in df.columns:  # ohlcv cols
                 if col[:6] == 'price_':
                     df.rename(columns={col: col[6:]}, inplace=True)
-            df.drop(columns=['candle_usd_volume', 'candle_trades_count'], inplace=True)
         elif 'contract_count' in df.columns:  # open interest resp
             df.rename(columns={'contract_count': 'oi'}, inplace=True)
-            df.drop(columns=['value_usd', 'database_time', 'exchange_time'], inplace=True)
+            df.drop(columns=['database_time', 'exchange_time'], inplace=True)
         elif 'rate' in df.columns:  # funding rate resp
             df.rename(columns={'rate': 'funding_rate'}, inplace=True)
             df.drop(columns=['database_time', 'period', 'interval'], inplace=True)

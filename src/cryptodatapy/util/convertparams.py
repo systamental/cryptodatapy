@@ -44,7 +44,8 @@ class ConvertParams():
         """
         # convert tickers to markets
         mkts_list = []
-        tickers, quote_ccy, exch, mkt_type = data_req.tickers, data_req.quote_ccy, data_req.exch, data_req.mkt_type
+        tickers, mkt_type = data_req.tickers, data_req.mkt_type
+        quote_ccy, exch = self.convert_quote_ccy_to_source(data_req), self.convert_exch_to_source(data_req)
 
         if self.data_source == 'coinmetrics':
             for ticker in tickers:

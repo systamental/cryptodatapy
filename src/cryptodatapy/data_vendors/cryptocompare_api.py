@@ -1,12 +1,11 @@
-# import libraries
 import pandas as pd
 import logging
 import requests
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional, Union
-from cryptodatapy.util.datacredentials import *
-from cryptodatapy.util.convertparams import *
+from cryptodatapy.util.datacredentials import DataCredentials
+from cryptodatapy.util.convertparams import ConvertParams
 from cryptodatapy.data_vendors.datavendor import DataVendor
 from cryptodatapy.data_requests.datarequest import DataRequest
 
@@ -33,7 +32,7 @@ class CryptoCompare(DataVendor):
             exchanges: list[str] = None,
             base_url: str = data_cred.cryptocompare_base_url,
             api_key: str = data_cred.cryptocompare_api_key,
-            max_obs_per_call: int = 2000,
+            max_obs_per_call: int = int(data_cred.cryptocompare_api_limit),
             rate_limit: pd.DataFrame = None
     ):
         """
@@ -42,32 +41,33 @@ class CryptoCompare(DataVendor):
         Parameters
         ----------
         source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
-            Type of data source, e.g. 'data_vendor'
+            Type of data source, e.g. 'data_vendor', 'exchange', etc.
         categories: list[str], {'crypto', 'fx', 'rates', 'equities', 'commodities', 'credit', 'macro', 'alt'}
             List of available categories, e.g. ['crypto', 'fx', 'alt']
-        assets: list[str]
+        assets: list
             List of available assets, e.g. ['btc', 'eth']
-        indexes: list[str]
+        indexes: list
             List of available indexes, e.g. ['mvda', 'bvin']
-        markets: list[str]
+        markets: list
             List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
-        market_types: list[str]
-            List of available market types/contracts, e.g. [spot', 'perpetual_futures', 'futures', 'options']
-        fields: list[str]
+        market_types: list
+            List of available market types/contracts, e.g. [spot', 'perpetual_future', 'future', 'option']
+        fields: list
             List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume']
-        frequencies: list[str]
+        frequencies: list
             List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h',
             '8h', 'd', 'w', 'm']
-        exchanges: list[str]
+        exchanges: list
             List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX']
         base_url: str
             Cryptocompare base url used in GET requests, e.g. 'https://min-api.cryptocompare.com/data/'
-            If not provided, the data_cred.cryptocompare_base_url is read from DataCredentials
+            If not provided, default is set to cryptocompare_base_url stored in DataCredentials
         api_key: str
             Cryptocompare api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'
-            If not provided, the data_cred.cryptocompare_api_key is read from DataCredentials
-        max_obs_per_call: int, default 2000
-            Maxiumu number of observations returns per API call.
+            If not provided, default is set to cryptocompare_api_key stored in DataCredentials
+        max_obs_per_call: int
+            Maximum number of observations returns per API call.
+            If not provided, default is set to cryptocompare_api_limit storeed in DataCredentials
         rate_limit: pd.DataFrame
             Number of API calls made and left by frequency.
         """
@@ -82,22 +82,22 @@ class CryptoCompare(DataVendor):
                             f"api key in {DataCredentials.__name__}.")
         # set assets
         if assets is None:
-            self._assets = self.get_assets_info(as_list=True)
+            self.assets = self.get_assets_info(as_list=True)
         # set indexes
         if indexes is None:
-            self._indexes = self.get_indexes_info(as_list=True)
+            self.indexes = self.get_indexes_info(as_list=True)
         # set markets
         if markets is None:
-            self._markets = self.get_markets_info(as_list=True)
+            self.markets = self.get_markets_info(as_list=True)
         # set fields
         if fields is None:
-            self._fields = self.get_fields_info(data_type=None)
+            self.fields = self.get_fields_info(data_type=None)
         # set exchanges
         if exchanges is None:
-            self._exchanges = self.get_exchanges_info(as_list=True)
+            self.exchanges = self.get_exchanges_info(as_list=True)
         # set rate limit
         if rate_limit is None:
-            self._rate_limit = self.get_rate_limit_info()
+            self.rate_limit = self.get_rate_limit_info()
 
     def get_assets_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
@@ -110,11 +110,11 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        assets: Union[pd.DataFrame, list[str]]
+        assets: pd.DataFrame or list
             Info on available assets.
         """
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'all/coinlist'
+            url = self.base_url + 'all/coinlist'
             params = {
                 'api_key': self.api_key
             }
@@ -133,6 +133,7 @@ class CryptoCompare(DataVendor):
             # asset list
             if as_list:
                 assets = list(assets.index)
+
             return assets
 
     def get_top_market_cap_assets(self, n=100) -> list[str]:
@@ -146,15 +147,15 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        tickers: list[str]
-            List of tickers for top n coins by market cap.
+        tickers: list
+            List of tickers for top n coins ranked by market cap.
         """
         # check n value
         if n > 100:
             raise ValueError("Maximum number of assets is 100. Change n parameter and try again.")
 
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'top/mktcapfull?'
+            url = self.base_url + 'top/mktcapfull?'
             params = {
                 'limit': n,
                 'tsym': 'USD',
@@ -180,7 +181,6 @@ class CryptoCompare(DataVendor):
 
             return tickers
 
-    # get onchain info
     def get_onchain_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
         Gets on-chain data info.
@@ -192,11 +192,11 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        onchain: Union[pd.DataFrame, list[str]]
+        onchain: pd.DataFrame or list
             Info on available on-chain data.
         """
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'blockchain/list'
+            url = self.base_url + 'blockchain/list'
             params = {
                 'api_key': self.api_key
             }
@@ -220,7 +220,6 @@ class CryptoCompare(DataVendor):
 
             return onchain
 
-    # get index info, or list
     def get_indexes_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
         Gets indexes info.
@@ -232,11 +231,11 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        indexes: Union[pd.DataFrame, list[str]]
+        indexes: pd.DataFrame or list
             Info on available indexes.
         """
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'index/list'
+            url = self.base_url + 'index/list'
             params = {
                 'api_key': self.api_key
             }
@@ -255,9 +254,9 @@ class CryptoCompare(DataVendor):
             # asset list
             if as_list:
                 indexes = list(indexes.index)
+
             return indexes
 
-    # get markets info, or list
     def get_markets_info(self, as_list=False) -> Union[dict, list[str]]:
         """
         Gets market pairs info.
@@ -269,11 +268,11 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        mkts: Union[dict, list[str]]
+        mkts: dictionary or list
             Info on available market pairs.
         """
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'v2/cccagg/pairs'
+            url = self.base_url + 'v2/cccagg/pairs'
             params = {
                 'api_key': self.api_key
             }
@@ -312,7 +311,7 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        fields_list: list[str]
+        fields_list: list
             Info on available fields.
         """
 
@@ -338,7 +337,7 @@ class CryptoCompare(DataVendor):
                     onchain_list.append(key)
 
         try:  # try get request for social stats
-            url = self.base_url + 'social/coin/histo/day'
+            url = data_cred.cryptocompare_base_url + 'social/coin/histo/day'
             params = {
                 'coinId': 1182,
                 'api_key': self.api_key
@@ -380,11 +379,11 @@ class CryptoCompare(DataVendor):
 
         Returns
         -------
-        indexes: Union[pd.DataFrame, list[str]]
+        indexes: pd.DataFrame or list
             Info on available exchanges.
         """
         try:  # try get request
-            url = data_cred.cryptocompare_base_url + 'exchanges/general'
+            url = self.base_url + 'exchanges/general'
             params = {
                 'api_key': self.api_key
             }
@@ -402,12 +401,12 @@ class CryptoCompare(DataVendor):
             # asset list
             if as_list:
                 exch = list(exch.index)
+
             return exch
 
     def get_news(self) -> pd.DataFrame:
         """
         Get news articles from various sources.
-
 
         Returns
         -------
@@ -428,6 +427,7 @@ class CryptoCompare(DataVendor):
 
         else:
             news = pd.DataFrame(r.json()['Data'])
+
             return news
 
     def get_news_sources(self) -> pd.DataFrame:
@@ -439,7 +439,6 @@ class CryptoCompare(DataVendor):
         news_sources: pd.DataFrame
             News source with name, language and image.
         """
-
         try:  # try get request
             url = self.base_url + 'news/feeds'
             params = {
@@ -453,6 +452,7 @@ class CryptoCompare(DataVendor):
 
         else:
             news_sources = pd.DataFrame(r.json()).set_index('key')
+
             return news_sources
 
     def get_rate_limit_info(self) -> pd.DataFrame:
@@ -462,7 +462,7 @@ class CryptoCompare(DataVendor):
         Returns
         ------
         rate_limit: pd.DataFrame
-            DataFrame with API calls made and left by period (hour, day, month).
+            DataFrame with API calls left and made by period (hour, day, month).
         """
         try:  # try get request
             url = 'https://min-api.cryptocompare.com/stats/rate/limit'
@@ -481,136 +481,8 @@ class CryptoCompare(DataVendor):
             rate_limit = pd.DataFrame(r.json()['Data'])
             # add index name
             rate_limit.index.name = 'frequency'
+
             return rate_limit
-
-    def convert_data_req_params(self, data_req: DataRequest) -> dict[str, Union[str, int, list]]:
-        """
-        Converts CryptoDataPy data request parameters to CryptoCompare API format.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        cc_data_req: dict[str, Union[str, int, list]]
-            Dictionary with data request parameters in Cryptocommpare format.
-        """
-        # convert tickers to uppercase
-        tickers = [ticker.upper() for ticker in data_req.tickers]
-
-        # TO DO: create util function to convert fields
-        # convert_fiedls_cdp_to_cc()
-
-        # convert freq format
-        if data_req.freq is None:
-            freq = 'histoday'
-        elif data_req.freq[-3:] == 'min':
-            freq = 'histominute'
-        elif data_req.freq[-1] == 'h':
-            freq = 'histohour'
-        elif data_req.freq == 'd':
-            freq = 'histoday'
-        else:
-            freq = 'histoday'
-
-        # convert quote ccy
-        # no quote
-        if data_req.quote_ccy is None:
-            quote_ccy = 'USD'
-        else:
-            quote_ccy = data_req.quote_ccy
-        # quote ccy to uppercase and add to dict
-        quote_ccy = quote_ccy.upper()
-
-        # convert exch
-        # no exch
-        if data_req.exch is None:
-            exch = 'CCCAGG'
-        else:
-            exch = data_req.exch
-
-        # convert date format
-        # min freq, Cryptocompare freemium will only return the past week of min OHLCV data
-        if data_req.freq is not None and data_req.freq[-3:] == 'min':
-            start_date = round((datetime.now() - timedelta(days=7)).timestamp())
-        # no start date
-        elif data_req.start_date is None:
-            start_date = convert_datetime_to_unix_tmsp('2009-01-03 00:00:00')
-        else:
-            start_date = convert_datetime_to_unix_tmsp(data_req.start_date)
-        # end date
-        if data_req.end_date is None:
-            end_date = convert_datetime_to_unix_tmsp(datetime.utcnow())
-        else:
-            end_date = convert_datetime_to_unix_tmsp(data_req.end_date)
-
-        # add to params dict
-        cc_data_req = {'tickers': tickers, 'frequency': freq, 'currency': quote_ccy, 'exchange': exch,
-                       'start_date': start_date, 'end_date': end_date, 'fields': data_req.fields,
-                       'trials': data_req.trials, 'pause': data_req.pause}
-
-        return cc_data_req
-
-    # wrangle data resp
-    @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Wrangles OHLCV data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from GET request.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Wrangled OHLCV dataframe in tidy format.
-        """
-        # make copy of df
-        df = data_resp.copy()
-
-        # format date
-        if 'time' in df.columns:
-            df['date'] = pd.to_datetime(df['time'], unit='s')
-            df.drop(columns=['time'], inplace=True)
-
-        # format ticker
-        if 'symbol' in df.columns:
-            df.rename(columns={'symbol': 'ticker'}, inplace=True)  # rename symbol col
-
-        # format cols
-        if 'volumefrom' not in df.columns and 'close' in df.columns:  # indexes data resp
-            df = df.loc[:, ['date', 'open', 'high', 'low', 'close']]
-        if 'volumefrom' in df.columns:  # ohlcv data resp
-            df.rename(columns={'volumefrom': 'volume'}, inplace=True)
-            df.drop(columns=['volumeto', 'conversionType', 'conversionSymbol'], inplace=True)
-            df = df.loc[:, ['date', 'open', 'high', 'low', 'close', 'volume']]
-        if 'active_addresses' in df.columns:  # on-chain data resp
-            df.drop(columns=['id'], inplace=True)
-
-        # set datetimeindex and sort index by date
-        df = df.set_index('date').sort_index()
-
-        # filter for desired start to end date
-        if data_req.start_date is not None:
-            df = df[(df.index >= data_req.start_date)]
-        if data_req.end_date is not None:
-            df = df[(df.index <= data_req.end_date)]
-
-        # resample frequency
-        df = df.resample(data_req.freq).last()
-
-        # remove bad data and type cast
-        df = df[df != 0].dropna(how='all')  # 0 values
-        df = df[~df.index.duplicated()]  # duplicate rows
-        df.dropna(how='all', inplace=True)  # remove entire row NaNs
-
-        return df
 
     def fetch_indexes(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
@@ -621,15 +493,15 @@ class CryptoCompare(DataVendor):
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         tidy_data: bool, default True
-            Wrangles data respponse into the tidy format.
+            Wrangles data response into tidy format.
 
         Returns
         -------
-        df: pd.DataFrame
-            DataFrame with DatetimeIndex and open, high, low and close index values (cols).
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and open, high, low and close index values (cols).
         """
         # convert data request parameters to CryptoCompare format
-        cc_data_req = self.convert_data_req_params(data_req)
+        cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
         # empty df to add data
         df = pd.DataFrame()
 
@@ -659,7 +531,8 @@ class CryptoCompare(DataVendor):
             while attempts < cc_data_req['trials']:
                 try:  # fetch index data
                     # get request
-                    url = self.base_url + "index/" + cc_data_req['frequency'][:5] + "/" + cc_data_req['frequency'][5:]
+                    url = self.base_url + "index/" + cc_data_req['freq'][:5] + "/" + \
+                          cc_data_req['freq'][5:]
                     params = {
                         'indexName': ticker,
                         'limit': self.max_obs_per_call,
@@ -726,7 +599,7 @@ class CryptoCompare(DataVendor):
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         tidy_data: bool, default True
-            Wrangles data respponse into the tidy format.
+            Wrangles data response into tidy format.
 
         Returns
         -------
@@ -734,9 +607,7 @@ class CryptoCompare(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and open, high, low and close prices (cols).
         """
         # convert data request parameters to CryptoCompare format
-        cc_data_req = self.convert_data_req_params(data_req)
-        # index tickers list
-        idx_tickers_list = self.get_indexes_info(as_list=True)
+        cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
         # empty df to add data
         df = pd.DataFrame()
 
@@ -750,7 +621,8 @@ class CryptoCompare(DataVendor):
                 tickers.append(ticker)
         # raise error if all tickers are indexes
         if len(tickers) == 0:
-            raise ValueError('Tickers are all indexes. Try again with get_indexes() method.')
+            raise ValueError("Tickers are all indexes. Use '.assets' property to"
+                             " see available assets.")
 
         # loop through tickers
         for ticker in tickers:
@@ -765,12 +637,12 @@ class CryptoCompare(DataVendor):
             while attempts < cc_data_req['trials']:
                 try:  # fetch OHLCV data
                     # get request
-                    url = self.base_url + f"v2/{cc_data_req['frequency']}"
+                    url = self.base_url + f"v2/{cc_data_req['freq']}"
                     params = {
                         'fsym': ticker,
-                        'tsym': cc_data_req['currency'],
+                        'tsym': cc_data_req['quote_ccy'],
                         'limit': self.max_obs_per_call,
-                        'e': cc_data_req['exchange'],
+                        'e': cc_data_req['exch'],
                         'toTs': end_date,
                         'api_key': self.api_key
                     }
@@ -833,6 +705,8 @@ class CryptoCompare(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data response into tidy format.
 
         Returns
         -------
@@ -840,12 +714,12 @@ class CryptoCompare(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and on-chain data (cols).
         """
         # convert data request parameters to CryptoCompare format
-        cc_data_req = self.convert_data_req_params(data_req)
+        cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
         # empty df to add data
         df = pd.DataFrame()
 
         # check if frequency daily
-        if cc_data_req['frequency'] != 'histoday':
+        if cc_data_req['freq'] != 'histoday':
             raise ValueError(f"On-chain data is only available on a daily frequency."
                              f" Change data request frequency to 'd' and try again.")
 
@@ -859,7 +733,8 @@ class CryptoCompare(DataVendor):
                 tickers.append(ticker)
         # raise error if all tickers are indexes
         if len(tickers) == 0:
-            raise ValueError('Tickers are all indexes. Try again with get_indexes() method.')
+            raise ValueError("Tickers are all indexes. Use '.assets' property to"
+                             " see available assets.")
 
         # loop through tickers
         for ticker in tickers:
@@ -939,7 +814,7 @@ class CryptoCompare(DataVendor):
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         tidy_data: bool, default True
-            Wrangles data respponse into the tidy format.
+            Wrangles data response into tidy format.
 
         Returns
         -------
@@ -947,12 +822,12 @@ class CryptoCompare(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and social stats (cols).
         """
         # convert data request parameters to CryptoCompare format
-        cc_data_req = self.convert_data_req_params(data_req)
+        cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
         # empty df to add data
         df = pd.DataFrame()
 
         # check frequency
-        if cc_data_req['frequency'] != 'histoday' and cc_data_req['frequency'] != 'histohour':
+        if cc_data_req['freq'] != 'histoday' and cc_data_req['freq'] != 'histohour':
             raise ValueError(f"Social stats data is only available on a daily and hourly frequency."
                              f" Change data request frequency to 'd' or '1h' and try again.")
 
@@ -966,7 +841,8 @@ class CryptoCompare(DataVendor):
                 tickers.append(ticker)
         # raise error if all tickers are indexes
         if len(tickers) == 0:
-            raise ValueError('Tickers are all indexes. Try again with get_indexes() method.')
+            raise ValueError("Tickers are all indexes. Use '.assets' property to"
+                             " see available assets.")
 
         # loop through tickers
         for ticker in tickers:
@@ -983,8 +859,8 @@ class CryptoCompare(DataVendor):
             while attempts < cc_data_req['trials']:
                 try:
                     # get request
-                    url = self.base_url + "social/coin/" + cc_data_req['frequency'][:5] + '/' \
-                          + cc_data_req['frequency'][5:]
+                    url = self.base_url + "social/coin/" + cc_data_req['freq'][:5] + '/' \
+                          + cc_data_req['freq'][5:]
                     params = {
                         'coinId': coin_id,
                         'limit': self.max_obs_per_call,
@@ -1053,31 +929,30 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV, on-chain and/or social data (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV, on-chain and/or social data (cols)
+            in tidy format.
         """
         # convert data request parameters to CryptoCompare format
-        cc_data_req = self.convert_data_req_params(data_req)
+        cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
 
         # check if fields available
         fields_list = self.get_fields_info(data_type=None)
         if not all(i in fields_list for i in cc_data_req['fields']):
-            raise ValueError(
-                'Fields are not available. Check available fields with get_fields_info() method and try again.')
+            raise ValueError("Fields are not available. Use '.fields' property to see available fields.")
 
         # fields list
         ohlcv_list = self.get_fields_info(data_type='market')
         onchain_list = self.get_fields_info(data_type='on-chain')
         offchain_list = self.get_fields_info(data_type='off-chain')
-        # index tickers list
-        idx_tickers_list = self.indexes
-        # store in empty df
-        df = pd.DataFrame()
+
+        # create index tickers list and empty df
+        idx_tickers_list, df = self.indexes, pd.DataFrame()
 
         # fetch indexes data
-        if any(i in idx_tickers_list for i in cc_data_req['tickers']):
+        if any(i in idx_tickers_list for i in cc_data_req['tickers']) and \
+                any(i in ohlcv_list for i in cc_data_req['fields']):
             try:
                 df0 = self.fetch_indexes(data_req)
-
             except Exception as e:
                 logging.warning(e)
             else:
@@ -1087,13 +962,8 @@ class CryptoCompare(DataVendor):
         if any(i in ohlcv_list for i in cc_data_req['fields']):
             try:
                 df1 = self.fetch_ohlcv(data_req)
-
             except Exception as e:
                 logging.warning(e)
-                # drop field
-                for field in ohlcv_list:
-                    if field in cc_data_req['fields']:
-                        cc_data_req['fields'].remove(field)
             else:
                 df = pd.concat([df, df1])
 
@@ -1101,13 +971,8 @@ class CryptoCompare(DataVendor):
         if any(i in onchain_list for i in cc_data_req['fields']):
             try:
                 df2 = self.fetch_onchain(data_req)
-
             except Exception as e:
                 logging.warning(e)
-                # drop field
-                for field in onchain_list:
-                    if field in cc_data_req['fields']:
-                        cc_data_req['fields'].remove(field)
             else:
                 df = pd.concat([df, df2], axis=1)
 
@@ -1115,14 +980,8 @@ class CryptoCompare(DataVendor):
         if any(i in offchain_list for i in cc_data_req['fields']):
             try:
                 df3 = self.fetch_social(data_req)
-
             except Exception as e:
                 logging.warning(e)
-                # drop field
-                for field in offchain_list:
-                    if field in cc_data_req['fields']:
-                        cc_data_req['fields'].remove(field)
-
             else:
                 df = pd.concat([df, df3], axis=1)
 
@@ -1131,9 +990,52 @@ class CryptoCompare(DataVendor):
             raise Exception('No data returned. Check data request parameters and try again.')
 
         # filter df for desired fields and sort index by date
-        df = df.loc[:, cc_data_req['fields']]
-        # remove ticker if only 1 ticker
-        if len(data_req.tickers) == 1:
-            df = df.droplevel('ticker')
+        fields = [field for field in data_req.fields if field in df.columns]
+        df = df.loc[:, fields]
 
         return df.sort_index()
+
+    @staticmethod
+    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+        """
+        Wrangles data response.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        data_resp: pd.DataFrame
+            Data response from GET request.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Wrangled dataframe in tidy format.
+        """
+        # convert cols to cryptodatapy format
+        df = ConvertParams(data_source='cryptocompare').convert_fields_to_lib(data_req, data_resp)
+        # format col order
+        if 'volume' in df.columns:  # ohlcv data resp
+            df = df.loc[:, ['date', 'open', 'high', 'low', 'close', 'volume']]
+        elif 'volume' not in df.columns and 'close' in df.columns:  # indexes data resp
+            df = df.loc[:, ['date', 'open', 'high', 'low', 'close']]
+
+        # convert date and set datetimeindex
+        df['date'] = pd.to_datetime(df['date'], unit='s')
+        df = df.set_index('date').sort_index()
+
+        # filter for desired start to end date
+        if data_req.start_date is not None:
+            df = df[(df.index >= data_req.start_date)]
+        if data_req.end_date is not None:
+            df = df[(df.index <= data_req.end_date)]
+
+        # resample freq
+        df = df.resample(data_req.freq).last()
+
+        # remove bad data
+        df = df[df != 0].dropna(how='all')  # 0 values
+        df = df[~df.index.duplicated()]  # duplicate rows
+        df.dropna(how='all', inplace=True)  # remove entire row NaNs
+
+        return df

@@ -1,4 +1,3 @@
-# import libraries
 import pandas as pd
 import pytz
 from typing import Union, Optional
@@ -11,22 +10,22 @@ class DataRequest():
     """
     def __init__(
             self,
-            tickers: Union[list[str], str] = 'btc',
+            tickers: Union[str, list[str]] = 'btc',
             freq: str = 'd',
             quote_ccy: Optional[str] = None,
             exch: Optional[str] = None,
-            mkt_type: Optional[str] = None,
+            mkt_type: Optional[str] = 'spot',
             start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
-            end_date: Optional[Union[str, datetime, pd.Timestamp]] = datetime.utcnow(),
-            fields: Union[list[str], str] = ['close'],
-            tz: str = 'UTC',
+            end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
+            fields: Union[str, list[str]] = ['close'],
+            tz: Optional[str] = None,
             inst: Optional[str] = None,
             cat: Optional[str] = None,
             trials: Optional[int] = 3,
             pause: Optional[float] = 0.1,
-            source_tickers: Optional[Union[list[str], str]] = None,
+            source_tickers: Optional[Union[str, list[str]]] = None,
             source_freq: Optional[str] = None,
-            source_fields: Optional[Union[list[str], str]] = None
+            source_fields: Optional[Union[str, list[str]]] = None
     ):
         """
         Constructor
@@ -34,45 +33,44 @@ class DataRequest():
         Parameters
         ----------
         tickers: list or str
-            List or string of ticker symbol(s) for assets or names of time series.
-            e.g. 'BTC', 'EURUSD', 'SPY', 'gdp', ... List of tickers/names must be from the same category.
-        freq: str, {'tick', '1min', '5min', '10min', '30min', '1h', '2h', '4h', '8h', 'b', 'd', 'w', 'm'}, default 'd'
+            List or string of ticker symbols for assets or names of time series,
+            e.g. 'BTC', 'EURUSD', 'SPY', 'us_gdp', etc.
+        freq: str, default 'd'
             Frequency of data observations. Defaults to daily 'd' which includes weekends for cryptoassets.
         quote_ccy: str,  optional, default None
-            Quote currency for asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD aka bitcoin in dollars, etc.
+            Quote currency for asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD (bitcoin in dollars), etc.
         exch: str,  optional, default None
-            Exchange from which to pull data (e.g. 'Binance', 'FTX', 'IEX', ...)
-        mkt_type: str, optional, default None
-            Market type, e.g. 'spot ', 'futures', 'perpetual_futures', 'options'.
+            Exchange from which to pull data, e.g. 'Binance', 'FTX', 'IEX', etc.
+        mkt_type: str, optional, default 'spot'
+            Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option'.
         start_date: str, datetime or pd.Timestamp, optional, default None
             Start date for data request in 'YYYY-MM-DD' string, datetime or pd.Timestamp format,
             e.g. '2010-01-01' for January 1st 2010, datetime(2010,1,1) or pd.Timestamp('2010-01-01').
         end_date, str, datetime or pd.Timestamp, optional, default None
             End date for data request in 'YYYY-MM-DD' string, datetime or pd.Timestamp format,
             e.g. '2020-12-31' for January 31st 2020, datetime(2020,12,31) or pd.Timestamp('2020-12-31').
-        fields: list or str, default ['close']
-            Fields for data request. OHLCV bars/fields are most common for market data.
-        tz: str, {'UTC', 'America/New_York', 'Europe/London', ...}, default 'UTC'
-            Timezone for the start/end dates.
+        fields: list or str, default 'close'
+            Fields for data request. OHLC bars/fields are most common fields for market data.
+        tz: str, default 'UTC'
+            Timezone for the start/end dates from tz database format.
         inst: str, optional, default None
-            Name of institution, e.g. 'grayscale'.
+            Name of institution from which to pull fund data, e.g. 'grayscale', 'purpose', etc.
         cat: str, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}
             Category of data, e.g. crypto, fx, rates, or macro.
-        trials: int, optional, default None
+        trials: int, optional, default 3
             Number of times to try data request.
-        pause: float,  optional, default None
+        pause: float,  optional, default 0.1
             Number of seconds to pause between data requests.
         source_tickers: list or str, optional, default None
-            List or string of ticker symbol(s) for assets or names for time series in the format used by the
-            data source. If None, tickers will be converted from CryptoDataPy format to data source format.
+            List or string of ticker symbols for assets or names for time series in the format used by the
+            data source. If None, tickers will be converted from CryptoDataPy to data source format.
         source_freq: str, optional, default None
-            Frequency of observations for asset(s) or time series in format used by data source.If None,
-            frequency will be converted from CryptoDataPy format to data source format.
+            Frequency of observations for assets or time series in format used by data source. If None,
+            frequency will be converted from CryptoDataPy to data source format.
         source_fields: list or str, optional, default None
-            List or string of fields for asset(s) or time series in format used by data source.If None,
-            fields will be converted from CryptoDataPy format to data source format.
+            List or string of fields for assets or time series in format used by data source. If None,
+            fields will be converted from CryptoDataPy to data source format.
         """
-
         # params
         self.tickers = tickers  # tickers
         self.freq = freq  # frequency
@@ -103,17 +101,12 @@ class DataRequest():
         """
         Sets tickers for data request.
         """
-        # None
-        if tickers is None:
-            self._tickers = ['btc']
-        # list
+        if isinstance(tickers, str):
+            self._tickers = [tickers]
         elif isinstance(tickers, list):
             self._tickers = tickers
-        # str
-        elif isinstance(tickers, str):
-            self._tickers = [tickers]
         else:
-            raise ValueError('Tickers must be a string or list of strings (symbols).')
+            raise TypeError('Tickers must be a string or list of strings (tickers).')
 
     @property
     def freq(self):
@@ -127,29 +120,28 @@ class DataRequest():
         """
         Sets frequency of observations for data request.
         """
-        freq_dict = {'tick': 'executed trade or bid/ask quote',
+        freq_dict = {'tick': 'bid/ask quote (quotes) or executed trade (trades)',
                      'block': 'record of the most recent batch or block of transactions validated by the network',
-                     '1s': 'one second frequency',
-                     '1min': 'one minute frequency',
-                     '5min': 'five minute frequency',
-                     '10min': 'ten minute frequency',
-                     '15min': 'fifteen minute frequency',
-                     '30min': 'thirty minute frequency',
-                     '1h': 'one hour frequency',
-                     '2h': 'two hour frequency',
-                     '4h': 'four hour frequency',
-                     '8h': 'eight hour frequency',
-                     'b': 'business day frequency',
-                     'd': 'daily frequency',
-                     'w': 'weekly frequency',
-                     'm': 'monthly frequency',
-                     'q': 'quarterly frequency'
+                     '1s': 'one second',
+                     '1min': 'one minute',
+                     '5min': 'five minutes',
+                     '10min': 'ten minutes',
+                     '15min': 'fifteen minutes',
+                     '30min': 'thirty minutes',
+                     '1h': 'one hour',
+                     '2h': 'two hours',
+                     '4h': 'four hours',
+                     '8h': 'eight hours',
+                     'b': 'business day',
+                     'd': 'daily',
+                     'w': 'weekly',
+                     'm': 'monthly',
+                     'q': 'quarterly',
+                     'y': 'yearly'
                      }
-        if frequency not in [None, 'tick', 'block', '1s', '1min', '5min', '10min', '15min', '30min',
-                             '1h', '2h', '4h', '8h', 'b', 'd', 'w', 'm', 'q']:
+        if frequency not in list(freq_dict.keys()):
             raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}")
         else:
-            # set categories
             self._frequency = frequency
 
     @property
@@ -164,10 +156,8 @@ class DataRequest():
         """
         Sets quote currency for data request.
         """
-        # none
         if quote is None:
             self._quote_ccy = quote
-        # str
         elif isinstance(quote, str):
             self._quote_ccy = quote
         else:
@@ -185,10 +175,8 @@ class DataRequest():
         """
         Sets exchange for data request.
         """
-        # none
         if exch is None:
             self._exch = exch
-        # str
         elif isinstance(exch, str):
             self._exch = exch
         else:
@@ -197,19 +185,17 @@ class DataRequest():
     @property
     def mkt_type(self):
         """
-        Returns exchange for data request.
+        Returns market type for data request.
         """
         return self._mkt_type
 
     @mkt_type.setter
     def mkt_type(self, mkt_type):
         """
-        Sets exchange for data request.
+        Sets market type for data request.
         """
-        # none
         if mkt_type is None:
             self._mkt_type = mkt_type
-        # str
         elif isinstance(mkt_type, str):
             self._mkt_type = mkt_type
         else:
@@ -227,10 +213,8 @@ class DataRequest():
         """
         Sets start date for data request.
         """
-        # none
         if start_date is None:
             self._start_date = start_date
-        # str date format %Y-%m-%d
         elif isinstance(start_date, str):
             try:
                 start_date = datetime.strptime(start_date, '%Y-%m-%d')
@@ -238,10 +222,8 @@ class DataRequest():
                 raise ValueError('Date must be in "YYYY-MM-DD" string format.')
             else:
                 self._start_date = start_date
-        # datetime format
         elif isinstance(start_date, datetime):
             self._start_date = start_date
-        # pd.Timestamp format
         elif isinstance(start_date, pd.Timestamp):
             self._start_date = start_date
         else:
@@ -259,10 +241,8 @@ class DataRequest():
         """
         Sets end date for data request.
         """
-        # none
         if end_date is None:
             self._end_date = end_date
-        # str date format %Y-%m-%d
         elif isinstance(end_date, str):
             try:
                 datetime.strptime(end_date, '%Y-%m-%d')
@@ -270,10 +250,8 @@ class DataRequest():
                 raise ValueError('Date must be in "YYYY-MM-DD" string format.')
             else:
                 self._end_date = end_date
-        # datetime format
         elif isinstance(end_date, datetime):
             self._end_date = end_date
-        # pd.Timestamp format
         elif isinstance(end_date, pd.Timestamp):
             self._end_date = end_date
         else:
@@ -292,14 +270,16 @@ class DataRequest():
         Sets fields for data request.
         """
         if isinstance(fields, str):
-            fields = [fields]
-
-        self._fields = fields
+            self._fields = [fields]
+        elif isinstance(fields, list):
+            self._fields = fields
+        else:
+            raise TypeError('Fields must be a string or list of strings (data fields).')
 
     @property
     def inst(self):
         """
-        Returns institution's name for data request.
+        Returns institution name for data request.
         """
         return self._inst
 
@@ -308,12 +288,10 @@ class DataRequest():
         """
         Sets institution's name for data request.
         """
-        # none
         if inst is None:
             self._inst = inst
-        # str
         elif isinstance(inst, str):
-            self._inst = inst
+            self._inst = inst.lower()
         else:
             raise TypeError('Institution must be a string.')
 
@@ -329,14 +307,13 @@ class DataRequest():
         """
         Sets timezone for data request.
         """
-        # all timezones
-        timezones = pytz.all_timezones
-
-        if timezone not in timezones:
-            raise ValueError(f"{timezone} is an invalid timezone. Valid timezones are: {timezones}.")
-
-        else:
+        valid_timezones = pytz.all_timezones
+        if timezone is None:
             self._timezone = timezone
+        elif timezone in valid_timezones:
+            self._timezone = timezone
+        else:
+            raise ValueError(f"{timezone} is an invalid timezone. Valid timezones are: {valid_timezones}.")
 
     @property
     def cat(self):
@@ -350,17 +327,13 @@ class DataRequest():
         """
         Sets category for data request.
         """
-        # all categories
-        categories = ['crypto', 'fx', 'rates', 'equities', 'commodities', 'bonds', 'credit', 'macro', 'alt']
-        # none
+        valid_categories = ['crypto', 'fx', 'rates', 'equities', 'commodities', 'bonds', 'credit', 'macro', 'alt']
         if category is None:
             self._category = category
-        # check if valid category
-        elif category in categories:
+        elif category in valid_categories:
             self._category = category
         else:
-            raise ValueError(
-                f"{category} is an invalid category. Valid categories are: {categories}.")
+            raise ValueError(f"{category} is an invalid category. Valid categories are: {valid_categories}.")
 
     @property
     def trials(self):
@@ -374,7 +347,6 @@ class DataRequest():
         """
         Sets number of trials for data request.
         """
-        # none
         if trials is None:
             self._trials = trials
         elif isinstance(trials, int) or isinstance(trials, str):
@@ -394,13 +366,12 @@ class DataRequest():
         """
         Sets number of seconds to pause between data requests.
         """
-        # none
         if pause is None:
             self._pause = pause
-        elif isinstance(pause, float):
-            self._pause = pause
+        elif isinstance(pause, float) or isinstance(pause, int):
+            self._pause = float(pause)
         else:
-            raise TypeError('Number of seconds to pause must be a float.')
+            raise TypeError('Number of seconds to pause must be an int or float.')
 
     @property
     def source_tickers(self):
@@ -414,17 +385,15 @@ class DataRequest():
         """
         Sets tickers for data request in data source format.
         """
-        # none
         if tickers is None:
             self._source_tickers = tickers
-        # list
-        elif isinstance(tickers, list):
-            self._source_tickers = tickers
-        # str
         elif isinstance(tickers, str):
             self._source_tickers = [tickers]
+        elif isinstance(tickers, list):
+            self._source_tickers = tickers
+
         else:
-            raise TypeError('Source tickers must be a string or list of strings (symbols).')
+            raise TypeError("Source tickers must be a string or list of strings (tickers) in data source's format.")
 
     @property
     def source_freq(self):
@@ -438,7 +407,6 @@ class DataRequest():
         """
         Sets frequency of data request in data source format.
         """
-        # none
         if freq is None:
             self._source_freq = freq
         elif isinstance(freq, str):
@@ -460,9 +428,9 @@ class DataRequest():
         """
         if fields is None:
             self._source_fields = fields
-        elif isinstance(fields, list):
-            self._source_fields = fields
         elif isinstance(fields, str):
             self._source_fields = fields
+        elif isinstance(fields, list):
+            self._source_fields = fields
         else:
-            raise TypeError('Source fields must be a string or list of strings (fields).')
+            raise TypeError("Source fields must be a string or list of strings (fields) in data source's format.")

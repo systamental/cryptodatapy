@@ -29,7 +29,7 @@ class CryptoCompare(DataVendor):
             markets: list[str] = None,
             market_types: list[str] = ['spot'],
             fields: list[str] = None,
-            frequencies: list[str] = ['min', 'h', 'd'],
+            frequencies: list[str] = ['1min', '1h', 'd'],
             exchanges: list[str] = None,
             base_url: str = data_cred.cryptocompare_base_url,
             api_key: str = data_cred.cryptocompare_api_key,
@@ -91,7 +91,7 @@ class CryptoCompare(DataVendor):
             self._markets = self.get_markets_info(as_list=True)
         # set fields
         if fields is None:
-            self._fields = self.get_fields(data_type=None)
+            self._fields = self.get_fields_info(data_type=None)
         # set exchanges
         if exchanges is None:
             self._exchanges = self.get_exchanges_info(as_list=True)
@@ -301,9 +301,9 @@ class CryptoCompare(DataVendor):
 
             return mkts
 
-    def get_fields(self, data_type: Optional[str]) -> list[str]:
+    def get_fields_info(self, data_type: Optional[str]) -> list[str]:
         """
-        Gets list of fields.
+        Gets fields info.
 
         Parameters
         ----------
@@ -313,7 +313,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         fields_list: list[str]
-            List of available fields.
+            Info on available fields.
         """
 
         ohlcv_list, onchain_list, social_list = ['open', 'high', 'low', 'close', 'volume'], [], []
@@ -500,6 +500,9 @@ class CryptoCompare(DataVendor):
         # convert tickers to uppercase
         tickers = [ticker.upper() for ticker in data_req.tickers]
 
+        # TO DO: create util function to convert fields
+        # convert_fiedls_cdp_to_cc()
+
         # convert freq format
         if data_req.freq is None:
             freq = 'histoday'
@@ -550,9 +553,9 @@ class CryptoCompare(DataVendor):
 
         return cc_data_req
 
-    # wrangle OHLCV data resp
+    # wrangle data resp
     @staticmethod
-    def wrangle_ohlcv_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangles OHLCV data response.
 
@@ -571,142 +574,45 @@ class CryptoCompare(DataVendor):
         # make copy of df
         df = data_resp.copy()
 
-        # create date and convert to datetime
-        if 'date' not in df.columns and 'time' in df.columns:
+        # format date
+        if 'time' in df.columns:
             df['date'] = pd.to_datetime(df['time'], unit='s')
             df.drop(columns=['time'], inplace=True)
 
-        # set datetimeindex and sort index by date
-        df = df.set_index('date').sort_index()
-
-        # rename volume col
-        if 'volume' not in df.columns and 'volumefrom' in df.columns:
-            df.rename(columns={'volumefrom': 'volume'}, inplace=True)
-            # keep only ohlcv cols
-            df = df.loc[:, ['open', 'high', 'low', 'close', 'volume']]
-        else:
-            # keep only ohlc cols
-            df = df.loc[:, ['open', 'high', 'low', 'close']]
-
-        # remove duplicate indexes/rows
-        df = df[~df.index.duplicated()]
-
-        # remove rows where close is 0
-        df = df[df['close'] != 0].dropna()
-
-        # filter for desired start to end date
-        if data_req.start_date is not None:
-            df = df[(df.index >= data_req.start_date)]
-        if data_req.end_date is not None:
-            df = df[(df.index <= data_req.end_date)]
-
-        # resample frequency
-        df = df.resample(data_req.freq).last()
-
-        return df
-
-    # wrangle onchain df
-    @staticmethod
-    def wrangle_onchain_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Wrangles on-chain data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from GET request.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Wrangled on-chain dataframe in tidy format.
-        """
-        # make copy of df
-        df = data_resp.copy()
-
-        # create date and convert to datetime
-        if 'date' not in df.columns and 'time' in df.columns:
-            df['date'] = pd.to_datetime(df['time'], unit='s')
-            df.drop(columns=['time'], inplace=True)
-
-        # set datetimeindex and sort index by date
-        df = df.set_index('date').sort_index()
-
-        # drop id and
-        if 'id' in df.columns:
-            df = df.drop(columns=['id'])
+        # format ticker
         if 'symbol' in df.columns:
-            df = df.drop(columns=['symbol'])
+            df.rename(columns={'symbol': 'ticker'}, inplace=True)  # rename symbol col
 
-        # remove duplicate indexes/rows
-        df = df[~df.index.duplicated()]
-
-        # filter for desired start to end date
-        if data_req.start_date is not None:
-            df = df[(df.index >= data_req.start_date)]
-        if data_req.end_date is not None:
-            df = df[(df.index <= data_req.end_date)]
-
-        # convert to float
-        df = df.astype(float)
-
-        # resample frequency
-        df = df.resample(data_req.freq).last()
-
-        return df
-
-    # wrangle social data resp
-    @staticmethod
-    def wrangle_social_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Wrangles social stats data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from GET request.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Wrangled social stats dataframe in tidy format.
-        """
-        # make copy of df
-        df = data_resp.copy()
-
-        # create date and convert to datetime
-        if 'date' not in df.columns and 'time' in df.columns:
-            df['date'] = pd.to_datetime(df['time'], unit='s')
-            df.drop(columns=['time'], inplace=True)
+        # format cols
+        if 'volumefrom' not in df.columns and 'close' in df.columns:  # indexes data resp
+            df = df.loc[:, ['date', 'open', 'high', 'low', 'close']]
+        if 'volumefrom' in df.columns:  # ohlcv data resp
+            df.rename(columns={'volumefrom': 'volume'}, inplace=True)
+            df.drop(columns=['volumeto', 'conversionType', 'conversionSymbol'], inplace=True)
+            df = df.loc[:, ['date', 'open', 'high', 'low', 'close', 'volume']]
+        if 'active_addresses' in df.columns:  # on-chain data resp
+            df.drop(columns=['id'], inplace=True)
 
         # set datetimeindex and sort index by date
         df = df.set_index('date').sort_index()
 
-        # remove duplicate indexes/rows
-        df = df[~df.index.duplicated()]
-
-        # remove rows where all vals 0
-        df = df[df != 0].dropna(how='all')
-
         # filter for desired start to end date
         if data_req.start_date is not None:
             df = df[(df.index >= data_req.start_date)]
         if data_req.end_date is not None:
             df = df[(df.index <= data_req.end_date)]
 
-        # convert to float
-        df = df.astype(float)
-
         # resample frequency
         df = df.resample(data_req.freq).last()
 
+        # remove bad data and type cast
+        df = df[df != 0].dropna(how='all')  # 0 values
+        df = df[~df.index.duplicated()]  # duplicate rows
+        df.dropna(how='all', inplace=True)  # remove entire row NaNs
+
         return df
 
-    def fetch_indexes(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_indexes(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API for indexes data.
 
@@ -714,6 +620,8 @@ class CryptoCompare(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -735,7 +643,8 @@ class CryptoCompare(DataVendor):
                 pass
         # raise error if all tickers are assets
         if len(tickers) == 0:
-            raise ValueError('Tickers are all assets. Try again with get_OHLCV() method.')
+            raise ValueError("Tickers are all assets. Use '.indexes' property to"
+                             " see available indexes.")
 
         # loop through tickers
         for ticker in tickers:
@@ -794,17 +703,21 @@ class CryptoCompare(DataVendor):
                         sleep(cc_data_req['pause'])
 
             # wrangle data resp
-            if not df0.empty:
-                df1 = self.wrangle_ohlcv_resp(data_req, df0)
+            if not df0.empty and tidy_data:
+                df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to df0 and reset index
                 df1['ticker'] = ticker
                 df1 = df1.reset_index().set_index(['date', 'ticker']).sort_index()
                 # concat df and df1
                 df = pd.concat([df, df1])
+            elif not df0.empty:
+                # add ticker to df0 and reset index
+                df0['ticker'] = ticker
+                df = pd.concat([df, df0])
 
-        return df.sort_index()
+        return df
 
-    def fetch_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_ohlcv(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API for OHLCV data.
 
@@ -812,6 +725,8 @@ class CryptoCompare(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -896,17 +811,21 @@ class CryptoCompare(DataVendor):
                         sleep(cc_data_req['pause'])
 
             # wrangle data resp
-            if not df0.empty:
-                df1 = self.wrangle_ohlcv_resp(data_req, df0)
+            if not df0.empty and tidy_data:
+                df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to df0 and reset index
                 df1['ticker'] = ticker
                 df1 = df1.reset_index().set_index(['date', 'ticker']).sort_index()
                 # concat df and df1
                 df = pd.concat([df, df1])
+            elif not df0.empty:
+                # add ticker to df0 and reset index
+                df0['ticker'] = ticker
+                df = pd.concat([df, df0])
 
         return df
 
-    def fetch_onchain(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_onchain(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API for on-chain data.
 
@@ -999,17 +918,19 @@ class CryptoCompare(DataVendor):
                         sleep(cc_data_req['pause'])
 
             # wrangle data resp
-            if not df0.empty:
-                df1 = self.wrangle_onchain_resp(data_req, df0)
+            if not df0.empty and tidy_data:
+                df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to df0 and reset index
-                df1['ticker'] = ticker
                 df1 = df1.reset_index().set_index(['date', 'ticker']).sort_index()
                 # concat df and df1
                 df = pd.concat([df, df1])
+            elif not df0.empty:
+                # add ticker to df0 and reset index
+                df = pd.concat([df, df0])
 
         return df
 
-    def fetch_social(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_social(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
         Submits data request to API for social stats.
 
@@ -1017,6 +938,8 @@ class CryptoCompare(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        tidy_data: bool, default True
+            Wrangles data respponse into the tidy format.
 
         Returns
         -------
@@ -1030,7 +953,7 @@ class CryptoCompare(DataVendor):
 
         # check frequency
         if cc_data_req['frequency'] != 'histoday' and cc_data_req['frequency'] != 'histohour':
-            raise ValueError(f"On-chain data is only available on a daily and hourly frequency."
+            raise ValueError(f"Social stats data is only available on a daily and hourly frequency."
                              f" Change data request frequency to 'd' or '1h' and try again.")
 
         # indexes list
@@ -1105,13 +1028,17 @@ class CryptoCompare(DataVendor):
                         sleep(cc_data_req['pause'])
 
             # wrangle data resp
-            if not df0.empty:
-                df1 = self.wrangle_social_resp(data_req, df0)
+            if not df0.empty and tidy_data:
+                df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to df0 and reset index
                 df1['ticker'] = ticker
                 df1 = df1.reset_index().set_index(['date', 'ticker']).sort_index()
                 # concat df and df1
                 df = pd.concat([df, df1])
+            elif not df0.empty:
+                # add ticker to df0 and reset index
+                df0['ticker'] = ticker
+                df = pd.concat([df, df0])
 
         return df
 
@@ -1132,14 +1059,15 @@ class CryptoCompare(DataVendor):
         cc_data_req = self.convert_data_req_params(data_req)
 
         # check if fields available
-        fields_list = self.get_fields(data_type=None)
+        fields_list = self.get_fields_info(data_type=None)
         if not all(i in fields_list for i in cc_data_req['fields']):
-            raise ValueError('Fields are not available. Check available fields with get_fields() method and try again.')
+            raise ValueError(
+                'Fields are not available. Check available fields with get_fields_info() method and try again.')
 
         # fields list
-        ohlcv_list = self.get_fields(data_type='market')
-        onchain_list = self.get_fields(data_type='on-chain')
-        offchain_list = self.get_fields(data_type='off-chain')
+        ohlcv_list = self.get_fields_info(data_type='market')
+        onchain_list = self.get_fields_info(data_type='on-chain')
+        offchain_list = self.get_fields_info(data_type='off-chain')
         # index tickers list
         idx_tickers_list = self.indexes
         # store in empty df

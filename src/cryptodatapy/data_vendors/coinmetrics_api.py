@@ -1,4 +1,3 @@
-# import libraries
 import pandas as pd
 import numpy as np
 import logging
@@ -6,16 +5,16 @@ import requests
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional, Union
-from cryptodatapy.util.datacredentials import *
-from cryptodatapy.util.convertparams import *
+from cryptodatapy.util.datacredentials import DataCredentials
+from cryptodatapy.util.convertparams import ConvertParams
 from cryptodatapy.data_vendors.datavendor import DataVendor
 from cryptodatapy.data_requests.datarequest import DataRequest
 from coinmetrics.api_client import CoinMetricsClient
 
+
 # data credentials
 data_cred = DataCredentials()
-
-# CoinMetrics Community API:
+# CoinMetrics community API client:
 client = CoinMetricsClient()
 
 
@@ -31,11 +30,10 @@ class CoinMetrics(DataVendor):
             assets: list[str] = None,
             indexes: list[str] = None,
             markets: list[str] = None,
-            market_types: list[str] = ['spot', 'perpetual_futures', 'futures', 'options'],
+            market_types: list[str] = ['spot', 'perpetual_future', 'future', 'option'],
             fields: list[str] = None,
             frequencies: list[str] = ['tick', 'block', '1s', '1min', '5min', '10min', '15min', '30min', '1h', '2h',
-                                      '4h',
-                                      '8h', 'd', 'w', 'm', 'q'],
+                                      '4h', '8h', 'd', 'w', 'm', 'q'],
             exchanges: list[str] = None,
             base_url: str = None,
             api_key: str = None,
@@ -54,7 +52,7 @@ class CoinMetrics(DataVendor):
         assets: list[str]
             List of available assets, e.g. ['btc', 'eth']
         indexes: list[str]
-            List of available indexes, e.g. ['cmbi10', 'cmbi10e']
+            List of available indexes, e.g. ['mvda', 'bvin']
         markets: list[str]
             List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
         market_types: list[str]
@@ -73,7 +71,7 @@ class CoinMetrics(DataVendor):
             Cryptocompare api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'
             If not provided, the data_cred.cryptocompare_api_key is read from DataCredentials
         max_obs_per_call: int, default 2000
-            Maximum number of observations returns per API call.
+            Maxiumu number of observations returns per API call.
         rate_limit: pd.DataFrame
             Number of API calls made and left by frequency.
         """
@@ -100,7 +98,8 @@ class CoinMetrics(DataVendor):
         if rate_limit is None:
             self._rate_limit = self.get_rate_limit_info()
 
-    def get_assets_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    @staticmethod
+    def get_assets_info(as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
         Gets available assets info.
 
@@ -132,7 +131,8 @@ class CoinMetrics(DataVendor):
 
             return assets
 
-    def get_indexes_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    @staticmethod
+    def get_indexes_info(as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
         Gets available indexes info.
 
@@ -164,20 +164,20 @@ class CoinMetrics(DataVendor):
 
             return indexes
 
-    def get_institutions_info(self, as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
+    @staticmethod
+    def get_institutions_info(as_dict=False) -> Union[pd.DataFrame, dict[str]]:
         """
-        Gets available info on institutions.
+        Gets available institutions info.
 
         Parameters
         ----------
         as_dict: bool, default False
-            If True, returns available indexes as dictionary with institution names (keys),
-            and list of fields (values) pairs.
+            If True, returns available institutions as dictionary.
 
         Returns
         -------
-        indexes: Union[pd.DataFrame, dict[str, list[str]]]
-            Info on available institutions and fields.
+        indexes: Union[pd.DataFrame, dict[str]]
+            Info on available institutions.
         """
         try:
             inst = client.catalog_institutions()  # get institutions info
@@ -201,7 +201,8 @@ class CoinMetrics(DataVendor):
             else:
                 return inst
 
-    def get_markets_info(self, as_list=False) -> Union[dict, list[str]]:
+    @staticmethod
+    def get_markets_info(as_list=False) -> Union[dict, list[str]]:
         """
         Gets markets info.
 
@@ -264,8 +265,6 @@ class CoinMetrics(DataVendor):
             # fields info
             if data_type == 'market':
                 fields = fields[fields.category == 'Market']
-            elif data_type == 'on-chain':
-                fields = fields[fields.category != 'Market']
             elif data_type == 'off-chain':
                 fields = inst_list
             else:
@@ -273,15 +272,14 @@ class CoinMetrics(DataVendor):
 
             # fields list
             if as_list:
-                fields = list(fields.index)
                 if data_type == 'market':
-                    fields = ohlcv_list + fields
+                    fields = ohlcv_list + list(fields.index)
                 elif data_type == 'on-chain':
-                    fields = fields
+                    fields = list(fields.index)
                 elif data_type == 'off-chain':
                     fields = inst_list
                 else:
-                    fields = ohlcv_list + fields + inst_list
+                    fields = ohlcv_list + list(fields.index) + inst_list
 
             return fields
 
@@ -319,15 +317,16 @@ class CoinMetrics(DataVendor):
                 # add to dict
                 fields_dict[field] = df['frequencies'][0]['assets']
 
+        # asset list
+        asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
         # return asset list if dict not empty
         if len(fields_dict) != 0:
-            # asset list
-            asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
             return asset_list
         else:
             raise Exception('No fields were found. Check available fields and try again.')
 
-    def get_exchanges_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    @staticmethod
+    def get_exchanges_info(as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
         Gets exchanges info.
 
@@ -357,7 +356,8 @@ class CoinMetrics(DataVendor):
                 exch = list(exch.index)
             return exch
 
-    def get_rate_limit_info(self) -> pd.DataFrame:
+    @staticmethod
+    def get_rate_limit_info() -> pd.DataFrame:
         """
         Gets rate limit info.
 
@@ -367,86 +367,6 @@ class CoinMetrics(DataVendor):
             DataFrame with API calls made and left by period (hour, day, month).
         """
         return None
-
-    def convert_data_req_params(self, data_req: DataRequest) -> dict[str, Union[str, int, list]]:
-        """
-        Converts CryptoDataPy data request parameters to CryptoCompare API format.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        cm_data_req: dict[str, Union[str, int, list]]
-            Dictionary with data request parameters in CoinMetrics format.
-        """
-        # convert freq format
-        if data_req.freq is None:
-            freq = '1d'
-        elif data_req.freq == 'block':
-            freq = '1b'
-        elif data_req.freq == 'tick':
-            freq = 'tick'
-        elif data_req.freq[-1] == 's':
-            freq = '1s'
-        elif data_req.freq[-3:] == 'min':
-            freq = '1m'
-        elif data_req.freq[-1] == 'h':
-            freq = '1h'
-        elif data_req.freq == 'd':
-            freq = '1d'
-        else:
-            freq = '1d'
-
-        # convert quote ccy
-        if data_req.quote_ccy is None:
-            quote_ccy = 'usdt'
-        else:
-            quote_ccy = data_req.quote_ccy
-
-        # convert exch
-        # no exch
-        if data_req.exch is None:
-            exch = 'binance'
-        else:
-            exch = data_req.exch
-
-        # convert mkt type
-        if data_req.mkt_type is None:
-            mkt_type = 'spot'
-        else:
-            mkt_type = data_req.mkt_type
-
-        # convert tickers to markets
-        mkts_list = []
-        for ticker in data_req.tickers:
-            if mkt_type == 'spot' and ticker in self.assets:
-                mkts_list.append(exch + '-' + ticker.lower() + '-' + quote_ccy.lower() + '-' + mkt_type.lower())
-            elif mkt_type == 'perpetual_future' and ticker in self.assets:
-                if exch == 'binance' or exch == 'bybit' or exch == 'bitmex':
-                    mkts_list.append(exch + '-' + ticker.upper() + quote_ccy.upper() + '-' + 'future')
-                elif exch == 'ftx':
-                    mkts_list.append(exch + '-' + ticker.upper() + '-' + 'PERP' + '-' + 'future')
-                elif exch == 'okex':
-                    mkts_list.append(exch + '-' + ticker.upper() + '-' + quote_ccy.upper() + '-' + 'SWAP' + '-'
-                                     + 'future')
-                elif exch == 'huobi':
-                    mkts_list.append(exch + '-' + ticker.upper() + '-' + quote_ccy.upper() + '_' + 'SWAP' + '-'
-                                     + 'future')
-                elif exch == 'hitbtc':
-                    mkts_list.append(exch + '-' + ticker.upper() + quote_ccy.upper() + '_' + 'PERP' + '-' + 'future')
-            # TO DO: create deliverable future and option markets list
-            elif mkt_type == 'future':
-                pass
-
-        # add to params dict
-        cm_data_req = {'tickers': data_req.tickers, 'markets': mkts_list, 'frequency': freq,
-                       'quote_ccy': quote_ccy, 'exchange': exch, 'mkt_type': mkt_type,
-                       'start_time': data_req.start_date, 'end_time': data_req.end_date, 'fields': data_req.fields}
-
-        return cm_data_req
 
     def fetch_indexes(self, data_req: DataRequest, tidy_data=True) -> pd.DataFrame:
         """
@@ -465,11 +385,11 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), tickers (level 1) and index close values (cols).
         """
 
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if avaliable frequency
-        if cm_data_req['frequency'] not in ['1h', '1d']:
+        if cm_data_req['freq'] not in ['1h', '1d']:
             raise ValueError(f"Indexes data is only available for hourly, daily, weekly, monthly and quarterly"
                              f" frequencies. Change data request frequency and try again.")
 
@@ -486,8 +406,8 @@ class CoinMetrics(DataVendor):
                              f" Use '.indexes' property to get a list of available indexes.")
 
         try:
-            df = client.get_index_levels(indexes=tickers, frequency=cm_data_req['frequency'],
-                                         start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+            df = client.get_index_levels(indexes=tickers, frequency=cm_data_req['freq'],
+                                         start_time=cm_data_req['start_date'], end_time=cm_data_req['end_date'],
                                          timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
@@ -518,13 +438,11 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), tickers (level 1) and institutions data (cols).
         """
 
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
-        if data_req.inst is None:
-            data_req.inst = 'grayscale'
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if avaliable frequency
-        if cm_data_req['frequency'] not in ['1d']:
+        if cm_data_req['freq'] != '1d':
             raise ValueError(f"Institutions data is only available for daily frequency."
                              f" Change data request frequency and try again.")
 
@@ -538,13 +456,12 @@ class CoinMetrics(DataVendor):
         # raise error if fields is empty
         if len(fields_list) == 0:
             raise ValueError(f"{cm_data_req['fields']} are not valid institution fields."
-                             f" Use the '.fields' property to get a list of avaialable fields.")
+                             f" Use the '.fields' property to get a list of available 'source_fields'.")
 
         try:
-            df = client.get_institution_metrics(institutions=data_req.inst, metrics=cm_data_req['fields'],
-                                                frequency=cm_data_req['frequency'],
-                                                start_time=cm_data_req['start_time'],
-                                                end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_institution_metrics(institutions=cm_data_req['inst'], metrics=cm_data_req['fields'],
+                                                frequency=cm_data_req['freq'], start_time=cm_data_req['start_date'],
+                                                end_time=cm_data_req['end_date'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
@@ -574,29 +491,29 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and open, high, low, close and volumne
             data (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if available frequency
-        if cm_data_req['frequency'] not in ['1m', '1h', '1d']:
+        if cm_data_req['freq'] not in ['1m', '1h', '1d']:
             raise ValueError(f"OHLCV data is only available for minute, hourly, daily, weekly, monthly and quarterly"
                              f" frequencies. Change data request frequency and try again.")
 
         # check if tickers are assets
-        asset_list, tickers = self.assets, []
-        for ticker in cm_data_req['tickers']:
+        asset_list, mkts = self.assets, []
+        for ticker, mkt in zip(cm_data_req['tickers'], cm_data_req['mkts']):
             if ticker in asset_list:
-                tickers.append(ticker)  # keep only asset tickers
+                mkts.append(mkt)  # keep only asset tickers
             else:
                 pass
         # raise error if all tickers are indexes
-        if len(tickers) == 0:
+        if len(mkts) == 0:
             raise ValueError(f"{cm_data_req['tickers']} are not valid assets."
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch OHLCV data
-            df = client.get_market_candles(markets=cm_data_req['markets'], frequency=cm_data_req['frequency'],
-                                           start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+            df = client.get_market_candles(markets=mkts, frequency=cm_data_req['freq'],
+                                           start_time=cm_data_req['start_date'], end_time=cm_data_req['end_date'],
                                            timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
@@ -626,11 +543,11 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and on-chain data (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if valid on-chain frequency
-        if cm_data_req['frequency'] not in ['1b', '1d']:
+        if cm_data_req['freq'] not in ['1b', '1d']:
             raise ValueError(f"On-chain data is only available for 'block' and 'd' frequencies."
                              f" Change data request frequency and try again.")
 
@@ -644,8 +561,8 @@ class CoinMetrics(DataVendor):
         # raise error if fields is empty
         if len(fields_list) == 0:
             raise ValueError(f"{cm_data_req['fields']} are not valid on-chain fields."
-                             f" Use the get_fiels_info(data_type='on-chain') method to get info on avaialable"
-                             f" on-chain fields.")
+                             f" Use the get_fiels_info(data_type='on-chain') method to get info"
+                             f" on available fields.")
 
         # check if tickers are assets
         asset_list, tickers = self.assets, []
@@ -660,8 +577,8 @@ class CoinMetrics(DataVendor):
                              f" to get info on available assets.")
 
         try:  # fetch on-chain data
-            df = client.get_asset_metrics(assets=tickers, metrics=fields_list, frequency=cm_data_req['frequency'],
-                                          start_time=cm_data_req['start_time'], end_time=cm_data_req['end_time'],
+            df = client.get_asset_metrics(assets=tickers, metrics=fields_list, frequency=cm_data_req['freq'],
+                                          start_time=cm_data_req['start_date'], end_time=cm_data_req['end_date'],
                                           timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
@@ -691,8 +608,8 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and open interest (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check market type
         if data_req.mkt_type not in ['perpetual_future', 'future', 'option']:
@@ -712,8 +629,8 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch open interest data
-            df = client.get_market_open_interest(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                                 end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_open_interest(markets=cm_data_req['mkts'], start_time=cm_data_req['start_date'],
+                                                 end_time=cm_data_req['end_date'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
@@ -742,8 +659,8 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check market type
         if data_req.mkt_type not in ['perpetual_future', 'future', 'option']:
@@ -763,8 +680,8 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch open interest data
-            df = client.get_market_funding_rates(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                                 end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_funding_rates(markets=cm_data_req['mkts'], start_time=cm_data_req['start_date'],
+                                                 end_time=cm_data_req['end_date'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
@@ -793,11 +710,11 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and bid/ask price and size (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if available frequency
-        if cm_data_req['frequency'] != 'tick':
+        if cm_data_req['freq'] != 'tick':
             raise ValueError(f"Quote data is only available at the 'tick' frequency."
                              f" Change data request frequency and try again.")
 
@@ -814,8 +731,8 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch quote data
-            df = client.get_market_trades(markets=cm_data_req['markets'],
-                                          start_time=datetime.utcnow() - pd.Timedelta('1h')).to_dataframe()
+            df = client.get_market_trades(markets=cm_data_req['mkts'],
+                                          start_time=cm_data_req['start_date']).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
@@ -844,11 +761,11 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and bid/ask price and size (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
         # check if available frequency
-        if cm_data_req['frequency'] != 'tick':
+        if cm_data_req['freq'] != 'tick':
             raise ValueError(f"Quote data is only available at the 'tick' frequency."
                              f" Change data request frequency and try again.")
 
@@ -865,8 +782,8 @@ class CoinMetrics(DataVendor):
                              f" Use the '.assets' property to get a list of available assets.")
 
         try:  # fetch quote data
-            df = client.get_market_quotes(markets=cm_data_req['markets'], start_time=cm_data_req['start_time'],
-                                          end_time=cm_data_req['end_time'], timezone=data_req.tz).to_dataframe()
+            df = client.get_market_quotes(markets=cm_data_req['mkts'], start_time=cm_data_req['start_date'],
+                                          end_time=cm_data_req['end_date'], timezone=data_req.tz).to_dataframe()
 
         except Exception as e:
             logging.warning(e)
@@ -892,47 +809,61 @@ class CoinMetrics(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and market, on-chain and/or off-chain data (cols).
         """
-        # convert data request parameters to CryptoCompare format
-        cm_data_req = self.convert_data_req_params(data_req)
+        # convert data request parameters to Coin Metrics format
+        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
 
-        # store in empty df
+        # check if fields available
+        if not all(i in self.fields for i in cm_data_req['fields']):
+            raise ValueError("Fields are not available. Check available fields with"
+                             " get_fields_info(data_type=None) method and try again.")
+        # fields list
+        ohlcv_list = self.get_fields_info(data_type='market', as_list=True)
+        onchain_list = self.get_fields_info(data_type='on-chain', as_list=True)
+        # empty df
         df = pd.DataFrame()
 
         # fetch indexes data
-        try:
-            df0 = self.fetch_indexes(data_req)
-        except Exception as e:
-            logging.info(e)
-        else:
-            df = pd.concat([df, df0])
+        if any(i.upper() in self.indexes for i in cm_data_req['tickers']) and \
+                any(i in ohlcv_list for i in cm_data_req['fields']):
+            try:
+                df0 = self.fetch_indexes(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                df = pd.concat([df, df0])
 
         # fetch OHLCV data
-        try:
-            df1 = self.fetch_ohlcv(data_req)
-        except Exception as e:
-            logging.info(e)
-        else:
-            df = pd.concat([df, df1])
+        if any(i in self.assets for i in cm_data_req['tickers']) and \
+                any(i in ohlcv_list for i in cm_data_req['fields']):
+            try:
+                df1 = self.fetch_ohlcv(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                df = pd.concat([df, df1])
 
         # fetch on-chain data
-        try:
-            df2 = self.fetch_onchain(data_req)
-        except Exception as e:
-            logging.info(e)
-        else:
-            df = pd.concat([df, df2], axis=1)
+        if any(i in self.assets for i in cm_data_req['tickers']) and \
+                any(i in onchain_list for i in cm_data_req['fields']):
+            try:
+                df2 = self.fetch_onchain(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                df = pd.concat([df, df2], axis=1)
 
         # check if df empty
         if df.empty:
             raise Exception('No data returned. Check data request parameters and try again.')
 
         # filter df for desired fields and sort index by date
-        fields = [field for field in cm_data_req['fields'] if field in df.columns]
+        fields = [field for field in data_req.fields if field in df.columns]
         df = df.loc[:, fields]
 
         return df.sort_index()
 
-    def wrangle_data_resp(self, data_req, data_resp: pd.DataFrame()):
+    @staticmethod
+    def wrangle_data_resp(data_req, data_resp: pd.DataFrame()):
         """
         Wrangles data response.
 
@@ -949,48 +880,24 @@ class CoinMetrics(DataVendor):
             Wrangled dataframe (tidy format) with DatetimeIndex (level 0), ticker or institution (level 1) and market,
             on-chain or off-chain data (cols) with dtypes converted to the optimal pandas types for data analysis.
         """
-        # make copy of df
-        df = data_resp.copy()
+        # convert cols to cryptodatapy format
+        df = ConvertParams(data_source='coinmetrics').convert_fields_to_lib(data_req, data_resp)
 
-        # format date
-        if 'time' in df.columns:
-            df['date'] = pd.to_datetime(df['time'])  # intraday freq
-            df.drop(columns=['time'], inplace=True)
+        # convert date and set datetimeindex
+        df['date'] = pd.to_datetime(df['date'])
 
-        # format ticker
-        if 'market' in df.columns:
-            df.rename(columns={'market': 'ticker'}, inplace=True)  # rename market col
-            df['ticker'] = df.ticker.str.split(pat='-', expand=True)[1]  # keep only asset ticker symbol
-        elif 'index' in df.columns:
-            df.rename(columns={'index': 'ticker'}, inplace=True)  # rename index col
-        elif 'asset' in df.columns:
-            df.rename(columns={'asset': 'ticker'}, inplace=True)  # rename asset col
+        # format ticker and set index
+        if 'ticker' in df.columns and all(df.ticker.str.contains('-')):
+            df['ticker'] = df.ticker.str.split(pat='-', expand=True)[1]  # keep asset ticker only
         if 'ticker' in df.columns:
-            df['ticker'] = df.ticker.str.upper()  # convert ticker to uppercase
-
-        # format cols
-        if 'level' in df.columns:  # indexes resp
-            df.rename(columns={'level': 'close'}, inplace=True)
-        elif 'price_close' in df.columns:  # ohlcv resp
-            for col in df.columns:  # ohlcv cols
-                if col[:6] == 'price_':
-                    df.rename(columns={col: col[6:]}, inplace=True)
-        elif 'contract_count' in df.columns:  # open interest resp
-            df.rename(columns={'contract_count': 'oi'}, inplace=True)
-            df.drop(columns=['database_time', 'exchange_time'], inplace=True)
-        elif 'rate' in df.columns:  # funding rate resp
-            df.rename(columns={'rate': 'funding_rate'}, inplace=True)
-            df.drop(columns=['database_time', 'period', 'interval'], inplace=True)
-        elif 'bid_price' in df.columns:  # quotes resp
-            df.drop(columns=['coin_metrics_id'], inplace=True)
-        elif 'side' in df.columns:  # quotes resp
-            df.drop(columns=['coin_metrics_id', 'database_time'], inplace=True)
-
-        # set index
-        if 'institution' in df.columns:  # institution resp
-            df = df.set_index(['date', 'institution']).sort_index()
-        else:
+            df['ticker'] = df.ticker.str.upper()  # to uppercase
             df = df.set_index(['date', 'ticker']).sort_index()
+        elif 'institution' in df.columns:  # inst resp
+            df = df.set_index(['date', 'institution']).sort_index()
+
+        # reorder cols
+        if 'open' in df.columns:
+            df = df.loc[:, ['open', 'high', 'low', 'close', 'volume', 'vwap']]  # reorder cols
 
         # resample frequency
         if data_req.freq == 'tick':  # tick freq

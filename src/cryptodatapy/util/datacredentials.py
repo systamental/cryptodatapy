@@ -1,9 +1,11 @@
 # import libraries
+import pandas as pd
 import os
 import logging
 import keyring
 from dataclasses import dataclass
 from typing import Union
+from importlib import resources
 
 
 # sets data credentials
@@ -81,7 +83,7 @@ class DataCredentials:
     mongo_db_password: str = get_credential('mongodb_password')
     mongo_db_name: str = get_credential('mongodb_name')
 
-    #  API KEYS
+    #  api keys
     binance_api_key: str = get_credential('binance_api_key')
     binance_api_secret: str = get_credential('binance_api_secret')
     cryptocompare_api_key: str = get_credential('cryptocompare_api_key')
@@ -91,10 +93,15 @@ class DataCredentials:
     fred_api_key: str = get_credential('fred_api_key')
     quandl_api_key: str = get_credential('quandl_api_key')
 
-    # API Limits
+    # api limits
     cryptocompare_api_limit: int = get_credential('cryptocompare_api_limit')
 
     # URLs for get requests
     cryptocompare_base_url: str = get_credential('cryptocompare_base_url')
     glassnode_base_url: str = get_credential('glassnode_base_url')
     tiingo_base_url: str = get_credential('tiingo_base_url')
+
+    # data catalogs
+    with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:  # conf dir
+        fields_dict_path = f
+    fields_catalog: pd.DataFrame = pd.read_csv(fields_dict_path, index_col=0)  # fields catalog

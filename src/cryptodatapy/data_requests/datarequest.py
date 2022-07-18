@@ -327,7 +327,7 @@ class DataRequest():
         """
         Sets category for data request.
         """
-        valid_categories = ['crypto', 'fx', 'rates', 'equities', 'commodities', 'bonds', 'credit', 'macro', 'alt']
+        valid_categories = ['crypto', 'fx', 'rates', 'eqty', 'cmdty', 'bonds', 'credit', 'macro', 'alt']
         if category is None:
             self._category = category
         elif category in valid_categories:

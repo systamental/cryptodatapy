@@ -10,7 +10,7 @@ readme = "README.md"
 python = ">=3.9"
 keyring = ">=23.6.0"
 pandas = ">=1.4.3"
-requests = ">=2.28.0"
+requests = {version = ">=2.28.0", python = "^3.9"}
 coinmetrics-api-client = {version = ">=2022.6.17", python = "^3.9"}
 furo = ">=2022.6.21"
 

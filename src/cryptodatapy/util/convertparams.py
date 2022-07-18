@@ -100,6 +100,33 @@ class ConvertParams():
                 freq = '1h'
             else:
                 freq = '1d'
+
+        elif self.data_source == 'glassnode':
+            if data_req.freq[-3:] == 'min':
+                freq = '10m'
+            elif data_req.freq[-1] == 'h':
+                freq = '1h'
+            elif data_req.freq == 'd':
+                freq = '24h'
+            elif data_req.freq == 'w':
+                freq = '1w'
+            elif data_req.freq == 'm':
+                freq = '1month'
+            else:
+                freq = '24h'
+
+        elif self.data_source == 'tiingo':
+            if data_req.freq[-3:] == 'min':
+                freq = data_req.freq
+            elif data_req.freq[-1] == 'h':
+                freq = '1hour'
+            elif data_req.freq == 'd':
+                freq = '1day'
+            elif data_req.freq == 'w':
+                freq = '1week'
+            else:
+                freq = '1day'
+
         else:
             freq = data_req.freq
 
@@ -118,6 +145,18 @@ class ConvertParams():
         elif self.data_source == 'coinmetrics':
             if data_req.quote_ccy is None:
                 quote_ccy = 'usdt'
+            else:
+                quote_ccy = data_req.quote_ccy.lower()
+
+        elif self.data_source == 'glassnode':
+            if data_req.quote_ccy is None:
+                quote_ccy = 'USD'
+            else:
+                quote_ccy = data_req.quote_ccy.upper()
+
+        elif self.data_source == 'tiingo':
+            if data_req.quote_ccy is None:
+                quote_ccy = 'usd'
             else:
                 quote_ccy = data_req.quote_ccy.lower()
         else:
@@ -141,6 +180,16 @@ class ConvertParams():
             else:
                 exch = data_req.exch.lower()
 
+        elif self.data_source == 'glassnode':
+            exch = None
+
+        elif self.data_source == 'tiingo':
+            if data_req.exch is None and data_req.cat == 'eqty' and \
+                    data_req.freq in ['1min', '5min', '10min', '15min', '30min', '1h', '2h', '4h', '8h']:
+                exch = 'iex'
+            else:
+                exch = data_req.exch
+
         else:
             exch = data_req.exch
 
@@ -155,6 +204,12 @@ class ConvertParams():
                 start_date = round((datetime.now() - timedelta(days=7)).timestamp())
             # no start date
             elif data_req.start_date is None:
+                start_date = round(pd.Timestamp('2009-01-03 00:00:00').timestamp())
+            else:
+                start_date = round(pd.Timestamp(data_req.start_date).timestamp())
+
+        elif self.data_source == 'glassnode':
+            if data_req.start_date is None:
                 start_date = round(pd.Timestamp('2009-01-03 00:00:00').timestamp())
             else:
                 start_date = round(pd.Timestamp(data_req.start_date).timestamp())
@@ -174,6 +229,18 @@ class ConvertParams():
             else:
                 end_date = round(pd.Timestamp(data_req.end_date).timestamp())
 
+        elif self.data_source == 'glassnode':
+            if data_req.end_date is None:
+                end_date = data_req.end_date
+            else:
+                end_date = round(pd.Timestamp(data_req.end_date).timestamp())
+
+        elif self.data_source == 'tiingo':
+            if data_req.end_date is None:
+                end_date = datetime.utcnow()
+            else:
+                end_date = data_req.end_date
+
         else:
             end_date = data_req.end_date
 
@@ -187,50 +254,32 @@ class ConvertParams():
         with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:
             fields_dict_path = f
         df = pd.read_csv(fields_dict_path, index_col=0)
-
+        # empty fields list
         fields = []
 
         # source fields can be provided in data req
         if data_req.source_fields is not None:
             fields = data_req.source_fields
 
-        # convert to cryptocompare format
-        elif self.data_source == 'cryptocompare':
+        # convert to source format
+        else:
             for field in data_req.fields:
                 try:
-                    fields.append(df.loc[field, 'cryptocompare_id'])
+                    fields.append(df.loc[field, self.data_source + '_id'])
                 except KeyError as e:
                     logging.warning(e)
-                    logging.warning(f"Id for {field} could not be found in data dictionary."
-                                    f" Try using source field ids.")
-
-        # convert to coinmetrics format
-        elif self.data_source == 'coinmetrics':
-            for field in data_req.fields:
-                try:
-                    fields.append(df.loc[field, 'coinmetrics_id'])
-                except KeyError as e:
-                    logging.warning(e)
-                    logging.warning(f"Id for {field} could not be found in data dictionary."
+                    logging.warning(f"Id for {field} could not be found in fields dictionary."
                                     f" Try using source field ids.")
 
         return fields
 
-    def convert_tz_to_source(self, data_req: DataRequest) -> str:
+    @staticmethod
+    def convert_tz_to_source(data_req: DataRequest) -> str:
         """
         Converts timezone from CryptoDataPy to data source format.
         """
-        if self.data_source == 'cryptocompare':
-            if data_req.tz is None:
-                tz = 'UTC'
-            else:
-                tz = data_req.tz
-
-        elif self.data_source == 'coinmetrics':
-            if data_req.tz is None:
-                tz = 'UTC'
-            else:
-                tz = data_req.tz
+        if data_req.tz is None:
+            tz = 'UTC'
         else:
             tz = data_req.tz
 
@@ -243,6 +292,12 @@ class ConvertParams():
         if self.data_source == 'coinmetrics':
             if data_req.inst is None:
                 inst = 'grayscale'
+            else:
+                inst = data_req.inst
+
+        elif self.data_source == 'glassnode':
+            if data_req.inst is None:
+                inst = 'purpose'
             else:
                 inst = data_req.inst
         else:
@@ -315,5 +370,31 @@ class ConvertParams():
                     pass
                 else:
                     df.drop(columns=[col], inplace=True)
+
+        elif self.data_source == 'tiingo':
+            for col in df.columns:
+                if data_req.source_fields is not None and col in data_req.source_fields:
+                    pass
+                elif col in data_df.tiingo_id.to_list():
+                    df.rename(columns={col: data_df[data_df.tiingo_id == col].index[0]}, inplace=True)
+                else:
+                    df.drop(columns=[col], inplace=True)
+
+        return df
+
+    @staticmethod
+    def convert_dtypes(data_resp: pd.DataFrame) -> pd.DataFrame:
+        """
+        Converts data types from data source data resp.
+        """
+        # fields dictionary
+        with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:
+            fields_dict_path = f
+        # getdata resp and create empty fields list
+        data_df, df = pd.read_csv(fields_dict_path, index_col=0), data_resp.copy()
+
+        for col in df.columns:
+            if col in data_df.index.to_list():
+                df[col] = df[col].astype(data_df.loc[col, 'data_type'])
 
         return df

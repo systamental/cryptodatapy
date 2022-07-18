@@ -72,7 +72,7 @@ class DataVendor(ABC):
         if isinstance(categories, str):
             categories = [categories]
         for category in categories:
-            if category in ['crypto', 'fx', 'rates', 'equities', 'commodities', 'credit', 'macro', 'alt']:
+            if category in ['crypto', 'fx', 'rates', 'eqty', 'cmdty', 'credit', 'macro', 'alt']:
                 cat.append(category)
             else:
                 raise ValueError(
@@ -362,8 +362,15 @@ class DataVendor(ABC):
         # to be implemented by subclasses
 
     @abstractmethod
-    def fetch_data(self, data_req) -> pd.DataFrame:
+    def get_data(self, data_req) -> pd.DataFrame:
         """
         Submits data request to API.
+        """
+        # to be implemented by subclasses
+
+    @abstractmethod
+    def wrangle_data_resp(self, data_resp: pd.DataFrame) -> pd.DataFrame:
+        """
+        Wrangles data response from data vendor API into tidy format.
         """
         # to be implemented by subclasses

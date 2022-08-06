@@ -10,9 +10,14 @@ readme = "README.md"
 python = ">=3.9"
 keyring = ">=23.6.0"
 pandas = ">=1.4.3"
+numpy = ">=1.23.1"
+matplotlib = ">=3.5.2"
 requests = {version = ">=2.28.0", python = "^3.9"}
 coinmetrics-api-client = {version = ">=2022.6.17", python = "^3.9"}
-furo = ">=2022.6.21"
+investpy = ">=1.0.8"
+DBnomics = ">=1.2.3"
+ccxt = ">=1.91.52"
+pandas-datareader = ">=0.10.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"

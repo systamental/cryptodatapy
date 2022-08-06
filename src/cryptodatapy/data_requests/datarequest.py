@@ -2,6 +2,7 @@ import pandas as pd
 import pytz
 from typing import Union, Optional
 from datetime import datetime
+from importlib import resources
 
 
 class DataRequest():
@@ -10,6 +11,7 @@ class DataRequest():
     """
     def __init__(
             self,
+            data_source: str = None,
             tickers: Union[str, list[str]] = 'btc',
             freq: str = 'd',
             quote_ccy: Optional[str] = None,
@@ -32,15 +34,18 @@ class DataRequest():
 
         Parameters
         ----------
-        tickers: list or str
-            List or string of ticker symbols for assets or names of time series,
-            e.g. 'BTC', 'EURUSD', 'SPY', 'us_gdp', etc.
+        data_source: str, optional, default None
+            Name of data source. Should only be specified when data request can be made from a library which provides
+             data from a wide range of sources, e.g. pandas-datareader.
+        tickers: list or str, default 'btc'
+            Ticker symbols for assets or time series.
+            e.g. 'BTC', 'EURUSD', 'SPY', 'US_Manuf_PMI', 'EZ_Rates_10Y', etc.
         freq: str, default 'd'
             Frequency of data observations. Defaults to daily 'd' which includes weekends for cryptoassets.
         quote_ccy: str,  optional, default None
-            Quote currency for asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD (bitcoin in dollars), etc.
+            Quote currency for base asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD (bitcoin in dollars), etc.
         exch: str,  optional, default None
-            Exchange from which to pull data, e.g. 'Binance', 'FTX', 'IEX', etc.
+            Name of asset exchange, e.g. 'Binance', 'FTX', 'IEX', 'Nasdaq', etc.
         mkt_type: str, optional, default 'spot'
             Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option'.
         start_date: str, datetime or pd.Timestamp, optional, default None
@@ -51,8 +56,8 @@ class DataRequest():
             e.g. '2020-12-31' for January 31st 2020, datetime(2020,12,31) or pd.Timestamp('2020-12-31').
         fields: list or str, default 'close'
             Fields for data request. OHLC bars/fields are most common fields for market data.
-        tz: str, default 'UTC'
-            Timezone for the start/end dates from tz database format.
+        tz: str, optional, default None
+            Timezone for the start/end dates in tz database format.
         inst: str, optional, default None
             Name of institution from which to pull fund data, e.g. 'grayscale', 'purpose', etc.
         cat: str, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}
@@ -62,7 +67,7 @@ class DataRequest():
         pause: float,  optional, default 0.1
             Number of seconds to pause between data requests.
         source_tickers: list or str, optional, default None
-            List or string of ticker symbols for assets or names for time series in the format used by the
+            List or string of ticker symbols for assets or time series in the format used by the
             data source. If None, tickers will be converted from CryptoDataPy to data source format.
         source_freq: str, optional, default None
             Frequency of observations for assets or time series in format used by data source. If None,
@@ -72,6 +77,7 @@ class DataRequest():
             fields will be converted from CryptoDataPy to data source format.
         """
         # params
+        self.data_source = data_source  # specific data source
         self.tickers = tickers  # tickers
         self.freq = freq  # frequency
         self.quote_ccy = quote_ccy  # quote ccy
@@ -88,6 +94,23 @@ class DataRequest():
         self.source_tickers = source_tickers  # tickers used by data source
         self.source_freq = source_freq  # frequency used by data source
         self.source_fields = source_fields  # fields used by data source
+
+    @property
+    def data_source(self):
+        """
+        Returns data source for data request.
+        """
+        return self._data_source
+
+    @data_source.setter
+    def data_source(self, data_source):
+        """
+        Sets data source for data request.
+        """
+        if data_source is None or isinstance(data_source, str):
+            self._data_source = data_source
+        else:
+            raise TypeError('Data source must be a string.')
 
     @property
     def tickers(self):
@@ -123,22 +146,36 @@ class DataRequest():
         freq_dict = {'tick': 'bid/ask quote (quotes) or executed trade (trades)',
                      'block': 'record of the most recent batch or block of transactions validated by the network',
                      '1s': 'one second',
+                     '10s': 'ten seconds',
+                     '15s': 'fifteen seconds',
                      '1min': 'one minute',
+                     '3min': 'three minutes',
                      '5min': 'five minutes',
                      '10min': 'ten minutes',
                      '15min': 'fifteen minutes',
                      '30min': 'thirty minutes',
+                     '45min': 'forty five minutes',
                      '1h': 'one hour',
                      '2h': 'two hours',
                      '4h': 'four hours',
+                     '6h': 'six hours',
                      '8h': 'eight hours',
+                     '12h': 'twelve hours',
                      'b': 'business day',
                      'd': 'daily',
+                     '3d': 'three days',
+                     '5d': 'five days',
+                     '7d': 'seven days',
                      'w': 'weekly',
+                     '2w': 'two weeks',
                      'm': 'monthly',
+                     '3m': 'three months',
+                     '4m': 'four months',
+                     '6m': 'six months',
                      'q': 'quarterly',
                      'y': 'yearly'
                      }
+
         if frequency not in list(freq_dict.keys()):
             raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}")
         else:
@@ -194,12 +231,11 @@ class DataRequest():
         """
         Sets market type for data request.
         """
-        if mkt_type is None:
-            self._mkt_type = mkt_type
-        elif isinstance(mkt_type, str):
+        valid_mkt_types = ['spot', 'etf', 'perpetual_future', 'future', 'swap', 'option']
+        if mkt_type in valid_mkt_types:
             self._mkt_type = mkt_type
         else:
-            raise TypeError('Market type must be a string.')
+            raise ValueError(f"{mkt_type} is invalid. Valid market types are: {valid_mkt_types}.")
 
     @property
     def start_date(self):
@@ -269,12 +305,22 @@ class DataRequest():
         """
         Sets fields for data request.
         """
+        # get valid fields
+        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
+            fields_path = f
+        valid_fields, fields_list = pd.read_csv(fields_path, index_col=0).index.to_list(), []
+
+        # convert to list
         if isinstance(fields, str):
-            self._fields = [fields]
-        elif isinstance(fields, list):
-            self._fields = fields
-        else:
-            raise TypeError('Fields must be a string or list of strings (data fields).')
+            fields = [fields]
+        # check if valid field
+        for field in fields:
+            if field in valid_fields:
+                fields_list.append(field)
+            else:
+                raise ValueError(f"{field} is an invalid field. Valid fields are {valid_fields}.")
+
+        self._fields = fields_list
 
     @property
     def inst(self):
@@ -291,7 +337,7 @@ class DataRequest():
         if inst is None:
             self._inst = inst
         elif isinstance(inst, str):
-            self._inst = inst.lower()
+            self._inst = inst
         else:
             raise TypeError('Institution must be a string.')
 
@@ -327,7 +373,7 @@ class DataRequest():
         """
         Sets category for data request.
         """
-        valid_categories = ['crypto', 'fx', 'rates', 'eqty', 'cmdty', 'bonds', 'credit', 'macro', 'alt']
+        valid_categories = ['crypto', 'fx', 'eqty', 'cmdty', 'rates',  'bonds', 'credit', 'macro', 'alt']
         if category is None:
             self._category = category
         elif category in valid_categories:
@@ -391,7 +437,6 @@ class DataRequest():
             self._source_tickers = [tickers]
         elif isinstance(tickers, list):
             self._source_tickers = tickers
-
         else:
             raise TypeError("Source tickers must be a string or list of strings (tickers) in data source's format.")
 
@@ -412,7 +457,7 @@ class DataRequest():
         elif isinstance(freq, str):
             self._source_freq = freq
         else:
-            raise TypeError('Source data frequency must be a string.')
+            raise TypeError("Source data frequency must be a string in data source's format.")
 
     @property
     def source_fields(self):

@@ -8,7 +8,6 @@ from typing import Union
 from importlib import resources
 
 
-# sets data credentials
 def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
     """
     Sets value for data credential key, e.g. api keys, api secrets, db name, ....
@@ -32,8 +31,6 @@ def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
         logging.warning(e)
         logging.warning('Credentials could not be set.')
 
-
-# retrieves data credentials
 def get_credential(cred_key: str) -> str:
     """
     Gets value for data credential key, e.g. api keys, api secrets, db name, ....
@@ -67,7 +64,7 @@ def get_credential(cred_key: str) -> str:
 @dataclass
 class DataCredentials:
     """
-    Stores important data credentials used by the CryptoDataPy project for data extraction, storage, etc.
+    Stores data credentials used by the CryptoDataPy project for data extraction, storage, etc.
     """
     # SQL db for structured data
     # postgresql db credentials
@@ -84,24 +81,26 @@ class DataCredentials:
     mongo_db_name: str = get_credential('mongodb_name')
 
     #  api keys
-    binance_api_key: str = get_credential('binance_api_key')
-    binance_api_secret: str = get_credential('binance_api_secret')
     cryptocompare_api_key: str = get_credential('cryptocompare_api_key')
     glassnode_api_key: str = get_credential('glassnode_api_key')
     tiingo_api_key: str = get_credential('tiingo_api_key')
-    finnhub_api_key: str = get_credential('finnhub_api_key')
     fred_api_key: str = get_credential('fred_api_key')
-    quandl_api_key: str = get_credential('quandl_api_key')
+    ndl_api_key: str = get_credential('quandl_api_key')
+    av_api_key: str = get_credential('av_api_key')
 
-    # api limits
-    cryptocompare_api_limit: int = get_credential('cryptocompare_api_limit')
+    # api limit URLs
+    cryptocompare_api_rate_limit: str = 'https://min-api.cryptocompare.com/stats/rate/limit'
+    ndl_api_rate_limit: str = 'https://help.data.nasdaq.com/article/' + \
+                              '490-is-there-a-rate-limit-or-speed-limit-for-api-usage'
 
-    # URLs for get requests
+    # base URLs
     cryptocompare_base_url: str = get_credential('cryptocompare_base_url')
     glassnode_base_url: str = get_credential('glassnode_base_url')
     tiingo_base_url: str = get_credential('tiingo_base_url')
 
-    # data catalogs
-    with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:  # conf dir
-        fields_dict_path = f
-    fields_catalog: pd.DataFrame = pd.read_csv(fields_dict_path, index_col=0)  # fields catalog
+    # vendors URLs
+    dbnomics_vendors_url: str = 'https://db.nomics.world/providers'
+    pdr_vendors_url: str = 'https://pandas-datareader.readthedocs.io/en/latest/readers/index.html'
+
+    # search URLs
+    dbnomics_search_url: str = 'https://db.nomics.world/'

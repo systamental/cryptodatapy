@@ -1,4 +1,3 @@
-# import libraries
 import pandas as pd
 import os
 import logging
@@ -18,6 +17,10 @@ def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
         Credential key for which value is to be stored.
     cred_val: str or int
         Credential value to be stored.
+
+    Returns
+    -------
+    None
 
     Examples
     --------

@@ -362,8 +362,7 @@ class ConvertParams():
                 start_date = pd.Timestamp(data_req.start_date).strftime("%d/%m/%Y")
 
         elif self.data_source == 'fred' or self.data_source == 'av-daily' or self.data_source == 'av-forex-daily' or \
-             self.data_source == 'yahoo':
-
+                self.data_source == 'yahoo':
             if data_req.start_date is None:
                 start_date = datetime(1920, 1, 1)
             else:

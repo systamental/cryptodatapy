@@ -29,10 +29,62 @@ class ConvertParams():
         """
         Converts tickers from CryptoDataPy to data source format.
         """
-        if self.data_source == 'cryptocompare':
+        # tickers
+        with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
+            tickers_path = f
+        # get tickers file and create ticker list
+        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding='latin1'), []
+        # quote ccy
+        quote_ccy = self.convert_quote_ccy_to_source(data_req)
+
+        if data_req.source_tickers is not None:
+            tickers = data_req.source_tickers
+            data_req.tickers = data_req.source_tickers
+
+        elif self.data_source == 'cryptocompare' or self.data_source == 'ccxt' or self.data_source == 'av-daily':
             tickers = [ticker.upper() for ticker in data_req.tickers]
+
         elif self.data_source == 'coinmetrics':
             tickers = [ticker.lower() for ticker in data_req.tickers]
+
+        elif self.data_source == 'tiingo':
+            if data_req.cat == 'fx' or data_req.cat == 'crypto':
+                tickers = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
+            else:
+                tickers = [ticker.lower() for ticker in data_req.tickers]
+
+        elif self.data_source == 'investpy':
+            if data_req.cat == 'fx':
+                tickers = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
+            elif data_req.cat == 'eqty':
+                for ticker in data_req.tickers:
+                    if len(ticker) > 4:
+                        try:
+                            tickers.append(tickers_df.loc[ticker, 'investpy_id'])
+                        except KeyError:
+                            logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
+                                            f"data catalog and try again.")
+                    else:
+                        tickers.append(ticker.upper())
+            else:
+                for ticker in data_req.tickers:
+                    try:
+                        tickers.append(tickers_df.loc[ticker, 'investpy_id'])
+                    except KeyError:
+                        logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
+                                        f"data catalog and try again.")
+
+        elif self.data_source == 'dbnomics' or self.data_source == 'fred':
+            for ticker in data_req.tickers:
+                try:
+                    tickers.append(tickers_df.loc[ticker, self.data_source + '_id'])
+                except KeyError:
+                    logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in"
+                                    f" data catalog and try again.")
+
+        elif self.data_source == 'av-forex-daily':
+            tickers = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
+
         else:
             tickers = data_req.tickers
 
@@ -70,6 +122,23 @@ class ConvertParams():
                     pass
                 elif mkt_type == 'option':
                     pass
+        elif self.data_source == 'ccxt':
+            for ticker in tickers:
+                if mkt_type == 'spot':
+                    mkts_list.append(ticker.upper() + '/' + quote_ccy.upper())
+                elif mkt_type == 'perpetual_future':
+                    if exch == 'binanceusdm':
+                        mkts_list.append(ticker.upper() + '/' + quote_ccy.upper())
+                    elif exch == 'ftx' or exch == 'okx' or exch == 'kucoinfutures' or exch == 'huobipro' \
+                            or exch == 'cryptocom' or exch == 'bitfinex2' or exch == 'bybit' or exch == 'mexc3' \
+                            or exch == 'aax' or exch == 'bitmex':
+                        mkts_list.append(ticker.upper() + '/' + quote_ccy.upper() + ':' + quote_ccy.upper())
+                # TO DO: create deliverable future and option markets list
+                elif mkt_type == 'future':
+                    pass
+                elif mkt_type == 'option':
+                    pass
+
         else:
             mkts_list = None
 
@@ -79,7 +148,10 @@ class ConvertParams():
         """
         Converts frequencies from CryptoDataPy to data source format.
         """
-        if self.data_source == 'cryptocompare':
+        if data_req.source_freq is not None:
+            freq = data_req.source_freq
+
+        elif self.data_source == 'cryptocompare':
             if data_req.freq[-3:] == 'min':
                 freq = 'histominute'
             elif data_req.freq[-1] == 'h':
@@ -101,6 +173,26 @@ class ConvertParams():
             else:
                 freq = '1d'
 
+        elif self.data_source == 'ccxt':
+            if data_req.freq == 'tick':
+                freq = 'tick'
+            elif data_req.freq[-3:] == 'min':
+                freq = data_req.freq.replace('min', 'm')
+            elif data_req.freq == 'd':
+                freq = '1d'
+            elif data_req.freq == 'w':
+                freq = '1w'
+            elif data_req.freq == 'm':
+                freq = '1M'
+            elif data_req.freq[-1] == 'm':
+                freq = data_req.freq.replace('m', 'M')
+            elif data_req.freq == 'q':
+                freq = '1q'
+            elif data_req.freq == 'y':
+                freq = '1y'
+            else:
+                freq = data_req.freq
+
         elif self.data_source == 'glassnode':
             if data_req.freq[-3:] == 'min':
                 freq = '10m'
@@ -113,7 +205,7 @@ class ConvertParams():
             elif data_req.freq == 'm':
                 freq = '1month'
             else:
-                freq = '24h'
+                freq = data_req.freq
 
         elif self.data_source == 'tiingo':
             if data_req.freq[-3:] == 'min':
@@ -125,7 +217,13 @@ class ConvertParams():
             elif data_req.freq == 'w':
                 freq = '1week'
             else:
-                freq = '1day'
+                freq = data_req.freq
+
+        elif self.data_source == 'investpy':
+            if data_req.cat != 'macro':
+                freq = 'Daily'
+            else:
+                freq = data_req.freq
 
         else:
             freq = data_req.freq
@@ -136,7 +234,8 @@ class ConvertParams():
         """
         Converts quote currency from CryptoDataPy to data source format.
         """
-        if self.data_source == 'cryptocompare':
+        if self.data_source == 'cryptocompare' or self.data_source == 'glassnode' \
+                or self.data_source == 'av-forex-daily' or self.data_source == 'investpy':
             if data_req.quote_ccy is None:
                 quote_ccy = 'USD'
             else:
@@ -148,9 +247,9 @@ class ConvertParams():
             else:
                 quote_ccy = data_req.quote_ccy.lower()
 
-        elif self.data_source == 'glassnode':
+        elif self.data_source == 'ccxt':
             if data_req.quote_ccy is None:
-                quote_ccy = 'USD'
+                quote_ccy = 'USDT'
             else:
                 quote_ccy = data_req.quote_ccy.upper()
 
@@ -159,6 +258,7 @@ class ConvertParams():
                 quote_ccy = 'usd'
             else:
                 quote_ccy = data_req.quote_ccy.lower()
+
         else:
             quote_ccy = data_req.quote_ccy
 
@@ -180,8 +280,21 @@ class ConvertParams():
             else:
                 exch = data_req.exch.lower()
 
-        elif self.data_source == 'glassnode':
-            exch = None
+        elif self.data_source == 'ccxt':
+            if data_req.exch is None:
+                exch = 'binance'
+            elif data_req.exch == 'binance' and data_req.mkt_type == 'perpetual_future':
+                exch = 'binanceusdm'
+            elif data_req.exch == 'kucoin' and data_req.mkt_type == 'perpetual_future':
+                exch = 'kucoinfutures'
+            elif data_req.exch == 'huobi' and data_req.mkt_type == 'perpetual_future':
+                exch = 'huobipro'
+            elif data_req.exch == 'bitfinex' and data_req.mkt_type == 'perpetual_future':
+                exch = 'bitfinex2'
+            elif data_req.exch == 'mexc' and data_req.mkt_type == 'perpetual_future':
+                exch = 'mexc3'
+            else:
+                exch = data_req.exch.lower()
 
         elif self.data_source == 'tiingo':
             if data_req.exch is None and data_req.cat == 'eqty' and \
@@ -194,6 +307,27 @@ class ConvertParams():
             exch = data_req.exch
 
         return exch
+
+    def convert_tickers_to_ctys_source(self, data_req: DataRequest) -> list[str]:
+        """
+        Maps tickers from CryptoDataPy to their respective countries.
+        """
+        # tickers
+        with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
+            tickers_path = f
+        # get tickers file and create ticker list
+        tickers_df, ctys_list = pd.read_csv(tickers_path, index_col=0, encoding='latin1'), []
+
+        if self.data_source == 'investpy':
+            if data_req.cat == 'macro':
+                for ticker in data_req.tickers:
+                    try:
+                        ctys_list.append(tickers_df.loc[ticker, 'country_name'].lower())
+                    except KeyError:
+                        logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
+                                        f"data catalog and try again.")
+
+        return ctys_list
 
     def convert_start_date_to_source(self, data_req: DataRequest) -> Union[str, int, datetime, pd.Timestamp]:
         """
@@ -208,11 +342,32 @@ class ConvertParams():
             else:
                 start_date = round(pd.Timestamp(data_req.start_date).timestamp())
 
+        elif self.data_source == 'ccxt':
+            # no start date
+            if data_req.start_date is None:
+                start_date = round(pd.Timestamp('2010-01-01 00:00:00').timestamp() * 1e3)
+            else:
+                start_date = round(pd.Timestamp(data_req.start_date).timestamp() * 1e3)
+
         elif self.data_source == 'glassnode':
             if data_req.start_date is None:
                 start_date = round(pd.Timestamp('2009-01-03 00:00:00').timestamp())
             else:
                 start_date = round(pd.Timestamp(data_req.start_date).timestamp())
+
+        elif self.data_source == 'investpy':
+            if data_req.start_date is None:
+                start_date = pd.Timestamp('1960-01-01').strftime("%d/%m/%Y")
+            else:
+                start_date = pd.Timestamp(data_req.start_date).strftime("%d/%m/%Y")
+
+        elif self.data_source == 'fred' or self.data_source == 'av-daily' or self.data_source == 'av-forex-daily' or \
+             self.data_source == 'yahoo':
+
+            if data_req.start_date is None:
+                start_date = datetime(1920, 1, 1)
+            else:
+                start_date = data_req.start_date
 
         else:
             start_date = data_req.start_date
@@ -229,13 +384,27 @@ class ConvertParams():
             else:
                 end_date = round(pd.Timestamp(data_req.end_date).timestamp())
 
+        elif self.data_source == 'ccxt':
+            # no end date
+            if data_req.end_date is None:
+                end_date = round(pd.Timestamp(datetime.utcnow()).timestamp() * 1e3)
+            else:
+                end_date = round(pd.Timestamp(data_req.end_date).timestamp() * 1e3)
+
         elif self.data_source == 'glassnode':
             if data_req.end_date is None:
                 end_date = data_req.end_date
             else:
                 end_date = round(pd.Timestamp(data_req.end_date).timestamp())
 
-        elif self.data_source == 'tiingo':
+        elif self.data_source == 'investpy':
+            if data_req.end_date is None:
+                end_date = datetime.utcnow().strftime("%d/%m/%Y")
+            else:
+                end_date = pd.Timestamp(data_req.end_date).strftime("%d/%m/%Y")
+
+        elif self.data_source == 'tiingo' or self.data_source == 'fred' or self.data_source == 'av-daily' or \
+                self.data_source == 'av-forex-daily' or self.data_source == 'yahoo':
             if data_req.end_date is None:
                 end_date = datetime.utcnow()
             else:
@@ -250,35 +419,35 @@ class ConvertParams():
         """
         Converts fields from CryptoDataPy to data source format.
         """
-        # fields dictionary
-        with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:
+        # get fields
+        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_dict_path = f
-        df = pd.read_csv(fields_dict_path, index_col=0)
-        # empty fields list
-        fields = []
+        fields_df, fields_list = pd.read_csv(fields_dict_path, index_col=0), []
 
-        # source fields can be provided in data req
+        # when source fields already provided in data req
         if data_req.source_fields is not None:
-            fields = data_req.source_fields
+            fields_list = data_req.source_fields
 
         # convert to source format
         else:
             for field in data_req.fields:
                 try:
-                    fields.append(df.loc[field, self.data_source + '_id'])
+                    fields_list.append(fields_df.loc[field, self.data_source + '_id'])
                 except KeyError as e:
                     logging.warning(e)
-                    logging.warning(f"Id for {field} could not be found in fields dictionary."
+                    logging.warning(f"Id for {field} could not be found in the data catalog."
                                     f" Try using source field ids.")
 
-        return fields
+        return fields_list
 
-    @staticmethod
-    def convert_tz_to_source(data_req: DataRequest) -> str:
+    def convert_tz_to_source(self, data_req: DataRequest) -> str:
         """
         Converts timezone from CryptoDataPy to data source format.
         """
-        if data_req.tz is None:
+        us_timezones = ['fred', 'av-daily', 'av-forex-daily', 'yahoo']
+        if self.data_source in us_timezones and data_req.tz is None:
+            tz = 'America/New_York'
+        elif self.data_source not in us_timezones and data_req.tz is None:
             tz = 'UTC'
         else:
             tz = data_req.tz
@@ -293,13 +462,13 @@ class ConvertParams():
             if data_req.inst is None:
                 inst = 'grayscale'
             else:
-                inst = data_req.inst
+                inst = data_req.inst.lower()
 
         elif self.data_source == 'glassnode':
             if data_req.inst is None:
                 inst = 'purpose'
             else:
-                inst = data_req.inst
+                inst = data_req.inst.lower()
         else:
             inst = data_req.inst
 
@@ -313,6 +482,7 @@ class ConvertParams():
         freq = self.convert_freq_to_source(data_req)
         quote_ccy = self.convert_quote_ccy_to_source(data_req)
         exch = self.convert_exch_to_source(data_req)
+        ctys = self.convert_tickers_to_ctys_source(data_req)
         mkt_type = data_req.mkt_type
         mkts_list = self.convert_tickers_to_mkts_source(data_req)
         start_date = self.convert_start_date_to_source(data_req)
@@ -327,58 +497,42 @@ class ConvertParams():
         source_freq = data_req.source_freq
         source_fields = data_req.source_fields
 
-        source_params = {'tickers': tickers, 'freq': freq, 'quote_ccy': quote_ccy, 'exch': exch, 'mkt_type': mkt_type,
-                         'mkts': mkts_list, 'start_date': start_date, 'end_date': end_date, 'fields': fields, 'tz': tz,
-                         'inst': inst, 'cat': cat, 'trials': trials, 'pause': pause, 'source_tickers': source_tickers,
-                         'source_freq': source_freq, 'source_fields': source_fields}
+        source_params = {'tickers': tickers, 'freq': freq, 'quote_ccy': quote_ccy, 'exch': exch, 'ctys': ctys,
+                         'mkt_type': mkt_type, 'mkts': mkts_list, 'start_date': start_date, 'end_date': end_date,
+                         'fields': fields, 'tz': tz, 'inst': inst, 'cat': cat, 'trials': trials, 'pause': pause,
+                         'source_tickers': source_tickers, 'source_freq': source_freq, 'source_fields': source_fields}
 
         return source_params
 
     def convert_fields_to_lib(self, data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Converts fields from data source data resp to CrptoDataPy format.
+        Converts fields from data source data resp to CryptoDataPy format.
         """
         # fields dictionary
-        with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:
+        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_dict_path = f
-        # getdata resp and create empty fields list
-        data_df, df, fields = pd.read_csv(fields_dict_path, index_col=0), data_resp.copy(), []
+        # get fields and data resp
+        fields_df = pd.read_csv(fields_dict_path, index_col=0).copy()
+        fields_list, df = fields_df[str(self.data_source) + '_id'].to_list(), data_resp.copy()
 
-        # convert to cryptodatapy format
-        if self.data_source == 'cryptocompare':
-            for col in df.columns:
-                if data_req.source_fields is not None and col in data_req.source_fields:
-                    pass
-                elif col in data_df.cryptocompare_id.to_list():
-                    df.rename(columns={col: data_df[data_df.cryptocompare_id == col].index[0]}, inplace=True)
-                else:
-                    df.drop(columns=[col], inplace=True)
-
-        elif self.data_source == 'coinmetrics':
-            for col in df.columns:
-                if data_req.source_fields is not None and col in data_req.source_fields:
-                    pass
-                elif col in data_df.coinmetrics_id.to_list():
-                    df.rename(columns={col: data_df[data_df.coinmetrics_id == col].index[0]}, inplace=True)
-                elif col == 'index':
-                    df.rename(columns={'index': 'ticker'}, inplace=True)  # rename index col
-                elif col == 'asset':
-                    df.rename(columns={'asset': 'ticker'}, inplace=True)  # rename asset col
-                elif col == 'level':
-                    df.rename(columns={'level': 'close'}, inplace=True)  # rename level col
-                elif col == 'institution':
-                    pass
-                else:
-                    df.drop(columns=[col], inplace=True)
-
-        elif self.data_source == 'tiingo':
-            for col in df.columns:
-                if data_req.source_fields is not None and col in data_req.source_fields:
-                    pass
-                elif col in data_df.tiingo_id.to_list():
-                    df.rename(columns={col: data_df[data_df.tiingo_id == col].index[0]}, inplace=True)
-                else:
-                    df.drop(columns=[col], inplace=True)
+        for col in df.columns:
+            if data_req.source_fields is not None and col in data_req.source_fields:
+                pass
+            elif col in fields_list or col.title() in fields_list or col.lower() in fields_list:
+                df.rename(columns={col: fields_df[(fields_df[str(self.data_source) + '_id'] == col.title()) |
+                                                  (fields_df[str(self.data_source) + '_id'] == col.lower()) |
+                                                  (fields_df[str(self.data_source) + '_id'] == col)].index[0]},
+                          inplace=True)
+            elif col == 'index':
+                df.rename(columns={'index': 'ticker'}, inplace=True)  # rename index col
+            elif col == 'asset':
+                df.rename(columns={'asset': 'ticker'}, inplace=True)  # rename asset col
+            elif col == 'level':
+                df.rename(columns={'level': 'close'}, inplace=True)  # rename level col
+            elif col == 'institution':
+                pass
+            else:
+                df.drop(columns=[col], inplace=True)
 
         return df
 
@@ -387,14 +541,14 @@ class ConvertParams():
         """
         Converts data types from data source data resp.
         """
-        # fields dictionary
-        with resources.path('cryptodatapy.conf', 'fields_dict.csv') as f:
-            fields_dict_path = f
+        # get fields
+        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
+            fields_path = f
         # getdata resp and create empty fields list
-        data_df, df = pd.read_csv(fields_dict_path, index_col=0), data_resp.copy()
+        fields_df, df = pd.read_csv(fields_path, index_col=0), data_resp.copy()
 
         for col in df.columns:
-            if col in data_df.index.to_list():
-                df[col] = df[col].astype(data_df.loc[col, 'data_type'])
+            if col in fields_df.index.to_list():
+                df[col] = df[col].astype(fields_df.loc[col, 'data_type'])
 
         return df

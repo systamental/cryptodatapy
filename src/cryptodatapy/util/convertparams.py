@@ -421,7 +421,7 @@ class ConvertParams():
         # get fields
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_dict_path = f
-        fields_df, fields_list = pd.read_csv(fields_dict_path, index_col=0), []
+        fields_df, fields_list = pd.read_csv(fields_dict_path, index_col=0, encoding='latin1'), []
 
         # when source fields already provided in data req
         if data_req.source_fields is not None:
@@ -511,9 +511,10 @@ class ConvertParams():
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_dict_path = f
         # get fields and data resp
-        fields_df = pd.read_csv(fields_dict_path, index_col=0).copy()
+        fields_df = pd.read_csv(fields_dict_path, index_col=0, encoding='latin1').copy()
         fields_list, df = fields_df[str(self.data_source) + '_id'].to_list(), data_resp.copy()
 
+        # loop through data resp cols
         for col in df.columns:
             if data_req.source_fields is not None and col in data_req.source_fields:
                 pass
@@ -544,7 +545,7 @@ class ConvertParams():
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_path = f
         # getdata resp and create empty fields list
-        fields_df, df = pd.read_csv(fields_path, index_col=0), data_resp.copy()
+        fields_df, df = pd.read_csv(fields_path, index_col=0, encoding='latin1'), data_resp.copy()
 
         for col in df.columns:
             if col in fields_df.index.to_list():

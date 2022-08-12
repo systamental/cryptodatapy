@@ -308,7 +308,7 @@ class DataRequest():
         # get valid fields
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
             fields_path = f
-        valid_fields, fields_list = pd.read_csv(fields_path, index_col=0).index.to_list(), []
+        valid_fields, fields_list = pd.read_csv(fields_path, index_col=0, encoding='latin1').index.to_list(), []
 
         # convert to list
         if isinstance(fields, str):

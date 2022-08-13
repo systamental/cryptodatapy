@@ -48,15 +48,10 @@ class ConvertParams():
             tickers = [ticker.lower() for ticker in data_req.tickers]
 
         elif self.data_source == 'tiingo':
-            if data_req.cat == 'fx' or data_req.cat == 'crypto':
-                tickers = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
-            else:
                 tickers = [ticker.lower() for ticker in data_req.tickers]
 
         elif self.data_source == 'investpy':
-            if data_req.cat == 'fx':
-                tickers = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
-            elif data_req.cat == 'eqty':
+            if data_req.cat == 'eqty':
                 for ticker in data_req.tickers:
                     if len(ticker) > 4:
                         try:
@@ -81,9 +76,6 @@ class ConvertParams():
                 except KeyError:
                     logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in"
                                     f" data catalog and try again.")
-
-        elif self.data_source == 'av-forex-daily':
-            tickers = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
 
         else:
             tickers = data_req.tickers
@@ -138,6 +130,17 @@ class ConvertParams():
                     pass
                 elif mkt_type == 'option':
                     pass
+
+        elif self.data_source == 'tiingo':
+                if data_req.cat == 'fx' or data_req.cat == 'crypto':
+                    mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
+
+        elif self.data_source == 'investpy':
+                if data_req.cat == 'fx':
+                    mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
+
+        elif self.data_source == 'av-forex-daily':
+            mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
 
         else:
             mkts_list = None
@@ -281,10 +284,10 @@ class ConvertParams():
                 exch = data_req.exch.lower()
 
         elif self.data_source == 'ccxt':
-            if data_req.exch is None:
-                exch = 'binance'
-            elif data_req.exch == 'binance' and data_req.mkt_type == 'perpetual_future':
+            if (data_req.exch is None or data_req.exch == 'binance') and data_req.mkt_type == 'perpetual_future':
                 exch = 'binanceusdm'
+            elif data_req.exch is None:
+                exch = 'binance'
             elif data_req.exch == 'kucoin' and data_req.mkt_type == 'perpetual_future':
                 exch = 'kucoinfutures'
             elif data_req.exch == 'huobi' and data_req.mkt_type == 'perpetual_future':

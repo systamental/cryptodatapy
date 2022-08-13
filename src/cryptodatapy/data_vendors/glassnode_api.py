@@ -356,5 +356,3 @@ class Glassnode(DataVendor):
         df = ConvertParams().convert_dtypes(df).sort_index()
 
         return df
-
-

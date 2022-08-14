@@ -61,13 +61,15 @@ class ConvertParams():
                                             f"data catalog and try again.")
                     else:
                         tickers.append(ticker.upper())
-            else:
+            elif data_req.cat != 'fx':
                 for ticker in data_req.tickers:
                     try:
                         tickers.append(tickers_df.loc[ticker, 'investpy_id'])
                     except KeyError:
                         logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
                                         f"data catalog and try again.")
+            else:
+                tickers = [ticker.upper() for ticker in data_req.tickers]
 
         elif self.data_source == 'dbnomics' or self.data_source == 'fred':
             for ticker in data_req.tickers:
@@ -476,6 +478,17 @@ class ConvertParams():
 
         return inst
 
+    def convert_pause_to_source(self, data_req: DataRequest) -> str:
+        """
+        Converts pause to data source to avoid rate limiting issues.
+        """
+        if self.data_source == 'investpy':
+            pause = 3
+        else:
+            pause = data_req.pause
+
+        return pause
+
     def convert_to_source(self, data_req: DataRequest) -> dict[str, Union[str, int, list[str]]]:
         """
         Converts data request parameters from CryptoDataPy to data source format.
@@ -494,7 +507,7 @@ class ConvertParams():
         inst = self.convert_inst_to_source(data_req)
         cat = data_req.cat
         trials = data_req.trials
-        pause = data_req.pause
+        pause = self.convert_pause_to_source(data_req)
         source_tickers = data_req.source_tickers
         source_freq = data_req.source_freq
         source_fields = data_req.source_fields

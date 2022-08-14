@@ -163,7 +163,6 @@ def test_get_rate_limit_info(ccxt) -> None:
     cx = ccxt
     assert cx.get_rate_limit_info(exchange='ftx')['ftx'] == 28.57, "Rate limit info is incorrect."
 
-
 def test_get_ohlcv(ccxt, datarequest) -> None:
     """
     Test get OHLCV data method.

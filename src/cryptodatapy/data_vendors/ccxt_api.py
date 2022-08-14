@@ -18,7 +18,7 @@ data_cred = DataCredentials()
 
 class CCXT(DataVendor):
     """
-    Retrieves data from CCXT API.
+    Retrieves data from CCXT library.
     """
 
     def __init__(

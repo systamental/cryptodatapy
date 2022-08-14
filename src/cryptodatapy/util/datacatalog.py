@@ -36,8 +36,8 @@ class DataCatalog():
     def get_tickers_metadata(tickers: Optional[Union[str, list[str]]] = None, country_id_2: Optional[str] = None,
                              country_id_3: Optional[str] = None, country_name: Optional[str] = None,
                              agg: Optional[str] = None, cat: Optional[str] = None, subcat: Optional[str] = None,
-                             mkt_type: Optional[str] = None, quote_ccy: Optional[str] = None,
-                             as_list=False) -> pd.DataFrame():
+                             mkt_type: Optional[str] = None, tenor: Optional[str] = None,
+                             quote_ccy: Optional[str] = None, as_list=False) -> pd.DataFrame():
         """
         Gets tickers metadata. Excludes individual equity tickers.
 
@@ -62,6 +62,8 @@ class DataCatalog():
             Tickers subcategory on which to filter tickers.
         mkt_type: str, {'spot', 'etf', 'perpetual_future', 'future', 'swap', 'option'}, optional, default None
             Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option' etc on which to filter tickers.
+        tenor: str, optional, default None
+            Tenor (duration) of asset on which to filter tickers.
         quote_ccy: str,  optional, default None
             Quote currency for base asset on which to filter tickers.
         as_list: bool, default False
@@ -101,6 +103,9 @@ class DataCatalog():
         # filter by mkt type
         if mkt_type is not None:
             tickers_df = tickers_df[tickers_df.mkt_type == mkt_type.lower()]
+        # filter by tenor
+        if tenor is not None:
+            tickers_df = tickers_df[tickers_df.tenor == tenor.upper()]
         # filter by quote ccy
         if quote_ccy is not None:
             tickers_df = tickers_df[tickers_df.quote_ccy == quote_ccy.upper()]

@@ -201,23 +201,25 @@ class DataVendor(ABC):
         return self._market_types
 
     @market_types.setter
-    def market_types(self, market_types: Union[str, list[str]]):
+    def market_types(self, market_types: Optional[Union[str, list[str]]]):
         """
         Sets a list of available market types for the data vendor.
         """
-        valid_mkt_types, mkt_types_list = ['spot', 'etf', 'perpetual_future', 'future', 'swap', 'option'], []
+        valid_mkt_types, mkt_types_list = [None, 'spot', 'etf', 'perpetual_future', 'future', 'swap', 'option'], []
 
-        if not isinstance(market_types, str) and not isinstance(market_types, list):
+        if market_types is None:
+            self._market_types = market_types
+        elif isinstance(market_types, str) and market_types in valid_mkt_types:
+            self._market_types = [market_types]
+        elif isinstance(market_types, list):
+            for mkt in market_types:
+                if mkt in valid_mkt_types:
+                    mkt_types_list.append(mkt)
+                else:
+                    raise ValueError(f"{mkt} is invalid. Valid market types are: {valid_mkt_types}")
+            self._market_types = mkt_types_list
+        else:
             raise TypeError("Market types must be a string or list of strings.")
-        if isinstance(market_types, str):
-            market_types = [market_types]
-        for mkt in market_types:
-            if mkt in valid_mkt_types:
-                mkt_types_list.append(mkt)
-            else:
-                raise ValueError(f"{mkt} is invalid. Valid market types are: {valid_mkt_types}")
-
-        self._market_types = mkt_types_list
 
     @property
     def fields(self):

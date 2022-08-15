@@ -34,8 +34,6 @@ class ConvertParams():
             tickers_path = f
         # get tickers file and create ticker list
         tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding='latin1'), []
-        # quote ccy
-        quote_ccy = self.convert_quote_ccy_to_source(data_req)
 
         if data_req.source_tickers is not None:
             tickers = data_req.source_tickers
@@ -48,7 +46,7 @@ class ConvertParams():
             tickers = [ticker.lower() for ticker in data_req.tickers]
 
         elif self.data_source == 'tiingo':
-                tickers = [ticker.lower() for ticker in data_req.tickers]
+            tickers = [ticker.lower() for ticker in data_req.tickers]
 
         elif self.data_source == 'investpy':
             if data_req.cat == 'eqty':
@@ -84,6 +82,30 @@ class ConvertParams():
 
         return tickers
 
+    def convert_fx_tickers(self, data_req: DataRequest) -> list[str]:
+        """
+        Converts from base and quote fx tickers to fx pairs tickers following fx quoting convention.
+        """
+        quote_ccy = self.convert_quote_ccy_to_source(data_req)
+        fx_pairs = []  # fx pairs list
+        # fx groups
+        base_ccys = ['EUR', 'GBP', 'AUD', 'NZD']
+        # g10_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK']
+        # dm_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK', 'SGD', 'ILS', 'HKD', ]
+        # em_fx = ['ARS', 'BRL', 'CHN', 'CLP', 'CNY', 'COP', 'IDR', 'INR', 'KRW', 'MYR', 'MXN', 'PEN', 'PHP', 'RUB',
+        #          'TRY', 'TWD', 'ZAR']
+
+        if data_req.cat == 'fx':
+            for ticker in data_req.tickers:
+                if ticker.upper() in base_ccys and quote_ccy.upper() == 'USD':
+                    fx_pairs.append(ticker.upper() + quote_ccy.upper())
+                elif quote_ccy.upper() == 'USD':
+                    fx_pairs.append(quote_ccy.upper() + ticker.upper())
+                else:
+                    fx_pairs.append(ticker.upper() + quote_ccy.upper())
+
+        return fx_pairs
+
     def convert_tickers_to_mkts_source(self, data_req: DataRequest) -> list[str]:
         """
         Converts from asset tickers to data source market tickers.
@@ -92,6 +114,10 @@ class ConvertParams():
         mkts_list = []
         tickers, mkt_type = data_req.tickers, data_req.mkt_type
         quote_ccy, exch = self.convert_quote_ccy_to_source(data_req), self.convert_exch_to_source(data_req)
+
+        if data_req.source_tickers is not None:
+            mkts_list = data_req.source_tickers
+            data_req.tickers = data_req.source_tickers
 
         if self.data_source == 'coinmetrics':
             for ticker in tickers:
@@ -134,15 +160,14 @@ class ConvertParams():
                     pass
 
         elif self.data_source == 'tiingo':
-                if data_req.cat == 'fx' or data_req.cat == 'crypto':
-                    mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
+            if data_req.cat == 'fx':
+                mkts_list = self.convert_fx_tickers(data_req)
+            elif data_req.cat == 'crypto':
+                mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
 
-        elif self.data_source == 'investpy':
-                if data_req.cat == 'fx':
-                    mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
-
-        elif self.data_source == 'av-forex-daily':
-            mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
+        elif self.data_source == 'investpy' or self.data_source == 'av-forex-daily':
+            if data_req.cat == 'fx':
+                mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
 
         else:
             mkts_list = None

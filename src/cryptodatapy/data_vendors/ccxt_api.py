@@ -34,7 +34,7 @@ class CCXT(DataVendor):
             frequencies: Optional[dict[str, list[str]]] = None,
             base_url: Optional[str] = None,
             api_key: Optional[str] = None,
-            max_obs_per_call: int = 10000,
+            max_obs_per_call: Optional[int] = 10000,
             rate_limit: Optional[Any] = None
     ):
         """
@@ -63,11 +63,11 @@ class CCXT(DataVendor):
             Dictionary of available frequencies, by exchange-frequencies key-value pairs,
             e.g. {'binance' :  '5min', '10min', '20min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm'}.
         base_url: str, optional, default None
-            Base url used in GET requests. If not provided, default is set to base_url stored in DataCredentials.
+            Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
         api_key: str, optional, default None
             Api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'. If not provided, default is set to
             api_key stored in DataCredentials.
-        max_obs_per_call: int
+        max_obs_per_call: int, optional, default 10,000
             Maximum number of observations returned per API call. If not provided, default is set to
             api_limit stored in DataCredentials.
         rate_limit: Any, optional, Default None
@@ -99,7 +99,7 @@ class CCXT(DataVendor):
     @staticmethod
     def get_exchanges_info(exchange=None, as_list=False) -> Union[pd.DataFrame, list[str]]:
         """
-        Gets list of supported exchanges.
+        Get exchanges info.
 
         Parameters
         ----------
@@ -150,13 +150,13 @@ class CCXT(DataVendor):
     @staticmethod
     def get_indexes_info():
         """
-        Gets indexes info.
+        Get indexes info.
         """
         return None
 
     def get_assets_info(self, exchange='binance', as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
         """
-        Gets available assets info.
+        Get available assets info.
 
         Parameters
         ----------
@@ -191,7 +191,7 @@ class CCXT(DataVendor):
     def get_markets_info(self, exchange='binance', quote_ccy=None, mkt_type=None,
                          as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
         """
-        Gets available markets info.
+        Get available markets info.
 
         Parameters
         ----------
@@ -241,7 +241,7 @@ class CCXT(DataVendor):
     @staticmethod
     def get_fields_info() -> list[str]:
         """
-        Gets fields info.
+        Get fields info.
 
         Parameters
         ----------
@@ -258,7 +258,7 @@ class CCXT(DataVendor):
 
     def get_frequencies_info(self, exchange='binance') -> dict[str, list[str]]:
         """
-        Gets frequencies info.
+        Get frequencies info.
 
         Parameters
         ----------
@@ -284,7 +284,7 @@ class CCXT(DataVendor):
 
     def get_rate_limit_info(self, exchange='binance'):
         """
-        Gets rate limit info.
+        Get rate limit info.
 
         Parameters
         ----------
@@ -344,7 +344,6 @@ class CCXT(DataVendor):
 
         # get OHLCV
         df = pd.DataFrame()  # empty df to store data
-
         # loop through tickers
         for cx_ticker, dr_ticker in zip(cx_data_req['mkts'], data_req.tickers):
 
@@ -355,7 +354,7 @@ class CCXT(DataVendor):
             # set number of attempts and bool for while loop
             attempts = 0
 
-            # run a while loop to pull ohlcv prices in case the attempt fails
+            # run a while loop in case the attempt fails
             while attempts < cx_data_req['trials']:
 
                 try:
@@ -520,7 +519,7 @@ class CCXT(DataVendor):
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Gets data specified by data request.
+        Get data specified by data request.
 
         Parameters
         data_req: DataRequest
@@ -565,14 +564,14 @@ class CCXT(DataVendor):
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Wrangles raw data response.
+        Wrangle raw data response.
 
         Parameters
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         data_resp: pd.DataFrame
-            Data response from data request.
+            Data response from API.
 
         Returns
         -------
@@ -603,4 +602,3 @@ class CCXT(DataVendor):
         df = ConvertParams().convert_dtypes(df)
 
         return df
-    

@@ -11,7 +11,7 @@ class DataRequest():
     """
     def __init__(
             self,
-            data_source: str = None,
+            data_source: Optional[str] = None,
             tickers: Union[str, list[str]] = 'btc',
             freq: str = 'd',
             quote_ccy: Optional[str] = None,
@@ -55,12 +55,12 @@ class DataRequest():
             End date for data request in 'YYYY-MM-DD' string, datetime or pd.Timestamp format,
             e.g. '2020-12-31' for January 31st 2020, datetime(2020,12,31) or pd.Timestamp('2020-12-31').
         fields: list or str, default 'close'
-            Fields for data request. OHLC bars/fields are most common fields for market data.
+            Fields for data request. OHLC bars/fields are the most common fields for market data.
         tz: str, optional, default None
             Timezone for the start/end dates in tz database format.
         inst: str, optional, default None
             Name of institution from which to pull fund data, e.g. 'grayscale', 'purpose', etc.
-        cat: str, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}
+        cat: str, optional, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}, default None
             Category of data, e.g. crypto, fx, rates, or macro.
         trials: int, optional, default 3
             Number of times to try data request.
@@ -305,22 +305,13 @@ class DataRequest():
         """
         Sets fields for data request.
         """
-        # get valid fields
-        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
-            fields_path = f
-        valid_fields, fields_list = pd.read_csv(fields_path, index_col=0, encoding='latin1').index.to_list(), []
-
-        # convert to list
         if isinstance(fields, str):
-            fields = [fields]
-        # check if valid field
-        for field in fields:
-            if field in valid_fields:
-                fields_list.append(field)
-            else:
-                raise ValueError(f"{field} is an invalid field. Valid fields are {valid_fields}.")
+            self._fields = [fields]
+        elif isinstance(fields, list):
+            self._fields = fields
+        else:
+            raise TypeError('Fields must be a string or list of strings.')
 
-        self._fields = fields_list
 
     @property
     def inst(self):
@@ -474,7 +465,7 @@ class DataRequest():
         if fields is None:
             self._source_fields = fields
         elif isinstance(fields, str):
-            self._source_fields = fields
+            self._source_fields = [fields]
         elif isinstance(fields, list):
             self._source_fields = fields
         else:

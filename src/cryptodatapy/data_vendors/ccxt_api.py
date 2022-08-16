@@ -24,18 +24,18 @@ class CCXT(DataVendor):
     def __init__(
             self,
             source_type: str = 'library',
-            categories: str = 'crypto',
-            exchanges: list[str] = None,
-            indexes: list[str] = None,
-            assets: dict[str, list[str]] = None,
-            markets: dict[str, list[str]] = None,
+            categories: Union[str, list[str]] = 'crypto',
+            exchanges: Optional[list[str]] = None,
+            indexes: Optional[list[str]] = None,
+            assets: Optional[dict[str, list[str]]] = None,
+            markets: Optional[dict[str, list[str]]] = None,
             market_types: list[str] = ['spot', 'future', 'perpetual_future', 'option'],
-            fields: list[str] = None,
-            frequencies: list[str] = None,
-            base_url: str = None,
-            api_key: str = None,
+            fields: Optional[list[str]] = None,
+            frequencies: Optional[dict[str, list[str]]] = None,
+            base_url: Optional[str] = None,
+            api_key: Optional[str] = None,
             max_obs_per_call: int = 10000,
-            rate_limit: Any = None
+            rate_limit: Optional[Any] = None
     ):
         """
         Constructor
@@ -44,34 +44,34 @@ class CCXT(DataVendor):
         ----------
         source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
             Type of data source, e.g. 'data_vendor', 'exchange', etc.
-        categories: list[str], {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
-            List of available categories, e.g. ['crypto', 'fx', 'alt']
-        exchanges: list
-            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX']
-        indexes: list
-            List of available indexes, e.g. ['mvda', 'bvin']
-        assets: list
-            List of available assets, e.g. ['btc', 'eth']
-        markets: list
-            List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+            List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
+        exchanges: list, optional, default None
+            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
+        indexes: list, optional, default None
+            List of available indexes, e.g. ['mvda', 'bvin'].
+        assets: dictionary, optional, default None
+            Dictionary of available assets, by exchange-assets key-value pairs, e.g. {'ftx': 'btc', 'eth', ...}.
+        markets: dictionary, optional, default None
+            Dictionary of available markets as base asset/quote currency pairs, by exchange-markets key-value pairs,
+             e.g. {'kraken': btcusdt', 'ethbtc', ...}.
         market_types: list
-            List of available market types/contracts, e.g. [spot', 'perpetual_future', 'future', 'option']
-        fields: list
-            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume']
-        frequencies: list
-            List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h',
-            '8h', 'd', 'w', 'm']
-        base_url: str
-            Cryptocompare base url used in GET requests, e.g. 'https://min-api.cryptocompare.com/data/'
-            If not provided, default is set to cryptocompare_base_url stored in DataCredentials
-        api_key: str
-            Cryptocompare api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'
-            If not provided, default is set to cryptocompare_api_key stored in DataCredentials
+            List of available market types, e.g. [spot', 'perpetual_future', 'future', 'option'].
+        fields: list, optional, default None
+            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume'].
+        frequencies: dict, optional, default None
+            Dictionary of available frequencies, by exchange-frequencies key-value pairs,
+            e.g. {'binance' :  '5min', '10min', '20min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm'}.
+        base_url: str, optional, default None
+            Base url used in GET requests. If not provided, default is set to base_url stored in DataCredentials.
+        api_key: str, optional, default None
+            Api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'. If not provided, default is set to
+            api_key stored in DataCredentials.
         max_obs_per_call: int
-            Maximum number of observations returns per API call.
-            If not provided, default is set to cryptocompare_api_limit storeed in DataCredentials
-        rate_limit: pd.DataFrame
-            Number of API calls made and left by frequency.
+            Maximum number of observations returned per API call. If not provided, default is set to
+            api_limit stored in DataCredentials.
+        rate_limit: Any, optional, Default None
+            Number of API calls made and left, by time frequency.
         """
 
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
@@ -82,10 +82,10 @@ class CCXT(DataVendor):
             self.exchanges = self.get_exchanges_info(as_list=True)
         # set assets
         if assets is None:
-            self.assets = self.get_assets_info(as_list=True)
+            self.assets = self.get_assets_info(as_dict=True)
         # set markets
         if markets is None:
-            self.markets = self.get_markets_info(as_list=True)
+            self.markets = self.get_markets_info(as_dict=True)
         # set fields
         if fields is None:
             self.fields = self.get_fields_info()
@@ -103,12 +103,15 @@ class CCXT(DataVendor):
 
         Parameters
         ----------
-        None
+        exchange: str, default None
+            Name of exchange.
+        as_list: bool, default False
+            Returns exchanges info as list.
 
         Returns
         -------
-        exch: list
-            List of supported exchanges.
+        exch: list or pd.DataFrame
+            List or dataframe with info for supported exchanges.
         """
         # list
         if as_list:
@@ -131,12 +134,12 @@ class CCXT(DataVendor):
                 try:
                     exch = getattr(ccxt, row[0])()
                     exch.load_markets()
-                except Exception as e:
+                except Exception:
                     exch_df.loc[row[0], :] = np.nan
                 for col in exch_df.columns:
                     try:
                         exch_df.loc[row[0], col] = str(getattr(exch, str(col)))
-                    except Exception as e:
+                    except Exception:
                         exch_df.loc[row[0], col] = np.nan
             # set index name
             exch_df.index.name = 'exchange'
@@ -149,21 +152,23 @@ class CCXT(DataVendor):
         """
         Gets indexes info.
         """
-        print("CCXT does not provide data for indexes. See other data vendors.")
+        return None
 
-    def get_assets_info(self, exchange='binance', as_list=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
+    def get_assets_info(self, exchange='binance', as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
         """
         Gets available assets info.
 
         Parameters
         ----------
         exchange: str, default 'binance'
-            Name of exchange for which to get available assets.
+            Name of exchange.
+        as_dict: bool, default False
+            Returns assets info as dictionary, with exchange-assets key-value pairs.
 
         Returns
         -------
-        assets: list
-            List of available assets.
+        assets: list or pd.DataFrame
+            List or dataframe with info for available assets.
         """
         # exch
         if exchange not in self.exchanges:
@@ -176,30 +181,33 @@ class CCXT(DataVendor):
         assets = pd.DataFrame(exch.currencies).T
         assets.index.name = 'ticker'
 
-        # list of assets
-        if as_list:
-            assets_dict = {}
-            assets_dict[exchange] = assets.index.to_list()
+        # dict of assets
+        if as_dict:
+            assets_dict = {exchange: assets.index.to_list()}
             assets = assets_dict
 
         return assets
 
     def get_markets_info(self, exchange='binance', quote_ccy=None, mkt_type=None,
-                         as_list=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
+                         as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
         """
         Gets available markets info.
 
         Parameters
         ----------
         exchange: str, default 'binance'
-            Name of exchange for which to get available assets.
-        as_dict: bool
+            Name of exchange.
+        quote_ccy: str, default None
+            Quote currency.
+        mkt_type: str,  {'spot', 'future', 'perpetual_future', 'option'}, default None
+            Market type.
+        as_dict: bool, default False
             Returns markets info as dict with exchange-markets key-values pair.
 
         Returns
         -------
-        markets: dataframe or dict
-            DataFrame with markets info or dict of available markets.
+        markets: dict or pd.DataFrame
+            Dictionary or dataframe with info for available markets, by exchange.
         """
         if exchange not in self.exchanges:
             raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
@@ -223,10 +231,9 @@ class CCXT(DataVendor):
         elif mkt_type == 'spot' or mkt_type == 'future' or mkt_type == 'option':
             markets = markets[markets.type == mkt_type]
 
-        # list of assets
-        if as_list:
-            mkts_dict = {}
-            mkts_dict[exchange] = markets.index.to_list()
+        # dict of assets
+        if as_dict:
+            mkts_dict = {exchange: markets.index.to_list()}
             markets = mkts_dict
 
         return markets
@@ -238,7 +245,6 @@ class CCXT(DataVendor):
 
         Parameters
         ----------
-        None
 
         Returns
         -------
@@ -258,13 +264,11 @@ class CCXT(DataVendor):
         ----------
         exchange: str, default 'binance'
             Name of exchange for which to get available assets.
-        as_list: bool
-            Returns markets info as list of markets.
 
         Returns
         -------
-        assets: dataframe or list
-            DataFrame with markets info or list of available markets.
+        assets: dictionary
+            Dictionary with info on available frequencies.
         """
         # exch
         if exchange not in self.exchanges:
@@ -274,8 +278,7 @@ class CCXT(DataVendor):
         markets = exch.load_markets()
 
         # freq dict
-        freq = {}
-        freq[exchange] = exch.timeframes
+        freq = {exchange: exch.timeframes}
 
         return freq
 
@@ -285,7 +288,7 @@ class CCXT(DataVendor):
 
         Parameters
         ----------
-        exchange: str
+        exchange: str, default 'binance'
             Name of exchange.
 
         Returns
@@ -305,7 +308,7 @@ class CCXT(DataVendor):
 
     def get_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to CCXT API for OHLCV data.
+        Get OHLCV data.
 
         Parameters
         ----------
@@ -334,7 +337,7 @@ class CCXT(DataVendor):
             raise ValueError(f"{data_req.freq} is not available for {cx_data_req['exch']}.")
 
         # check tickers
-        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_list=True)[cx_data_req['exch']]
+        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
         if not any(ticker.upper() in tickers for ticker in cx_data_req['tickers']):
             raise ValueError(f"Assets are not available. Check available assets for {cx_data_req['exch']}"
                              f" with get_assets_info method.")
@@ -365,7 +368,7 @@ class CCXT(DataVendor):
                     attempts += 1
                     sleep(exch.rateLimit / 1000)
                     logging.warning(f"Failed to pull data for {cx_ticker} after attempt #{str(attempts)}.")
-                    if attempts == 3:
+                    if attempts == cx_data_req['trials']:
                         logging.warning(
                             f"Failed to pull data from {data_req.exch} for {cx_ticker} after many attempts.")
                         break
@@ -401,7 +404,7 @@ class CCXT(DataVendor):
 
     def get_funding_rates(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to CCXT API for funding rate data.
+        Get funding rates data.
 
         Parameters
         ----------
@@ -411,7 +414,7 @@ class CCXT(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rate (col).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates (col).
         """
         # convert data request parameters to CCXT format
         cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
@@ -433,7 +436,7 @@ class CCXT(DataVendor):
                              f" Market type must be perpetual futures.")
 
         # check tickers
-        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_list=True)[cx_data_req['exch']]
+        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
         if not any(ticker.upper() in tickers for ticker in cx_data_req['tickers']):
             raise ValueError(f"Assets are not available. Check available assets for {cx_data_req['exch']}"
                              f" with asset property.")
@@ -462,7 +465,7 @@ class CCXT(DataVendor):
                     attempts += 1
                     sleep(exch.rateLimit / 1000)
                     logging.warning(f"Failed to pull data for {cx_ticker} after attempt #{str(attempts)}.")
-                    if attempts == 3:
+                    if attempts == cx_data_req['trials']:
                         logging.warning(
                             f"Failed to pull data from {data_req.exch} for {cx_ticker} after many attempts.")
                         break
@@ -496,27 +499,28 @@ class CCXT(DataVendor):
 
         return df
 
-    def get_oi(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Submits data request to CCXT API for open interest data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and open interest (col).
-        """
-        # TODO: get open interest
-
-        pass
+    # TODO: get open interest method
+    # def get_open_interest(self, data_req: DataRequest) -> pd.DataFrame:
+    #     """
+    #     Submits data request to CCXT API for open interest data.
+    #
+    #     Parameters
+    #     ----------
+    #     data_req: DataRequest
+    #         Parameters of data request in CryptoDataPy format.
+    #
+    #     Returns
+    #     -------
+    #     df: pd.DataFrame - MultiIndex
+    #         DataFrame with DatetimeIndex (level 0), ticker (level 1), and open interest (col).
+    #     """
+    #     # TODO: get open interest
+    #
+    #     pass
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Gets time series data specified by data request.
+        Gets data specified by data request.
 
         Parameters
         data_req: DataRequest
@@ -525,15 +529,17 @@ class CCXT(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and time series data for fields (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and data for selected fields (cols).
         """
+        # convert data request parameters to CCXT format
+        cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
         # empty df
         df = pd.DataFrame()
 
         # check fields
         fields_list = self.fields
         ohlcv_list = ['open', 'high', 'low', 'close', 'volume']
-        if not any(field in fields_list for field in cx_data_req['fields']):
+        if not any(field in fields_list for field in data_req.fields):
             raise ValueError(f"Fields are not available. Check available fields for with fields property.")
 
         # get OHLCV data
@@ -542,7 +548,7 @@ class CCXT(DataVendor):
             df = pd.concat([df, df0])
 
         # get funding rate data
-        if any(field == 'funding_rate' for field in cx_data_req['fields']):
+        if any(field == 'funding_rate' for field in data_req.fields):
             df1 = self.get_funding_rates(data_req)
             df = pd.concat([df, df1], axis=1)
 
@@ -559,19 +565,20 @@ class CCXT(DataVendor):
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Wrangles data response.
+        Wrangles raw data response.
 
         Parameters
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         data_resp: pd.DataFrame
-            Data response from GET request.
+            Data response from data request.
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled dataframe in tidy format.
+        df: pd.DataFrame - MultiIndex
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and data for selected fields (cols),
+            in tidy format.
         """
         # convert cols to cryptodatapy format
         df = ConvertParams(data_source='ccxt').convert_fields_to_lib(data_req, data_resp)
@@ -588,8 +595,7 @@ class CCXT(DataVendor):
         if 'funding_rate' in df.columns and data_req.freq in ['d', 'w', 'm', 'q', 'y']:
             df = (df.funding_rate + 1).cumprod().resample(data_req.freq).last().diff().to_frame()
 
-        # remove bad data
-        df = df[df != 0].dropna(how='all')  # 0 values
+        # remove dups and NaNs
         df = df[~df.index.duplicated()]  # duplicate rows
         df.dropna(how='all', inplace=True)  # remove entire row NaNs
 
@@ -597,3 +603,4 @@ class CCXT(DataVendor):
         df = ConvertParams().convert_dtypes(df)
 
         return df
+    

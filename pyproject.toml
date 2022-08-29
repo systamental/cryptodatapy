@@ -20,6 +20,8 @@ ccxt = ">=1.91.52"
 pandas-datareader = ">=0.10.0"
 selenium = {version = ">=4.3.0", python = "^3.9"}
 webdriver-manager = ">=3.8.3"
+statsmodels = ">=0.13.2"
+prophet = {version = "^1.1", python = "^3.9"}
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"

@@ -10,7 +10,6 @@ class ConvertParams():
     """
     Converts data request parameters from CryptoDataPy to data source format.
     """
-
     def __init__(
             self,
             data_source: str = None,
@@ -55,8 +54,9 @@ class ConvertParams():
                         try:
                             tickers.append(tickers_df.loc[ticker, 'investpy_id'])
                         except KeyError:
-                            logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
+                            logging.warning(f"{ticker} not found for {self.data_source} data source. Check tickers in "
                                             f"data catalog and try again.")
+                            data_req.tickers.remove(ticker)
                     else:
                         tickers.append(ticker.upper())
             elif data_req.cat != 'fx':
@@ -66,6 +66,7 @@ class ConvertParams():
                     except KeyError:
                         logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in "
                                         f"data catalog and try again.")
+                        data_req.tickers.remove(ticker)
             else:
                 tickers = [ticker.upper() for ticker in data_req.tickers]
 
@@ -76,6 +77,7 @@ class ConvertParams():
                 except KeyError:
                     logging.warning(f"{ticker} not found for {self.data_source} source. Check tickers in"
                                     f" data catalog and try again.")
+                    data_req.tickers.remove(ticker)
 
         else:
             tickers = data_req.tickers
@@ -98,11 +100,11 @@ class ConvertParams():
         if data_req.cat == 'fx':
             for ticker in data_req.tickers:
                 if ticker.upper() in base_ccys and quote_ccy.upper() == 'USD':
-                    fx_pairs.append(ticker.upper() + quote_ccy.upper())
+                    fx_pairs.append(ticker.upper() + '/' + quote_ccy.upper())
                 elif quote_ccy.upper() == 'USD':
-                    fx_pairs.append(quote_ccy.upper() + ticker.upper())
+                    fx_pairs.append(quote_ccy.upper() + '/'+ ticker.upper())
                 else:
-                    fx_pairs.append(ticker.upper() + quote_ccy.upper())
+                    fx_pairs.append(ticker.upper() + '/' + quote_ccy.upper())
 
         return fx_pairs
 
@@ -159,15 +161,16 @@ class ConvertParams():
                 elif mkt_type == 'option':
                     pass
 
-        elif self.data_source == 'tiingo':
+        elif self.data_source == 'investpy' or self.data_source == 'av-forex-daily':
             if data_req.cat == 'fx':
                 mkts_list = self.convert_fx_tickers(data_req)
             elif data_req.cat == 'crypto':
                 mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
 
-        elif self.data_source == 'investpy' or self.data_source == 'av-forex-daily':
+        elif self.data_source == 'tiingo':
             if data_req.cat == 'fx':
-                mkts_list = [ticker.upper() + '/' + quote_ccy for ticker in data_req.tickers]
+                fx_list = self.convert_fx_tickers(data_req)
+                mkts_list = [ticker.lower().replace('/', '') for ticker in fx_list]
 
         else:
             mkts_list = None

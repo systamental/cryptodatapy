@@ -34,6 +34,7 @@ def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
         logging.warning(e)
         logging.warning('Credentials could not be set.')
 
+
 def get_credential(cred_key: str) -> str:
     """
     Gets value for data credential key, e.g. api keys, api secrets, db name, ....
@@ -107,3 +108,4 @@ class DataCredentials:
 
     # search URLs
     dbnomics_search_url: str = 'https://db.nomics.world/'
+    glassnode_search_url: str = 'https://docs.glassnode.com/general-info/on-chain-data'

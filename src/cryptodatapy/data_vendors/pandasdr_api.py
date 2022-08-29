@@ -19,7 +19,7 @@ data_cred = DataCredentials()
 
 class PandasDataReader(DataVendor):
     """
-    Retrieves data from Pandas Data Reader.
+    Retrieves data from Pandas Data Reader API.
     """
 
     def __init__(
@@ -27,9 +27,9 @@ class PandasDataReader(DataVendor):
             source_type: str = 'library',
             categories: list[str] = ['fx', 'rates', 'eqty', 'credit', 'macro'],
             exchanges: list[str] = None,
-            assets: list[str] = None,
-            indexes: list[str] = None,
-            markets: list[str] = None,
+            indexes: dict[str, list[str]] = None,
+            assets: dict[str, list[str]] = None,
+            markets: dict[str, list[str]] = None,
             market_types: list[str] = ['spot'],
             fields: dict[str, list[str]] = None,
             frequencies: dict[str, list[str]] = {
@@ -40,51 +40,53 @@ class PandasDataReader(DataVendor):
                 'credit': ['d', 'w', 'm', 'q', 'y'],
                 'macro': ['d', 'w', 'm', 'q', 'y']
             },
-            base_url: str = None,
-            api_key: dict = {'fred': None, 'yahoo': None,
-                             'av-daily': data_cred.av_api_key, 'av-forex-daily': data_cred.av_api_key},
-            max_obs_per_call: int = None,
-            rate_limit: str = None
+            base_url: Optional[str] = None,
+            api_key: dict = {'fred': None, 'yahoo': None, 'av-daily': data_cred.av_api_key,
+                             'av-forex-daily': data_cred.av_api_key},
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[Any] = None
     ):
         """
         Constructor
 
         Parameters
         ----------
-        source_type: string, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
+        source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
             Type of data source, e.g. 'data_vendor', 'exchange', etc.
-        categories: list, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
-            List of available categories, e.g. ['crypto', 'fx', 'alt']
-        exchanges: list
-            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX']
-        vendors: list
-            List of available data vendors, e.g. ['IMF Cross Country Macroeconomic Statistics']
-        assets: list
-            List of available assets, e.g. ['btc', 'eth']
-        indexes: list
-            List of available indexes, e.g. ['mvda', 'bvin']
-        markets: list
-            List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+            List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
+        exchanges: list, optional, default None
+            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
+        indexes: dictionary, optional, default None
+            Dictionary of available indexes, by cat-indexes key-value pairs,  e.g. [{'eqty': ['SPX', 'N225'],
+            'rates': [.... , ...}.
+        assets: dictionary, optional, default None
+            Dictionary of available assets, by cat-assets key-value pairs,  e.g. {'rates': ['Germany 2Y', 'Japan 10Y',
+            ...], 'eqty: ['SPY', 'TLT', ...], ...}.
+        markets: dictionary, optional, default None
+            Dictionary of available markets, by cat-markets key-value pairs,  e.g. [{'fx': ['EUR/USD', 'USD/JPY', ...],
+            'crypto': ['BTC/ETH', 'ETH/USDT', ...}.
         market_types: list
-            List of available market types/contracts, e.g. [spot', 'perpetual_future', 'future', 'option']
-        fields: list
-            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume']
-        frequencies: list
-            List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h',
-            '8h', 'd', 'w', 'm']
-        base_url: str
-            Base url used in GET requests. If not provided, default is set to base url stored in DataCredentials.
-        api_key: str
-            Api key. If not provided, default is set to cryptocompare_api_key stored in DataCredentials.
-        max_obs_per_call: int
-            Maximum number of observations returns per API call.
-        rate_limit: pd.DataFrame or dict
-            Number of API calls made and left by frequency.
+            List of available market types e.g. [spot', 'perpetual_future', 'future', 'option'].
+        fields: dictionary, optional, default None
+            Dictionary of available fields, by cat-fields key-value pairs,  e.g. {'cmdty': ['date', 'open', 'high',
+            'low', 'close', 'volume'], 'macro': ['actual', 'previous', 'expected', 'surprise']}
+        frequencies: dictionary
+            Dictionary of available frequencies, by cat-frequencies key-value pairs, e.g. {'fx':
+            ['d', 'w', 'm', 'q', 'y'], 'rates': ['d', 'w', 'm', 'q', 'y'], 'eqty': ['d', 'w', 'm', 'q', 'y'], ...}.
+        base_url: str, optional, default None
+            Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
+        api_key: dictionary
+            Api keys for data source by source-api key key-value pairs, e.g. {'av-daily' :'dcf13983adf7dfa79a0df',
+            'fred' : dcf13983adf7dfa79a0df', ...}. If not provided, default is set to api_key stored in DataCredentials.
+        max_obs_per_call: int, optional, default None
+            Maximum number of observations returned per API call. If not provided, default is set to
+            api_limit stored in DataCredentials.
+        rate_limit: Any, optional, default None
+            Number of API calls made and left, by time frequency.
         """
-
-        DataVendor.__init__(self, source_type, categories, exchanges, assets, indexes, markets, market_types, fields,
+        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-
         # set fields
         if fields is None:
             self.fields = self.get_fields_info()
@@ -92,54 +94,54 @@ class PandasDataReader(DataVendor):
     @staticmethod
     def get_vendors_info():
         """
-        Gets available vendors info.
+        Get vendors info.
         """
         print(f"See providers page to find available vendors: {data_cred.pdr_vendors_url} ")
 
     @staticmethod
     def get_exchanges_info():
         """
-        Gets exchanges info.
+        Get exchanges info.
         """
         print(f"See specific data vendor for available exchanges: {data_cred.pdr_vendors_url}")
 
     @staticmethod
-    def get_assets_info():
-        """
-        Gets available assets info.
-        """
-        print(f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} ")
-
-    @staticmethod
     def get_indexes_info():
         """
-        Gets available indexes info.
+        Get indexes info.
         """
         print(f"See specific data vendor for available indexes: {data_cred.pdr_vendors_url}")
 
     @staticmethod
+    def get_assets_info():
+        """
+        Get assets info.
+        """
+        print(f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} ")
+
+    @staticmethod
     def get_markets_info():
         """
-        Gets market pairs info.
+        Get markets info.
         """
         print(f"See specific data vendor for available markets: {data_cred.pdr_vendors_url}")
 
     @staticmethod
-    def get_fields_info(data_type: Optional[str] = 'market', cat=None) -> dict[str, list[str]]:
+    def get_fields_info(data_type: Optional[str] = 'market', cat: Optional[str] = None) -> dict[str, list[str]]:
         """
-        Gets fields info.
+        Get fields info.
 
         Parameters
         ----------
         data_type: str, {'market', 'on-chain', 'off-chain'}, default 'market'
             Type of data.
-        cat: str, {'crypto', 'eqty', 'fx', 'rates', 'cmdty', 'macro'}, default None
+        cat: str, {'crypto', 'eqty', 'fx', 'rates', 'cmdty', 'macro'}, optional, default None
             Asset class or time series category.
 
         Returns
         -------
-        fields_list: dict
-            Info on available fields, by category.
+        fields: dictionary
+            Dictionary with info on available fields, by category.
         """
         if data_type == 'on-chain':
             raise ValueError("Pandas Data Reader is a market data aggregator of market and off-chain data.")
@@ -166,16 +168,26 @@ class PandasDataReader(DataVendor):
     @staticmethod
     def get_rate_limit_info():
         """
-        Gets rate limit info.
+        Get rate limit info.
         """
         print(f"See specific data vendor for rate limits: {data_cred.pdr_vendors_url}")
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to pandas reader web API.
+        Get market (eqty, fx, rates, cmdty) and/or off-chain (macro) data.
+
+        Parameters
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market or macro series
+            for selected fields (cols), in tidy format.
         """
         if data_req.data_source is None:
-            raise ValueError("Data source cannot be None. Specify data source for data request.")
+            raise ValueError("Data source cannot be None. Select a data source for the data request.")
 
         # convert data request parameters to InvestPy format
         pdr_data_req = ConvertParams(data_source=data_req.data_source).convert_to_source(data_req)
@@ -188,28 +200,38 @@ class PandasDataReader(DataVendor):
             raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError(f"Invalid fields. Valide data fields are: {self.fields}.")
+            raise ValueError(f"Invalid fields. Valid data fields are: {self.fields}.")
+
+        # emtpy df
+        df0, df1 = pd.DataFrame(), pd.DataFrame()
 
         # get fred data
         if data_req.data_source == 'fred' or data_req.data_source == 'yahoo':
-            df0 = web.DataReader(pdr_data_req['tickers'], data_req.data_source, pdr_data_req['start_date'],
-                                 pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
-            # wrangle data resp
-            df1 = self.wrangle_data_resp(data_req, df0)
+
+            try:
+                df0 = web.DataReader(pdr_data_req['tickers'], data_req.data_source, pdr_data_req['start_date'],
+                                     pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+            except Exception as e:
+                logging.warning(e)
+                logging.warning(f"Failed to get data for: {pdr_data_req['tickers']}.")
+            else:
+                # wrangle data resp
+                df1 = self.wrangle_data_resp(data_req, df0)
 
         # get alpha vantage data
-        elif data_req.data_source == 'av-daily' or data_req.data_source == 'av-forex-daily':
+        elif data_req.data_source == 'av-daily':
 
-            # emtpy df
-            df1 = pd.DataFrame()
-            # get data from dbnomics
+            # get data from dbnomics, loop through tickers
             for pdr_ticker, dr_ticker in zip(pdr_data_req['tickers'], data_req.tickers):
 
-                # loop through tickers
-                df0 = web.DataReader(pdr_ticker, data_req.data_source, pdr_data_req['start_date'],
-                                     pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
-                # wrangle data resp
-                if not df0.empty:
+                try:
+                    df0 = web.DataReader(pdr_ticker, data_req.data_source, pdr_data_req['start_date'],
+                                         pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+                except Exception as e:
+                    logging.warning(e)
+                    logging.warning(f"Failed to get data for: {dr_ticker}.")
+
+                else:
                     # wrangle data resp
                     df0 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
@@ -221,7 +243,29 @@ class PandasDataReader(DataVendor):
                     # stack ticker dfs
                     df1 = pd.concat([df1, df0])
 
-                    # check if df empty
+        # get alpha vantage data
+        elif data_req.data_source == 'av-forex-daily':
+
+            # get data from dbnomics, loop through tickers
+            for pdr_ticker, dr_ticker in zip(pdr_data_req['mkts'], data_req.tickers):
+
+                try:
+                    df0 = web.DataReader(pdr_ticker, data_req.data_source, pdr_data_req['start_date'],
+                                         pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+                except Exception as e:
+                    logging.warning(e)
+                    logging.warning(f"Failed to get data for: {dr_ticker}.")
+
+                else:
+                    # wrangle data resp
+                    df0 = self.wrangle_data_resp(data_req, df0)
+                    # add ticker to index
+                    df0['ticker'] = pdr_ticker.replace('/', '')
+                    df0.set_index(['ticker'], append=True, inplace=True)
+                    # stack ticker dfs
+                    df1 = pd.concat([df1, df0])
+
+        # check if df empty
         if df1.empty:
             raise Exception('No data returned. Check data request parameters and try again.')
 
@@ -231,24 +275,25 @@ class PandasDataReader(DataVendor):
         # type conversion
         df = ConvertParams().convert_dtypes(df)
 
-        return df
+        return df.sort_index()
 
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Wrangles data response.
+        Wrangle data response.
 
         Parameters
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         data_resp: pd.DataFrame
-            Data response from GET request.
+            Data response from data request.
 
         Returns
         -------
         df: pd.DataFrame
-            Wrangled dataframe in tidy format.
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for market or macro series
+            for selected fields (cols), in tidy format.
         """
         df = data_resp.copy()  # copy data resp
 
@@ -288,7 +333,8 @@ class PandasDataReader(DataVendor):
             # set index
             df.set_index(['date', 'ticker'], inplace=True)
 
-            # TODO: wrangle data responses from other data sources
+        # TODO: wrangle data responses from other data sources
+
         else:
             pass
 

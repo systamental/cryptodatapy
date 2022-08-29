@@ -18,9 +18,8 @@ data_cred = DataCredentials()
 
 class CCXT(DataVendor):
     """
-    Retrieves data from CCXT library.
+    Retrieves data from CCXT API.
     """
-
     def __init__(
             self,
             source_type: str = 'library',
@@ -73,10 +72,8 @@ class CCXT(DataVendor):
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
         """
-
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-
         # set exchanges
         if exchanges is None:
             self.exchanges = self.get_exchanges_info(as_list=True)
@@ -97,7 +94,7 @@ class CCXT(DataVendor):
             self.rate_limit = self.get_rate_limit_info()
 
     @staticmethod
-    def get_exchanges_info(exchange=None, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    def get_exchanges_info(exchange: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
         Get exchanges info.
 
@@ -111,7 +108,7 @@ class CCXT(DataVendor):
         Returns
         -------
         exch: list or pd.DataFrame
-            List or dataframe with info for supported exchanges.
+            List or dataframe with info on supported exchanges.
         """
         # list
         if as_list:
@@ -154,9 +151,10 @@ class CCXT(DataVendor):
         """
         return None
 
-    def get_assets_info(self, exchange='binance', as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
+    def get_assets_info(self, exchange: str = 'binance', as_dict: bool = False) -> \
+            Union[pd.DataFrame, dict[str, list[str]]]:
         """
-        Get available assets info.
+        Get assets info.
 
         Parameters
         ----------
@@ -167,8 +165,8 @@ class CCXT(DataVendor):
 
         Returns
         -------
-        assets: list or pd.DataFrame
-            List or dataframe with info for available assets.
+        assets: dictionary or pd.DataFrame
+            Dictionary or dataframe with info on available assets.
         """
         # exch
         if exchange not in self.exchanges:
@@ -188,26 +186,27 @@ class CCXT(DataVendor):
 
         return assets
 
-    def get_markets_info(self, exchange='binance', quote_ccy=None, mkt_type=None,
-                         as_dict=False) -> Union[pd.DataFrame, dict[str, list[str]]]:
+    def get_markets_info(self, exchange: str = 'binance', quote_ccy: Optional[str] = None,
+                         mkt_type: Optional[str] = None, as_dict: bool = False) -> \
+            Union[dict[str, list[str]], pd.DataFrame]:
         """
-        Get available markets info.
+        Get markets info.
 
         Parameters
         ----------
         exchange: str, default 'binance'
             Name of exchange.
-        quote_ccy: str, default None
+        quote_ccy: str, optional, default None
             Quote currency.
-        mkt_type: str,  {'spot', 'future', 'perpetual_future', 'option'}, default None
+        mkt_type: str,  {'spot', 'future', 'perpetual_future', 'option'}, optional, default None
             Market type.
         as_dict: bool, default False
             Returns markets info as dict with exchange-markets key-values pair.
 
         Returns
         -------
-        markets: dict or pd.DataFrame
-            Dictionary or dataframe with info for available markets, by exchange.
+        markets: dictionary or pd.DataFrame
+            Dictionary or dataframe with info on available markets, by exchange.
         """
         if exchange not in self.exchanges:
             raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
@@ -248,7 +247,7 @@ class CCXT(DataVendor):
 
         Returns
         -------
-        fields_list: list
+        fields: list
             List of available fields.
         """
         # list of fields
@@ -256,7 +255,7 @@ class CCXT(DataVendor):
 
         return fields
 
-    def get_frequencies_info(self, exchange='binance') -> dict[str, list[str]]:
+    def get_frequencies_info(self, exchange: str = 'binance') -> dict[str, list[str]]:
         """
         Get frequencies info.
 
@@ -267,7 +266,7 @@ class CCXT(DataVendor):
 
         Returns
         -------
-        assets: dictionary
+        freq: dictionary
             Dictionary with info on available frequencies.
         """
         # exch
@@ -282,7 +281,7 @@ class CCXT(DataVendor):
 
         return freq
 
-    def get_rate_limit_info(self, exchange='binance'):
+    def get_rate_limit_info(self, exchange: str = 'binance') -> dict[str]:
         """
         Get rate limit info.
 
@@ -293,8 +292,8 @@ class CCXT(DataVendor):
 
         Returns
         -------
-        rate_limit: int
-            Required minimal delay between HTTP requests to the same exchange in milliseconds.
+        rate_limit: dictionary
+            Dictionary with exchange and required minimal delay between HTTP requests that exchange in milliseconds.
         """
         # exch
         if exchange not in self.exchanges:
@@ -318,7 +317,7 @@ class CCXT(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV data (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV values (cols).
         """
         # convert data request parameters to CCXT format
         cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
@@ -413,7 +412,7 @@ class CCXT(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates (col).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates values (col).
         """
         # convert data request parameters to CCXT format
         cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
@@ -522,13 +521,14 @@ class CCXT(DataVendor):
         Get data specified by data request.
 
         Parameters
+        ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
 
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and data for selected fields (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols).
         """
         # convert data request parameters to CCXT format
         cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
@@ -537,11 +537,11 @@ class CCXT(DataVendor):
 
         # check fields
         fields_list = self.fields
-        ohlcv_list = ['open', 'high', 'low', 'close', 'volume']
         if not any(field in fields_list for field in data_req.fields):
             raise ValueError(f"Fields are not available. Check available fields for with fields property.")
 
         # get OHLCV data
+        ohlcv_list = ['open', 'high', 'low', 'close', 'volume']
         if any(field in ohlcv_list for field in cx_data_req['fields']):
             df0 = self.get_ohlcv(data_req)
             df = pd.concat([df, df0])
@@ -576,7 +576,7 @@ class CCXT(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and data for selected fields (cols),
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols),
             in tidy format.
         """
         # convert cols to cryptodatapy format

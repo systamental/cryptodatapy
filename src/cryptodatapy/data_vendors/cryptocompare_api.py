@@ -18,22 +18,21 @@ class CryptoCompare(DataVendor):
     """
     Retrieves data from CryptoCompare API.
     """
-
     def __init__(
             self,
             source_type: str = 'data_vendor',
             categories: list[str] = ['crypto'],
-            exchanges: list[str] = None,
-            assets: list[str] = None,
-            indexes: list[str] = None,
-            markets: list[str] = None,
+            exchanges: Optional[list[str]] = None,
+            indexes: Optional[list[str]] = None,
+            assets: Optional[list[str]] = None,
+            markets: Optional[list[str]] = None,
             market_types: list[str] = ['spot'],
-            fields: list[str] = None,
+            fields: Optional[list[str]] = None,
             frequencies: list[str] = ['1min', '1h', 'd'],
             base_url: str = data_cred.cryptocompare_base_url,
             api_key: str = data_cred.cryptocompare_api_key,
             max_obs_per_call: int = 2000,
-            rate_limit: pd.DataFrame = None
+            rate_limit: Optional[pd.DataFrame] = None
     ):
         """
         Constructor
@@ -42,39 +41,36 @@ class CryptoCompare(DataVendor):
         ----------
         source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
             Type of data source, e.g. 'data_vendor', 'exchange', etc.
-        categories: list[str], {'crypto', 'fx', 'rates', 'equities', 'commodities', 'credit', 'macro', 'alt'}
-            List of available categories, e.g. ['crypto', 'fx', 'alt']
-        exchanges: list
-            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX'].
-        assets: list
-            List of available assets, e.g. ['btc', 'eth'].
-        indexes: list
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+            List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
+        exchanges: list, optional, default None
+            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
+        indexes: list, optional, default None
             List of available indexes, e.g. ['mvda', 'bvin'].
-        markets: list
+        assets: list, optional, default None
+            List of available assets, e.g. ['btc', 'eth'].
+        markets: list, optional, default None
             List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc'].
         market_types: list
-            List of available market types, e.g. [spot', 'perpetual_future', 'future', 'option']
-        fields: list
-            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume']
+            List of available market types, e.g. [spot', 'perpetual_future', 'future', 'option'].
+        fields: list, optional, default None
+            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume'].
         frequencies: list
             List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h',
             '8h', 'd', 'w', 'm']
         base_url: str
-            Cryptocompare base url used in GET requests, e.g. 'https://min-api.cryptocompare.com/data/'
-            If not provided, default is set to cryptocompare_base_url stored in DataCredentials
+            Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
         api_key: str
-            Cryptocompare api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'
-            If not provided, default is set to cryptocompare_api_key stored in DataCredentials
-        max_obs_per_call: int
-            Maximum number of observations returns per API call.
-            If not provided, default is set to cryptocompare_api_limit storeed in DataCredentials
-        rate_limit: pd.DataFrame
-            Number of API calls made and left by frequency.
+            Api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'. If not provided, default is set to
+            api_key stored in DataCredentials.
+        max_obs_per_call: int, default 2,000
+            Maximum number of observations returned per API call. If not provided, default is set to
+            api_limit stored in DataCredentials.
+        rate_limit: pd.DataFrame, optional, Default None
+            Number of API calls made and left, by time frequency.
         """
-
-        DataVendor.__init__(self, source_type, categories, exchanges, assets, indexes, markets, market_types, fields,
+        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-
         # api key
         if api_key is None:
             raise TypeError(f"Set your api key. Alternatively, you can use the function "
@@ -83,12 +79,12 @@ class CryptoCompare(DataVendor):
         # set exchanges
         if exchanges is None:
             self.exchanges = self.get_exchanges_info(as_list=True)
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(as_list=True)
         # set indexes
         if indexes is None:
             self.indexes = self.get_indexes_info(as_list=True)
+        # set assets
+        if assets is None:
+            self.assets = self.get_assets_info(as_list=True)
         # set markets
         if markets is None:
             self.markets = self.get_markets_info(as_list=True)
@@ -99,19 +95,19 @@ class CryptoCompare(DataVendor):
         if rate_limit is None:
             self.rate_limit = self.get_rate_limit_info()
 
-    def get_exchanges_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    def get_exchanges_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
-        Gets exchanges info.
+        Get exchanges info.
 
         Parameters
         ----------
         as_list: bool, default False
-            If True, returns available exchanges as list.
+            Returns exchanges info as list.
 
         Returns
         -------
-        indexes: pd.DataFrame or list
-            Info on available exchanges.
+        exch: list or pd.DataFrame
+            List or dataframe with info for supported exchanges.
         """
         # set number of attempts and bool for while loop
         attempts = 0
@@ -132,8 +128,7 @@ class CryptoCompare(DataVendor):
                 sleep(0.1)
                 logging.warning(f"Failed to get exchanges info after attempt #{str(attempts)}.")
                 if attempts == 3:
-                    logging.warning(
-                        f"Failed to get exchanges info from Cryptocompare after many attempts.")
+                    logging.warning("Failed to get exchanges info after many attempts.")
                     break
 
             else:
@@ -146,67 +141,19 @@ class CryptoCompare(DataVendor):
 
                 return exch
 
-    def get_assets_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    def get_indexes_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
-        Gets available assets info.
+        Get indexes info.
 
         Parameters
         ----------
         as_list: bool, default False
-            If True, returns available assets as list.
+            Returns indexes info as list.
 
         Returns
         -------
-        assets: pd.DataFrame or list
-            Info on available assets.
-        """
-        # set number of attempts and bool for while loop
-        attempts = 0
-        # run a while loop in case the attempt fails
-        while attempts < 3:
-
-            try:  # try get request
-                url = self.base_url + 'all/coinlist'
-                params = {
-                    'api_key': self.api_key
-                }
-                r = requests.get(url, params=params)
-                assert r.json()['Response'] == 'Success'
-
-            except AssertionError as e:
-                logging.warning(e)
-                attempts += 1
-                sleep(0.1)
-                logging.warning(f"Failed to get asset info after attempt #{str(attempts)}.")
-                if attempts == 3:
-                    logging.warning(
-                        f"Failed to get asset info from Cryptocompare after many attempts.")
-                    break
-
-            else:
-                # format response
-                assets = pd.DataFrame(r.json()['Data']).T
-                # add index name
-                assets.index.name = 'ticker'
-                # asset list
-                if as_list:
-                    assets = list(assets.index)
-
-                return assets
-
-    def get_indexes_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
-        """
-        Gets indexes info.
-
-        Parameters
-        ----------
-        as_list: bool, default False
-            If True, returns available indexes as list.
-
-        Returns
-        -------
-        indexes: pd.DataFrame or list
-            Info on available indexes.
+        indexes: list or pd.DataFrame
+            List or dataframe with info on available indexes.
         """
         # set number of attempts and bool for while loop
         attempts = 0
@@ -227,8 +174,7 @@ class CryptoCompare(DataVendor):
                 sleep(0.1)
                 logging.warning(f"Failed to get indexes info after attempt #{str(attempts)}.")
                 if attempts == 3:
-                    logging.warning(
-                        f"Failed to get indexes info from Cryptocompare after many attempts.")
+                    logging.warning("Failed to get indexes info after many attempts.")
                     break
 
             else:
@@ -242,9 +188,56 @@ class CryptoCompare(DataVendor):
 
                 return indexes
 
-    def get_top_market_cap_assets(self, n=100) -> list[str]:
+    def get_assets_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
-        Gets list of top assets by market cap.
+        Get assets info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns assets info as list.
+
+        Returns
+        -------
+        assets: list or pd.DataFrame
+            List or dataframe with info on available assets.
+        """
+        # set number of attempts and bool for while loop
+        attempts = 0
+        # run a while loop in case the attempt fails
+        while attempts < 3:
+
+            try:  # try get request
+                url = self.base_url + 'all/coinlist'
+                params = {
+                    'api_key': self.api_key
+                }
+                r = requests.get(url, params=params)
+                assert r.json()['Response'] == 'Success'
+
+            except AssertionError as e:
+                logging.warning(e)
+                attempts += 1
+                sleep(0.1)
+                logging.warning(f"Failed to get asset info after attempt #{str(attempts)}.")
+                if attempts == 3:
+                    logging.warning("Failed to get asset info after many attempts.")
+                    break
+
+            else:
+                # format response
+                assets = pd.DataFrame(r.json()['Data']).T
+                # add index name
+                assets.index.name = 'ticker'
+                # asset list
+                if as_list:
+                    assets = list(assets.index)
+
+                return assets
+
+    def get_top_market_cap_assets(self, n: int = 100) -> list[str]:
+        """
+        Get list of top assets by market cap.
 
         Parameters
         ----------
@@ -281,8 +274,7 @@ class CryptoCompare(DataVendor):
                 sleep(0.1)
                 logging.warning(f"Failed to get top market cap assets after attempt #{str(attempts)}.")
                 if attempts == 3:
-                    logging.warning(
-                        f"Failed to get top market cap assets from Cryptocompare after many attempts.")
+                    logging.warning("Failed to get top market cap assets after many attempts.")
                     break
 
             else:
@@ -300,19 +292,19 @@ class CryptoCompare(DataVendor):
 
                 return tickers
 
-    def get_markets_info(self, as_list=False) -> Union[dict, list[str]]:
+    def get_markets_info(self, as_list: bool = False) -> Union[list[str], dict[str]]:
         """
-        Gets market pairs info.
+        Get markets info.
 
         Parameters
         ----------
         as_list: bool, default False
-            If True, returns available market pairs as list.
+            Returns markets info as list.
 
         Returns
         -------
         mkts: dictionary or list
-            Info on available market pairs.
+            Dictionary or list with info on available markets.
         """
         # set number of attempts and bool for while loop
         attempts = 0
@@ -333,8 +325,7 @@ class CryptoCompare(DataVendor):
                 sleep(0.1)
                 logging.warning(f"Failed to get markets info after attempt #{str(attempts)}.")
                 if attempts == 3:
-                    logging.warning(
-                        f"Failed to get markets info from Cryptocompare after many attempts.")
+                    logging.warning("Failed to get markets info after many attempts.")
                     break
 
             else:
@@ -354,19 +345,19 @@ class CryptoCompare(DataVendor):
 
                 return mkts
 
-    def get_onchain_info(self, as_list=False) -> Union[pd.DataFrame, list[str]]:
+    def get_onchain_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
-        Gets on-chain data info.
+        Get on-chain data info.
 
         Parameters
         ----------
         as_list: bool, default False
-            If True, returns available on-chain data as list.
+            Returns available on-chain data as list.
 
         Returns
         -------
-        onchain: pd.DataFrame or list
-            Info on available on-chain data.
+        onchain: list or pd.DataFrame
+            list or dataframe with info on available on-chain data.
         """
         # set number of attempts and bool for while loop
         attempts = 0
@@ -404,9 +395,9 @@ class CryptoCompare(DataVendor):
 
                 return onchain
 
-    def get_fields_info(self, data_type: Optional[str]) -> list[str]:
+    def get_fields_info(self, data_type: Optional[str] = None) -> list[str]:
         """
-        Gets fields info.
+        Get fields info.
 
         Parameters
         ----------
@@ -416,9 +407,9 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         fields_list: list
-            Info on available fields.
+            List of available fields.
         """
-        ohlcv_list, onchain_list, social_list = ['open', 'high', 'low', 'close', 'volume'], [], []
+        ohlcv_list, onchain_list, social_list = ['open', 'high', 'low', 'close', 'volumefrom'], [], []
 
         # set number of attempts and bool for while loop
         attempts = 0
@@ -497,7 +488,7 @@ class CryptoCompare(DataVendor):
 
     def get_rate_limit_info(self) -> pd.DataFrame:
         """
-        Gets rate limit info.
+        Get rate limit info.
 
         Returns
         ------
@@ -574,12 +565,12 @@ class CryptoCompare(DataVendor):
 
     def get_news_sources(self) -> pd.DataFrame:
         """
-        Gets news sources.
+        Get news sources.
 
         Returns
         -------
         news_sources: pd.DataFrame
-            News source with name, language and image.
+            News source info.
         """
         # set number of attempts and bool for while loop
         attempts = 0
@@ -593,14 +584,13 @@ class CryptoCompare(DataVendor):
                 }
                 r = requests.get(url, params=params)
 
-            except AssertionError as e:
+            except Exception as e:
                 logging.warning(e)
                 attempts += 1
                 sleep(0.1)
                 logging.warning(f"Failed to get news after attempt #{str(attempts)}.")
                 if attempts == 3:
-                    logging.warning(
-                        f"Failed to get news from Cryptocompare after many attempts.")
+                    logging.warning("Failed to get news after many attempts.")
                     break
 
             else:
@@ -610,7 +600,7 @@ class CryptoCompare(DataVendor):
 
     def get_indexes(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to API for indexes data.
+        Get indexes data.
 
         Parameters
         ----------
@@ -620,7 +610,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and open, high, low and close index values (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and index values (cols).
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
@@ -637,8 +627,7 @@ class CryptoCompare(DataVendor):
                 pass
         # raise error if all tickers are assets
         if len(tickers) == 0:
-            raise ValueError("Tickers are all assets. Use indexes property to"
-                             " see available indexes.")
+            raise ValueError(f"Tickers are all assets. Available indexes include: {self.indexes}.")
 
         # loop through tickers
         for ticker in tickers:
@@ -665,21 +654,15 @@ class CryptoCompare(DataVendor):
                     # resp message
                     assert r.json()['Response'] == 'Success'
 
-                except AssertionError as e:
+                except Exception as e:
                     logging.warning(e)
                     attempts += 1
                     sleep(cc_data_req['pause'])
                     logging.warning(f"Failed to get data for {ticker} after attempt #{str(attempts)}.")
                     if attempts == 3:
                         logging.warning(
-                            f"Failed to get data for {ticker} from Cryptocompare after many attempts.")
+                            f"Failed to get data for {ticker} after many attempts.")
                         break
-
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning(
-                        "The data's response format has most likely changed.\n Review Cryptocompares response format.")
-                    break
 
                 else:
                     data = pd.DataFrame(r.json()['Data'])
@@ -708,7 +691,7 @@ class CryptoCompare(DataVendor):
 
     def get_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to API for OHLCV data.
+        Get OHLCV data.
 
         Parameters
         ----------
@@ -718,7 +701,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and open, high, low and close prices (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV values (cols).
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
@@ -735,7 +718,7 @@ class CryptoCompare(DataVendor):
                 tickers.append(ticker)
         # raise error if all tickers are indexes
         if len(tickers) == 0:
-            raise ValueError("Tickers are all indexes. Use assets property to see all available assets.")
+            raise ValueError(f"Tickers are all indexes. Use assets property to see available assets.")
 
         # loop through tickers
         for ticker in tickers:
@@ -763,21 +746,15 @@ class CryptoCompare(DataVendor):
                     # resp message
                     assert r.json()['Response'] == 'Success'
 
-                except AssertionError as e:
+                except Exception as e:
                     logging.warning(e)
                     attempts += 1
                     sleep(cc_data_req['pause'])
                     logging.warning(f"Failed to get data for {ticker} after attempt #{str(attempts)}.")
                     if attempts == 3:
                         logging.warning(
-                            f"Failed to get data for {ticker} from Cryptocompare after many attempts.")
+                            f"Failed to get data for {ticker} after many attempts.")
                         break
-
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning("The data's response format has most likely changed."
-                                    "Review Cryptocompare's response format.")
-                    break
 
                 else:
                     data = pd.DataFrame(r.json()['Data']['Data'])
@@ -806,7 +783,7 @@ class CryptoCompare(DataVendor):
 
     def get_onchain(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to API for on-chain data.
+        Get on-chain data.
 
         Parameters
         ----------
@@ -816,7 +793,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and on-chain data (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for on-chain fields (cols).
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
@@ -838,8 +815,7 @@ class CryptoCompare(DataVendor):
                 tickers.append(ticker)
         # raise error if all tickers are indexes
         if len(tickers) == 0:
-            raise ValueError("Tickers are all indexes. Use '.assets' property to"
-                             " see available assets.")
+            raise ValueError("Tickers are all indexes. Use assets property to see available assets.")
 
         # loop through tickers
         for ticker in tickers:
@@ -865,21 +841,14 @@ class CryptoCompare(DataVendor):
                     # resp message
                     assert r.json()['Response'] == 'Success'
 
-                except AssertionError as e:
+                except Exception as e:
                     logging.warning(e)
                     attempts += 1
                     sleep(cc_data_req['pause'])
                     logging.warning(f"Failed to get data for {ticker} after attempt #{str(attempts)}.")
                     if attempts == 3:
-                        logging.warning(
-                            f"Failed to get data for {ticker} from Cryptocompare after many attempts.")
+                        logging.warning(f"Failed to get data for {ticker} after many attempts.")
                         break
-
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning(" The data's response format has most likely changed."
-                                    " Review Cryptocompare's response format.")
-                    break
 
                 else:
                     data = pd.DataFrame(r.json()['Data']['Data'])
@@ -907,7 +876,7 @@ class CryptoCompare(DataVendor):
 
     def get_social(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to API for social stats.
+        Get social media data.
 
         Parameters
         ----------
@@ -917,7 +886,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and social stats (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for social media fields (cols).
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
@@ -968,21 +937,15 @@ class CryptoCompare(DataVendor):
                     # resp message
                     assert r.json()['Response'] == 'Success'
 
-                except AssertionError as e:
+                except Exception as e:
                     attempts += 1
                     sleep(cc_data_req['pause'])
                     logging.warning(e)
                     logging.warning(f"Failed to get data for {ticker} after attempt #{str(attempts)}.")
                     if attempts == 3:
                         logging.warning(
-                            f"Failed to get data for {ticker} from Cryptocompare after many attempts.")
+                            f"Failed to get data for {ticker} after many attempts.")
                         break
-
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning("The data's response format has most likely changed."
-                                    " Review Cryptocompare's response format.")
-                    break
 
                 else:
                     data = pd.DataFrame(r.json()['Data'])
@@ -1011,17 +974,18 @@ class CryptoCompare(DataVendor):
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Gets either OHLCV, on-chain or social media data.
+        Get either market, on-chain or social media data.
 
         Parameters
+        ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
 
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV, on-chain and/or social data (cols)
-            in tidy format.
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for OHLCV, on-chain and/or
+            social fields (cols), in tidy format.
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_source='cryptocompare').convert_to_source(data_req)
@@ -1089,7 +1053,7 @@ class CryptoCompare(DataVendor):
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Wrangles data response.
+        Wrangle data response.
 
         Parameters
         ----------
@@ -1101,7 +1065,8 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         df: pd.DataFrame
-            Wrangled dataframe in tidy format.
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for market, on-chain or
+            social media fields (cols), in tidy format.
         """
         # convert cols to cryptodatapy format
         df = ConvertParams(data_source='cryptocompare').convert_fields_to_lib(data_req, data_resp)

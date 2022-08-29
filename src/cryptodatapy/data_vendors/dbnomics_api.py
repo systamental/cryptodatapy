@@ -19,18 +19,17 @@ data_cred = DataCredentials()
 
 class DBnomics(DataVendor):
     """
-    Retrieves data from DBNomics API.
+    Retrieves data from DBnomics API.
     """
-
     def __init__(
             self,
             source_type: str = 'library',
             categories: list[str] = ['macro'],
-            exchanges: list[str] = None,
-            assets: list[str] = None,
-            indexes: list[str] = None,
-            markets: list[str] = None,
-            market_types: list[str] = None,
+            exchanges: Optional[list[str]] = None,
+            indexes: Optional[list[str]] = None,
+            assets: Optional[list[str]] = None,
+            markets: Optional[list[str]] = None,
+            market_types: Optional[list[str]] = None,
             fields: dict[str, list[str]] = None,
             frequencies: dict[str, list[str]] = {'macro': ['d', 'w', 'm', 'q', 'y']},
             base_url: str = None,
@@ -43,27 +42,26 @@ class DBnomics(DataVendor):
 
         Parameters
         ----------
-        source_type: string, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
+        source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
             Type of data source, e.g. 'data_vendor', 'exchange', etc.
-        categories: list, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
-            List of available categories, e.g. ['crypto', 'fx', 'alt']
-        exchanges: list
-            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX']
-        vendors: list
-            List of available data vendors, e.g. ['IMF Cross Country Macroeconomic Statistics']
-        assets: list
-            List of available assets, e.g. ['btc', 'eth']
-        indexes: list
-            List of available indexes, e.g. ['mvda', 'bvin']
-        markets: list
-            List of available markets as asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc']
-        market_types: list
-            List of available market types/contracts, e.g. [spot', 'perpetual_future', 'future', 'option']
-        fields: list
-            List of available fields, e.g. ['open', 'high', 'low', 'close', 'volume']
-        frequencies: list
-            List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '20min', '30min', '1h', '2h', '4h',
-            '8h', 'd', 'w', 'm']
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+            List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
+        exchanges: list, optional, default None
+            List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
+        indexes: list, optional, default None
+            List of available indexes, e.g. ['mvda', 'bvin'].
+        assets: list, optional, default None
+            List of available assets, e.g. ['btc', 'eth'].
+        markets: list, optional, default None
+            List of available markets as base asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc'].
+        market_types: list, optional, default None
+            List of available market types, e.g. [spot', 'perpetual_future', 'future', 'option'].
+        fields: dictionary
+            Dictionary of available fields, by category-fields key-value pairs,
+             e.g. {'macro': 'actual', 'expected', 'suprise'}.
+        frequencies: dictionary
+            Dictionary of available frequencies, by category-freq key-value pairs, e.g. ['tick', '1min', '5min',
+            '10min', '20min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm']
         base_url: str
             Base url used in GET requests. If not provided, default is set to base url stored in DataCredentials.
         api_key: str
@@ -73,10 +71,8 @@ class DBnomics(DataVendor):
         rate_limit: pd.DataFrame or dict
             Number of API calls made and left by frequency.
         """
-
-        DataVendor.__init__(self, source_type, categories, exchanges, assets, indexes, markets, market_types, fields,
+        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-
         # set fields
         if fields is None:
             self.fields = self.get_fields_info()
@@ -109,26 +105,21 @@ class DBnomics(DataVendor):
         """
         return None
 
-    def get_fields_info(self, data_type: Optional[str] = 'off-chain', cat=None) -> dict[str, list[str]]:
+    @staticmethod
+    def get_fields_info(cat: Optional[str] = None) -> dict[str, list[str]]:
         """
         Gets fields info.
 
         Parameters
         ----------
-        data_type: str, {'market', 'on-chain', 'off-chain'}, default 'market'
-            Type of data.
-        cat: str, {'crypto', 'eqty', 'fx', 'rates', 'cmdty', 'macro'}, default None
+        cat: str, {'crypto', 'eqty', 'fx', 'rates', 'cmdty', 'macro', 'alt'}, default None
             Asset class or time series category.
 
         Returns
         -------
-        fields_list: dict
-            Info on available fields, by category.
+        fields: dictionary
+            Dictionary with info on available fields, by category.
         """
-        if data_type == 'market' or data_type == 'on-chain':
-            raise ValueError("Market and on-chain data are not available."
-                             " DBnomics aggregates economic data provided by national and international statistical institutions,"
-                             " researchers and private companies.")
 
         # list of fields
         macro_fields_list = ['actual']
@@ -151,7 +142,8 @@ class DBnomics(DataVendor):
         """
         return None
 
-    def get_rate_limit_info(self):
+    @staticmethod
+    def get_rate_limit_info():
         """
         Gets rate limit info.
         """
@@ -159,13 +151,20 @@ class DBnomics(DataVendor):
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Submits data request to DBnomics web API.
+        Get data macro data.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and values macro or off-chain fields (cols).
         """
         # convert data request parameters to InvestPy format
         dbn_data_req = ConvertParams(data_source='dbnomics').convert_to_source(data_req)
-        with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
-            tickers_path = f
-        tickers = pd.read_csv(tickers_path, index_col=0, encoding='latin1').index.to_list()
 
         # check cat
         if data_req.cat not in self.categories:
@@ -177,7 +176,7 @@ class DBnomics(DataVendor):
 
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError("Invalid fields. See '.fields' property for available fields.")
+            raise ValueError("Invalid fields. See fields property for available fields.")
 
         # emtpy df
         df = pd.DataFrame()
@@ -207,12 +206,12 @@ class DBnomics(DataVendor):
         fields = [field for field in data_req.fields if field in df.columns]
         df = df.loc[:, fields]
 
-        return df
+        return df.sort_index()
 
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
-        Wrangles data response.
+        Wrangle data response.
 
         Parameters
         ----------
@@ -224,7 +223,8 @@ class DBnomics(DataVendor):
         Returns
         -------
         df: pd.DataFrame
-            Wrangled dataframe in tidy format.
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for macro data series
+            for selected fields (cols), in tidy format.
         """
         # convert cols to cryptodatapy format
         df = ConvertParams(data_source='dbnomics').convert_fields_to_lib(data_req, data_resp)

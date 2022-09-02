@@ -63,7 +63,7 @@ def test_get_exchanges_info(ccxt) -> None:
     Test get exchanges info method.
     """
     cx = ccxt
-    assert cx.get_exchanges_info(exchange='ftx').loc['ftx', 'name'] == 'FTX', \
+    assert cx.get_exchanges_info(exch='ftx').loc['ftx', 'name'] == 'FTX', \
         "Exchanges info is missing 'Binance'."
 
 
@@ -148,7 +148,7 @@ def test_get_frequencies_info(ccxt) -> None:
     Test get markets info method.
     """
     cx = ccxt
-    assert cx.get_frequencies_info(exchange='ftx')['ftx']['15m'] == '900', "Frequencies info is incorrect."
+    assert cx.get_frequencies_info(exch='ftx')['ftx']['15m'] == '900', "Frequencies info is incorrect."
 
 
 def test_rate_limit(ccxt) -> None:
@@ -164,7 +164,7 @@ def test_get_rate_limit_info(ccxt) -> None:
     Test get rate limit info method.
     """
     cx = ccxt
-    assert cx.get_rate_limit_info(exchange='ftx')['ftx'] == 28.57, "Rate limit info is incorrect."
+    assert cx.get_rate_limit_info(exch='ftx')['ftx'] == 28.57, "Rate limit info is incorrect."
 
 
 def test_get_ohlcv(ccxt, datarequest) -> None:

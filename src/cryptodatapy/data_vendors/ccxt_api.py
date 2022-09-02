@@ -85,13 +85,13 @@ class CCXT(DataVendor):
         self.rate_limit = self.get_rate_limit_info()
 
     @staticmethod
-    def get_exchanges_info(exchange: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
+    def get_exchanges_info(exch: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
         Get exchanges info.
 
         Parameters
         ----------
-        exchange: str, default None
+        exch: str, default None
             Name of exchange.
         as_list: bool, default False
             Returns exchanges info as list.
@@ -105,8 +105,8 @@ class CCXT(DataVendor):
         if as_list:
             exchanges = ccxt.exchanges
         else:
-            if exchange is not None:
-                exchanges = [exchange]
+            if exch is not None:
+                exchanges = [exch]
             else:
                 print("Getting info on all supported exchanges can take a few minutes. Change exchange parameter"
                       " for info on a specific exchange.")
@@ -120,14 +120,14 @@ class CCXT(DataVendor):
             # extract exch info
             for row in exch_df.iterrows():
                 try:
-                    exch = getattr(ccxt, row[0])()
-                    exch.load_markets()
+                    exchange = getattr(ccxt, row[0])()
+                    exchange.load_markets()
                 except Exception:
                     exch_df.loc[row[0], :] = np.nan
                 else:
                     for col in exch_df.columns:
                         try:
-                            exch_df.loc[row[0], col] = str(getattr(exch, str(col)))
+                            exch_df.loc[row[0], col] = str(getattr(exchange, str(col)))
                         except Exception:
                             exch_df.loc[row[0], col] = np.nan
             # set index name
@@ -143,14 +143,14 @@ class CCXT(DataVendor):
         """
         return None
 
-    def get_assets_info(self, exchange: str = 'binance', as_dict: bool = False) -> \
+    def get_assets_info(self, exch: str = 'binance', as_dict: bool = False) -> \
             Union[pd.DataFrame, dict[str, list[str]]]:
         """
         Get assets info.
 
         Parameters
         ----------
-        exchange: str, default 'binance'
+        exch: str, default 'binance'
             Name of exchange.
         as_dict: bool, default False
             Returns assets info as dictionary, with exchange-assets key-value pairs.
@@ -161,24 +161,24 @@ class CCXT(DataVendor):
             Dictionary or dataframe with info on available assets.
         """
         # exch
-        if exchange not in self.exchanges:
-            raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
+        if exch not in self.exchanges:
+            raise ValueError(f"{exch} is not a supported exchange. Try another exchange.")
         else:
-            exch = getattr(ccxt, exchange)()
+            exchange = getattr(ccxt, exch)()
 
         # get assets on exchange
-        exch.load_markets()
-        assets = pd.DataFrame(exch.currencies).T
+        exchange.load_markets()
+        assets = pd.DataFrame(exchange.currencies).T
         assets.index.name = 'ticker'
 
         # dict of assets
         if as_dict:
-            assets_dict = {exchange: assets.index.to_list()}
+            assets_dict = {exch: assets.index.to_list()}
             assets = assets_dict
 
         return assets
 
-    def get_markets_info(self, exchange: str = 'binance', quote_ccy: Optional[str] = None,
+    def get_markets_info(self, exch: str = 'binance', quote_ccy: Optional[str] = None,
                          mkt_type: Optional[str] = None, as_dict: bool = False) -> \
             Union[dict[str, list[str]], pd.DataFrame]:
         """
@@ -186,7 +186,7 @@ class CCXT(DataVendor):
 
         Parameters
         ----------
-        exchange: str, default 'binance'
+        exch: str, default 'binance'
             Name of exchange.
         quote_ccy: str, optional, default None
             Quote currency.
@@ -200,13 +200,13 @@ class CCXT(DataVendor):
         markets: dictionary or pd.DataFrame
             Dictionary or dataframe with info on available markets, by exchange.
         """
-        if exchange not in self.exchanges:
-            raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
+        if exch not in self.exchanges:
+            raise ValueError(f"{exch} is not a supported exchange. Try another exchange.")
         else:
-            exch = getattr(ccxt, exchange)()
+            exchange = getattr(ccxt, exch)()
 
         # get assets on exchange
-        markets = pd.DataFrame(exch.load_markets()).T
+        markets = pd.DataFrame(exchange.load_markets()).T
         markets.index.name = 'ticker'
 
         # quote ccy
@@ -224,7 +224,7 @@ class CCXT(DataVendor):
 
         # dict of assets
         if as_dict:
-            mkts_dict = {exchange: markets.index.to_list()}
+            mkts_dict = {exch: markets.index.to_list()}
             markets = mkts_dict
 
         return markets
@@ -247,13 +247,13 @@ class CCXT(DataVendor):
 
         return fields
 
-    def get_frequencies_info(self, exchange: str = 'binance') -> dict[str, list[str]]:
+    def get_frequencies_info(self, exch: str = 'binance') -> dict[str, list[str]]:
         """
         Get frequencies info.
 
         Parameters
         ----------
-        exchange: str, default 'binance'
+        exch: str, default 'binance'
             Name of exchange for which to get available assets.
 
         Returns
@@ -262,24 +262,24 @@ class CCXT(DataVendor):
             Dictionary with info on available frequencies.
         """
         # exch
-        if exchange not in self.exchanges:
-            raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
+        if exch not in self.exchanges:
+            raise ValueError(f"{exch} is not a supported exchange. Try another exchange.")
         else:
-            exch = getattr(ccxt, exchange)()
-        exch.load_markets()
+            exchange = getattr(ccxt, exch)()
+        exchange.load_markets()
 
         # freq dict
-        freq = {exchange: exch.timeframes}
+        freq = {exch: exchange.timeframes}
 
         return freq
 
-    def get_rate_limit_info(self, exchange: str = 'binance') -> dict[str]:
+    def get_rate_limit_info(self, exch: str = 'binance') -> dict[str]:
         """
         Get rate limit info.
 
         Parameters
         ----------
-        exchange: str, default 'binance'
+        exch: str, default 'binance'
             Name of exchange.
 
         Returns
@@ -288,14 +288,14 @@ class CCXT(DataVendor):
             Dictionary with exchange and required minimal delay between HTTP requests that exchange in milliseconds.
         """
         # exch
-        if exchange not in self.exchanges:
-            raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
+        if exch not in self.exchanges:
+            raise ValueError(f"{exch} is not a supported exchange. Try another exchange.")
         else:
-            exch = getattr(ccxt, exchange)()
+            exchange = getattr(ccxt, exch)()
 
         return {
             'exchange rate limit': 'delay in milliseconds between two consequent HTTP requests to the same exchange',
-            exchange: exch.rateLimit}
+            exch: exchange.rateLimit}
 
     def get_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -328,7 +328,7 @@ class CCXT(DataVendor):
             raise ValueError(f"{data_req.freq} is not available for {cx_data_req['exch']}.")
 
         # check tickers
-        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
+        tickers = self.get_assets_info(exch=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
         if not any(ticker.upper() in tickers for ticker in cx_data_req['tickers']):
             raise ValueError(f"Assets are not available. Check available assets for {cx_data_req['exch']}"
                              f" with get_assets_info method.")
@@ -426,7 +426,7 @@ class CCXT(DataVendor):
                              f" Market type must be perpetual futures.")
 
         # check tickers
-        tickers = self.get_assets_info(exchange=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
+        tickers = self.get_assets_info(exch=cx_data_req['exch'], as_dict=True)[cx_data_req['exch']]
         if not any(ticker.upper() in tickers for ticker in cx_data_req['tickers']):
             raise ValueError(f"Assets are not available. Check available assets for {cx_data_req['exch']}"
                              f" with asset property.")

@@ -85,15 +85,9 @@ class InvestPy(DataVendor):
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # set indexes
-        if indexes is None:
-            self.indexes = self.get_indexes_info(cat=None, as_dict=True)
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(cat=None, as_dict=True)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info()
+        self.indexes = self.get_indexes_info(cat=None, as_dict=True)
+        self.assets = self.get_assets_info(cat=None, as_dict=True)
+        self.fields = self.get_fields_info()
 
     @staticmethod
     def get_exchanges_info():
@@ -939,6 +933,6 @@ class InvestPy(DataVendor):
         df = df.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

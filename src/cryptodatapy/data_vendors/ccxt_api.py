@@ -20,6 +20,7 @@ class CCXT(DataVendor):
     """
     Retrieves data from CCXT API.
     """
+
     def __init__(
             self,
             source_type: str = 'library',
@@ -74,24 +75,14 @@ class CCXT(DataVendor):
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # set exchanges
-        if exchanges is None:
-            self.exchanges = self.get_exchanges_info(as_list=True)
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(as_dict=True)
-        # set markets
-        if markets is None:
-            self.markets = self.get_markets_info(as_dict=True)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info()
-        # set fields
-        if frequencies is None:
-            self.frequencies = self.get_frequencies_info()
-        # set rate limit
-        if rate_limit is None:
-            self.rate_limit = self.get_rate_limit_info()
+
+        # get meta data
+        self.exchanges = self.get_exchanges_info(as_list=True)
+        self.assets = self.get_assets_info(as_dict=True)
+        self.markets = self.get_markets_info(as_dict=True)
+        self.fields = self.get_fields_info()
+        self.frequencies = self.get_frequencies_info()
+        self.rate_limit = self.get_rate_limit_info()
 
     @staticmethod
     def get_exchanges_info(exchange: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
@@ -133,11 +124,12 @@ class CCXT(DataVendor):
                     exch.load_markets()
                 except Exception:
                     exch_df.loc[row[0], :] = np.nan
-                for col in exch_df.columns:
-                    try:
-                        exch_df.loc[row[0], col] = str(getattr(exch, str(col)))
-                    except Exception:
-                        exch_df.loc[row[0], col] = np.nan
+                else:
+                    for col in exch_df.columns:
+                        try:
+                            exch_df.loc[row[0], col] = str(getattr(exch, str(col)))
+                        except Exception:
+                            exch_df.loc[row[0], col] = np.nan
             # set index name
             exch_df.index.name = 'exchange'
             exchanges = exch_df
@@ -175,7 +167,7 @@ class CCXT(DataVendor):
             exch = getattr(ccxt, exchange)()
 
         # get assets on exchange
-        markets = exch.load_markets()
+        exch.load_markets()
         assets = pd.DataFrame(exch.currencies).T
         assets.index.name = 'ticker'
 
@@ -274,7 +266,7 @@ class CCXT(DataVendor):
             raise ValueError(f"{exchange} is not a supported exchange. Try another exchange.")
         else:
             exch = getattr(ccxt, exchange)()
-        markets = exch.load_markets()
+        exch.load_markets()
 
         # freq dict
         freq = {exchange: exch.timeframes}
@@ -521,7 +513,6 @@ class CCXT(DataVendor):
         Get data specified by data request.
 
         Parameters
-        ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
 
@@ -599,6 +590,6 @@ class CCXT(DataVendor):
         df.dropna(how='all', inplace=True)  # remove entire row NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

@@ -298,9 +298,9 @@ class CoinMetrics(DataVendor):
 
             return fields
 
-    def get_avail_assets_for_fields(self, data_req: DataRequest) -> list[str]:
+    def get_avail_assets_info(self, data_req: DataRequest = None) -> list[str]:
         """
-        Get list of available assets for selected fields.
+        Get list of available assets for fields in data request.
 
         Parameters
         ----------
@@ -312,6 +312,9 @@ class CoinMetrics(DataVendor):
         asset_list: list
             List of available assets for selected fields.
         """
+        # raise error if data req is None
+        if data_req is None:
+            raise TypeError("Provide a data request with 'fields' parameter.")
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
         # fields param
@@ -324,7 +327,7 @@ class CoinMetrics(DataVendor):
                 df = self.get_fields_info(data_type=None).loc[field]  # get fields info
             except KeyError as e:
                 logging.warning(e)
-                logging.warning(f"{field} is not available. Check available fields and try again.")
+                logging.warning(f"{field} is not an on-chain metric. Check available fields and try again.")
             else:
                 # add to dict
                 fields_dict[field] = df['frequencies'][0]['assets']

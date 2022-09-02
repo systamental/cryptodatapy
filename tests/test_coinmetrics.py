@@ -157,13 +157,13 @@ def test_frequencies_error(coinmetrics) -> None:
         cm.frequencies = 5
 
 
-def test_get_avail_fields(coinmetrics) -> None:
+def test_get_avail_fields_info(coinmetrics) -> None:
     """
     Test get assets with available fields method.
     """
     cm = coinmetrics
     data_req = DataRequest(fields=['add_act', 'tx_count'])
-    assets_list = cm.get_avail_assets_for_fields(data_req)
+    assets_list = cm.get_avail_assets_info(data_req)
     assert len(assets_list) != 0, "Assets list was returned empty."  # non empty
     assert isinstance(assets_list, list), "Should be a list."  # list
     assert 'eth' in assets_list, "Tickers are missing from assets list."  # tickers
@@ -219,7 +219,7 @@ def test_get_ohlcv(coinmetrics, datarequest) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume', 'vwap'], \
         "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('2017-08-18'), "Wrong start date."  # start date
+    assert df.index[0][0] == pd.Timestamp('2017-08-17 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtype

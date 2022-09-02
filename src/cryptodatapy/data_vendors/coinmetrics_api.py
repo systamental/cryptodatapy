@@ -74,24 +74,13 @@ class CoinMetrics(DataVendor):
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # set exchanges
-        if exchanges is None:
-            self._exchanges = self.get_exchanges_info(as_list=True)
-        # set indexes
-        if indexes is None:
-            self._indexes = self.get_indexes_info(as_list=True)
-        # set assets
-        if assets is None:
-            self._assets = self.get_assets_info(as_list=True)
-        # set markets
-        if markets is None:
-            self._markets = self.get_markets_info(as_list=True)
-        # set fields
-        if fields is None:
-            self._fields = self.get_fields_info(data_type=None, as_list=True)
-        # set rate limit
-        if rate_limit is None:
-            self._rate_limit = self.get_rate_limit_info()
+
+        self._exchanges = self.get_exchanges_info(as_list=True)
+        self._indexes = self.get_indexes_info(as_list=True)
+        self._assets = self.get_assets_info(as_list=True)
+        self._markets = self.get_markets_info(as_list=True)
+        self._fields = self.get_fields_info(data_type=None, as_list=True)
+        self._rate_limit = self.get_rate_limit_info()
 
     @staticmethod
     def get_exchanges_info(as_list: bool = False) -> Union[list[str], pd.DataFrame]:
@@ -895,6 +884,6 @@ class CoinMetrics(DataVendor):
         df = df[~df.index.duplicated()]  # duplicate rows
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

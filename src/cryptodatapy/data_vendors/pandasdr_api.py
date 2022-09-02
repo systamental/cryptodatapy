@@ -87,9 +87,7 @@ class PandasDataReader(DataVendor):
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info()
+        self.fields = self.get_fields_info()
 
     @staticmethod
     def get_vendors_info():

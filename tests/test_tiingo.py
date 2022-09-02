@@ -51,7 +51,7 @@ def test_exchanges(tiingo) -> None:
     Test exchanges property.
     """
     tg = tiingo
-    assert 'NYSE' in tg.exchanges['eqty'], "Exchanges list is missing 'NYSE'."
+    assert 'NYSE' in tg.exchanges['eqty'], "Exchanges dictionary is missing 'NYSE'."
 
 
 def test_assets(tiingo) -> None:
@@ -59,7 +59,7 @@ def test_assets(tiingo) -> None:
     Test assets property.
     """
     tg = tiingo
-    assert 'btcusd' in tg.assets, "Assets list is missing 'btcusd'."
+    assert 'btcusd' in tg.assets['crypto'], "Assets dictionary is missing 'btcusd'."
 
 
 def test_get_assets_info(tiingo) -> None:
@@ -67,8 +67,8 @@ def test_get_assets_info(tiingo) -> None:
     Test get assets info method.
     """
     tg = tiingo
-    assert tg.get_assets_info().loc['btcusd', 'name'] == 'Bitcoin Tether (BTC/USD)', \
-        "Asset info is missing 'Bitcoin Tether'."
+    assert tg.get_assets_info(cat='eqty').loc['SPY', 'exchange'] == 'NYSE ARCA', \
+        "Assets info is missing 'SPY'."
 
 
 def test_market_types(tiingo) -> None:

@@ -67,7 +67,7 @@ def test_indexes(investpy) -> None:
     Test indexes property.
     """
     ip = investpy
-    assert 'SPX' in ip.indexes, "Index list is missing 'S&P 500 VIX'."
+    assert 'SPX' in ip.indexes['eqty'], "Indexes are missing 'SPX'."
 
 
 def test_get_indexes_info(investpy) -> None:
@@ -76,6 +76,7 @@ def test_get_indexes_info(investpy) -> None:
     """
     ip = investpy
     assert ip.get_indexes_info().loc['SPX', 'name'] == 'S&P 500', "Index info is missing 'SPX'."
+    assert 'BCOM' in ip.get_indexes_info(as_dict=True)['cmdty'], "Indexes are missing 'BCOM'."
 
 
 def test_market_types(investpy) -> None:
@@ -268,7 +269,8 @@ def test_get_macro(investpy) -> None:
     Test get macro series method.
     """
     ip = investpy
-    data_req = DataRequest(tickers=['US_Manuf_PMI', 'CN_Manuf_PMI', 'EZ_M3'], cat='macro', start_date='2019-01-01')
+    data_req = DataRequest(tickers=['US_Manuf_PMI', 'CN_Manuf_PMI', 'EZ_M3'], fields='actual', cat='macro',
+                           start_date='2019-01-01')
     df = ip.get_macro_series(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex

@@ -44,6 +44,7 @@ def test_categories_error(dbnomics) -> None:
     with pytest.raises(ValueError):
         db.categories = ['real_estate', 'art']
 
+
 def test_fields(dbnomics) -> None:
     """
     Test fields property.
@@ -51,13 +52,6 @@ def test_fields(dbnomics) -> None:
     db = dbnomics
     assert db.fields['macro'] == ['actual'], "Fields for macro cat are incorrect."
 
-def test_fields_error(dbnomics) -> None:
-    """
-    Test categories errors.
-    """
-    db = dbnomics
-    with pytest.raises(ValueError):
-        db.get_fields_info(data_type='market')
 
 def test_get_data(dbnomics) -> None:
     """
@@ -80,5 +74,3 @@ def test_get_data(dbnomics) -> None:
 
 if __name__ == "__main__":
     pytest.main()
-
-

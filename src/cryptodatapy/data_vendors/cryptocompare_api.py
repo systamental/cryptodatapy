@@ -76,24 +76,12 @@ class CryptoCompare(DataVendor):
             raise TypeError(f"Set your api key. Alternatively, you can use the function "
                             f"{set_credential.__name__} which uses keyring to store your "
                             f"api key in {DataCredentials.__name__}.")
-        # set exchanges
-        if exchanges is None:
-            self.exchanges = self.get_exchanges_info(as_list=True)
-        # set indexes
-        if indexes is None:
-            self.indexes = self.get_indexes_info(as_list=True)
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(as_list=True)
-        # set markets
-        if markets is None:
-            self.markets = self.get_markets_info(as_list=True)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info(data_type=None)
-        # set rate limit
-        if rate_limit is None:
-            self.rate_limit = self.get_rate_limit_info()
+        self.exchanges = self.get_exchanges_info(as_list=True)
+        self.indexes = self.get_indexes_info(as_list=True)
+        self.assets = self.get_assets_info(as_list=True)
+        self.markets = self.get_markets_info(as_list=True)
+        self.fields = self.get_fields_info(data_type=None)
+        self.rate_limit = self.get_rate_limit_info()
 
     def get_exchanges_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
@@ -1095,6 +1083,6 @@ class CryptoCompare(DataVendor):
         df.dropna(how='all', inplace=True)  # remove entire row NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

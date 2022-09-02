@@ -579,20 +579,3 @@ class ConvertParams():
                 df.drop(columns=[col], inplace=True)
 
         return df
-
-    @staticmethod
-    def convert_dtypes(data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Converts data types from data source data resp.
-        """
-        # get fields
-        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
-            fields_path = f
-        # getdata resp and create empty fields list
-        fields_df, df = pd.read_csv(fields_path, index_col=0, encoding='latin1'), data_resp.copy()
-
-        for col in df.columns:
-            if col in fields_df.index.to_list():
-                df[col] = df[col].astype(fields_df.loc[col, 'data_type'])
-
-        return df

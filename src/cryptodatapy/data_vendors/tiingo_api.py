@@ -607,6 +607,6 @@ class Tiingo(DataVendor):
         df.dropna(how='all', inplace=True)  # remove entire row NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

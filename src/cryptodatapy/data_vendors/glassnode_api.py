@@ -76,15 +76,9 @@ class Glassnode(DataVendor):
             raise TypeError(f"Set your api key. Alternatively, you can use the function "
                             f"{set_credential.__name__} which uses keyring to store your "
                             f"api key in {DataCredentials.__name__}.")
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(as_list=True)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info(data_type=None, as_list=True)
-        # set rate limit
-        if rate_limit is None:
-            self.rate_limit = self.get_rate_limit_info()
+        self.assets = self.get_assets_info(as_list=True)
+        self.fields = self.get_fields_info(data_type=None, as_list=True)
+        self.rate_limit = self.get_rate_limit_info()
 
     @staticmethod
     def get_exchanges_info():
@@ -345,6 +339,6 @@ class Glassnode(DataVendor):
         df.dropna(how='all', inplace=True)  # remove entire row NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df).sort_index()
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

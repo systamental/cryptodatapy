@@ -73,9 +73,7 @@ class DBnomics(DataVendor):
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info()
+        self.fields = self.get_fields_info()
 
     @staticmethod
     def get_vendors_info():
@@ -245,6 +243,6 @@ class DBnomics(DataVendor):
         df = df.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
 
         # type conversion
-        df = ConvertParams().convert_dtypes(df)
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.ccxt_api import CCXT
 import pytest
@@ -181,7 +180,7 @@ def test_get_ohlcv(ccxt, datarequest) -> None:
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2017-08-17'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -206,7 +205,7 @@ def test_get_funding_rates(ccxt) -> None:
     assert df.index.droplevel(0).unique() == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['funding_rate'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2019-09-11'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64), "Funding rate is not a numpy float."  # dtypes
 
@@ -224,7 +223,7 @@ def test_get_data_integration(ccxt) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close', 'funding_rate'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2019-09-08 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64), "Funding rate is not a numpy float."  # dtypes

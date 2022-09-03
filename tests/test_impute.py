@@ -1,13 +1,11 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime
-from datetime import datetime, timedelta
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
-from cryptodatapy.data_cleaning.od import OutlierDetection
+import pandas as pd
+import pytest
 from cryptodatapy.data_cleaning.filter import Filter
 from cryptodatapy.data_cleaning.impute import Impute
-import pytest
+from cryptodatapy.data_cleaning.od import OutlierDetection
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
 
 
 # get data for testing

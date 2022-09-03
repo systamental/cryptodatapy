@@ -1,14 +1,12 @@
-import pandas as pd
 import logging
+import pandas as pd
 import requests
-from datetime import datetime, timedelta
-from time import sleep
-from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
 from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.util.convertparams import ConvertParams
 from cryptodatapy.data_vendors.datavendor import DataVendor
-
+from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
+from time import sleep
+from typing import Optional, Any, Union
 
 # data credentials
 data_cred = DataCredentials()

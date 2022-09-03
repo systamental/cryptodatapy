@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.glassnode_api import Glassnode
 import pytest
@@ -129,7 +128,7 @@ def test_get_data_integration(glassnode) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close', 'add_act', 'tx_count'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2009-01-12'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=2), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=2), \
         "End date is more than 48h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
     assert isinstance(df.add_act.dropna().iloc[-1], np.int64), "Active addresses is not a numpy int."  # dtypes

@@ -102,7 +102,7 @@ class ConvertParams():
                 if ticker.upper() in base_ccys and quote_ccy.upper() == 'USD':
                     fx_pairs.append(ticker.upper() + '/' + quote_ccy.upper())
                 elif quote_ccy.upper() == 'USD':
-                    fx_pairs.append(quote_ccy.upper() + '/'+ ticker.upper())
+                    fx_pairs.append(quote_ccy.upper() + '/' + ticker.upper())
                 else:
                     fx_pairs.append(ticker.upper() + '/' + quote_ccy.upper())
 
@@ -314,7 +314,7 @@ class ConvertParams():
                 exch = data_req.exch.lower()
 
         elif self.data_source == 'ccxt':
-            if (data_req.exch is None or data_req.exch == 'binance') and data_req.mkt_type == 'perpetual_future':
+            if data_req.mkt_type == 'perpetual_future' and (data_req.exch is None or data_req.exch == 'binance'):
                 exch = 'binanceusdm'
             elif data_req.exch is None:
                 exch = 'binance'

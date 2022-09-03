@@ -1,8 +1,8 @@
 import pandas as pd
-from datetime import datetime, timedelta
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.util.convertparams import ConvertParams
-import pytest
+from datetime import datetime
 
 
 @pytest.fixture
@@ -52,8 +52,8 @@ def test_convert_tg_tickers(dr_tickers, tg_tickers) -> None:
 @pytest.mark.parametrize(
     "dr_tickers, tg_tickers",
     [
-        ('EUR', ['eurusd']),
-        (['BTC', 'ETH'], ['btcusd', 'ethusd'])
+        ('EUR', ['eur']),
+        (['BTC', 'ETH'], ['btc', 'eth'])
     ]
 )
 def test_convert_tg_fx_tickers(dr_tickers, tg_tickers) -> None:
@@ -68,8 +68,8 @@ def test_convert_tg_fx_tickers(dr_tickers, tg_tickers) -> None:
 @pytest.mark.parametrize(
     "dr_tickers, ip_tickers",
     [
-        ('eur', ['EUR/USD']),
-        (['gbp', 'cad'], ['GBP/USD', 'CAD/USD'])
+        ('eur', ['EUR']),
+        (['gbp', 'cad'], ['GBP', 'CAD'])
     ]
 )
 def test_convert_ip_fx_tickers(dr_tickers, ip_tickers) -> None:
@@ -149,8 +149,8 @@ def test_convert_fred_tickers(dr_tickers, fred_tickers) -> None:
 @pytest.mark.parametrize(
     "dr_tickers, av_tickers",
     [
-        ('eur', ['EUR/USD']),
-        (['gbp', 'cad'], ['GBP/USD', 'CAD/USD'])
+        ('eur', ['eur']),
+        (['gbp', 'cad'], ['gbp', 'cad'])
     ]
 )
 def test_convert_av_fx_tickers(dr_tickers, av_tickers) -> None:
@@ -160,6 +160,55 @@ def test_convert_av_fx_tickers(dr_tickers, av_tickers) -> None:
     data_req = DataRequest(tickers=dr_tickers)
     av_params = ConvertParams(data_source='av-forex-daily').convert_to_source(data_req)
     assert av_params['tickers'] == av_tickers, "Tickers parameter conversion failed."
+
+
+# fx mkts
+@pytest.mark.parametrize(
+    "dr_tickers, fx_mkts",
+    [
+        (['cad', 'eur', 'jpy'], ['USD/CAD', 'EUR/USD', 'USD/JPY']),
+        ('mxn', ['USD/MXN'])
+    ]
+)
+def test_convert_tickers_to_ip_fx_mkts(dr_tickers, fx_mkts) -> None:
+    """
+    Test tickers to markets parameter conversion for Coin Metrics format.
+    """
+    data_req = DataRequest(tickers=dr_tickers, cat='fx')
+    cm_params = ConvertParams(data_source='investpy').convert_to_source(data_req)
+    assert cm_params['mkts'] == fx_mkts, "Tickers to markets parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_tickers, fx_mkts",
+    [
+        (['cad', 'eur', 'jpy'], ['USD/CAD', 'EUR/USD', 'USD/JPY']),
+        ('mxn', ['USD/MXN'])
+    ]
+)
+def test_convert_tickers_to_av_fx_mkts(dr_tickers, fx_mkts) -> None:
+    """
+    Test tickers to markets parameter conversion for Coin Metrics format.
+    """
+    data_req = DataRequest(tickers=dr_tickers, cat='fx')
+    cm_params = ConvertParams(data_source='av-forex-daily').convert_to_source(data_req)
+    assert cm_params['mkts'] == fx_mkts, "Tickers to markets parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_tickers, fx_mkts",
+    [
+        (['cad', 'eur', 'jpy'], ['usdcad', 'eurusd', 'usdjpy']),
+        ('mxn', ['usdmxn'])
+    ]
+)
+def test_convert_tickers_to_tg_fx_mkts(dr_tickers, fx_mkts) -> None:
+    """
+    Test tickers to markets parameter conversion for Coin Metrics format.
+    """
+    data_req = DataRequest(tickers=dr_tickers, cat='fx')
+    cm_params = ConvertParams(data_source='tiingo').convert_to_source(data_req)
+    assert cm_params['mkts'] == fx_mkts, "Tickers to markets parameter conversion failed."
 
 
 # convert cryptodatapy params to markets in source format
@@ -474,7 +523,7 @@ def test_convert_cm_exchange(dr_exch, cm_exch) -> None:
 @pytest.mark.parametrize(
     "dr_exch, cx_exch",
     [
-        (None, 'binance'),
+        (None, 'binanceusdm'),
         ('binance', 'binanceusdm'),
         ('kucoin', 'kucoinfutures'),
         ('huobi', 'huobipro'),

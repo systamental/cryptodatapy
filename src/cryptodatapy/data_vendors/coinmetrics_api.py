@@ -1,15 +1,12 @@
-import pandas as pd
-import numpy as np
 import logging
-import requests
-from datetime import datetime, timedelta
-from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.util.convertparams import ConvertParams
-from cryptodatapy.data_vendors.datavendor import DataVendor
+import numpy as np
+import pandas as pd
 from coinmetrics.api_client import CoinMetricsClient
-
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.datavendor import DataVendor
+from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
+from typing import Optional, Union, Any
 
 # data credentials
 data_cred = DataCredentials()

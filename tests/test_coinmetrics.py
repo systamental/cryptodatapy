@@ -1,9 +1,9 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+import pandas as pd
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.coinmetrics_api import CoinMetrics
-import pytest
+from datetime import datetime
 
 
 @pytest.fixture
@@ -182,7 +182,7 @@ def test_get_indexes(coinmetrics) -> None:
     assert list(df.index.droplevel(0).unique()) == ['CMBI10'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2017-01-04'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -200,7 +200,7 @@ def test_get_institutions(coinmetrics) -> None:
     assert list(df.index.droplevel(0).unique()) == ['grayscale'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['btc_shares_outstanding'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2019-01-02'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=7), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=7), \
         "End date is more than 7 days ago."  # end date
     assert isinstance(df.btc_shares_outstanding.dropna().iloc[-1], np.int64), \
         "Shares outstanding is not a numpy int."  # dtypes
@@ -220,7 +220,7 @@ def test_get_ohlcv(coinmetrics, datarequest) -> None:
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume', 'vwap'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2017-08-17 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtype
 
@@ -238,7 +238,7 @@ def test_get_onchain(coinmetrics) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['add_act'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2009-01-09'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.add_act.dropna().iloc[-1], np.int64), "Active addresses is not a numpy int."  # dtype
 
@@ -255,9 +255,9 @@ def test_get_open_interest(coinmetrics) -> None:
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['oi'], "Fields are missing from dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[0][0] < timedelta(days=5), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[0][0] < pd.Timedelta(days=5), \
         "Start date is more than 5 days ago."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.oi.dropna().iloc[-1], np.float64), "Open interest is not a numpy float."  # dtype
 
@@ -274,7 +274,7 @@ def test_get_funding_rates(coinmetrics) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert list(df.columns) == ['funding_rate'], "Fields are missing from dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64)  # dtypes
 
@@ -284,14 +284,14 @@ def test_get_trades(coinmetrics) -> None:
     Test get trades data method.
     """
     cm = coinmetrics
-    data_req = DataRequest(freq='tick', start_date=datetime.utcnow() - timedelta(seconds=30))
+    data_req = DataRequest(freq='tick', start_date=datetime.utcnow() - pd.Timedelta(seconds=30))
     df = cm.get_trades(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['trade_size', 'trade_price', 'trade_side'], "Fields are missing from dataframe."
-    assert pd.Timestamp.utcnow() - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow() - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.trade_price.dropna().iloc[-1], np.float64)  # dtypes
 
@@ -301,14 +301,14 @@ def test_get_quotes(coinmetrics) -> None:
     Test get quotes data method.
     """
     cm = coinmetrics
-    data_req = DataRequest(freq='tick', start_date=datetime.utcnow() - timedelta(seconds=30))
+    data_req = DataRequest(freq='tick', start_date=datetime.utcnow() - pd.Timedelta(seconds=30))
     df = cm.get_quotes(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert list(df.index.droplevel(0).unique()) == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['ask', 'ask_size', 'bid', 'bid_size'], "Fields are missing from dataframe."  # fields
-    assert pd.Timestamp.utcnow() - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow() - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.ask.dropna().iloc[-1], np.float64)  # dtypes
 
@@ -326,7 +326,7 @@ def test_get_data_integration(coinmetrics) -> None:
     assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close', 'add_act'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2009-01-09'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
     assert isinstance(df.add_act.dropna().iloc[-1], np.int64), "Active addresses is not a numpy int."  # dtypes

@@ -3,10 +3,9 @@ import pandas as pd
 import pytest
 from cryptodatapy.data_cleaning.filter import Filter
 from cryptodatapy.data_cleaning.od import OutlierDetection
-# from datetime import datetime
-from datetime import datetime
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
+from datetime import datetime
 
 # get data for testing
 cc = CryptoCompare()

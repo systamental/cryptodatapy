@@ -1,10 +1,10 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from dataclasses import dataclass, field
-from typing import Union, Dict, Optional
 from importlib import resources
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from typing import Union, Dict, Optional
 from webdriver_manager.chrome import ChromeDriverManager
 
 

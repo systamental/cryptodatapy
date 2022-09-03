@@ -1,17 +1,11 @@
-import pandas as pd
-import numpy as np
-from dataclasses import dataclass, field
-from typing import Union, Dict, Optional
-from importlib import resources
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from cryptodatapy.util.datacatalog import DataCatalog
 import pytest
+
 
 @pytest.fixture
 def datacatalog():
     return DataCatalog()
+
 
 # data sources
 def test_data_sources(datacatalog) -> None:
@@ -24,6 +18,7 @@ def test_data_sources(datacatalog) -> None:
     assert dc.data_sources['coinmetrics'] == 'https://docs.coinmetrics.io/info/markets', "Invalid url for data source."
     assert dc.data_sources['glassnode'] == 'https://glassnode.com/', "Invalid url for data source."
     assert dc.data_sources['investpy'] == 'https://investpy.readthedocs.io/', "Invalid url for data source."
+
 
 def test_get_tickers_meta(datacatalog) -> None:
     """
@@ -39,6 +34,7 @@ def test_get_tickers_meta(datacatalog) -> None:
     tickers_list = dc.get_tickers_metadata(cat='crypto', subcat='stablecoin', as_list=True)
     assert isinstance(tickers_list, list), "'as_list' fails to return list."
 
+
 def test_search_tickers(datacatalog) -> None:
     """
     Test tickers metadata search.
@@ -50,6 +46,7 @@ def test_search_tickers(datacatalog) -> None:
     assert 'name' in list(df.columns), "Name is missing from tickers dataframe."
     assert 'USDC' in df.index, "Missing USDC ticker."
     assert df.loc['USDC', 'subcategory'] == 'stablecoin', "Subcategory should be stablecoin."
+
 
 def test_get_fields_meta(datacatalog) -> None:
     """
@@ -65,17 +62,19 @@ def test_get_fields_meta(datacatalog) -> None:
     fields_list = dc.get_fields_metadata(cat='on-chain', as_list=True)
     assert isinstance(fields_list, list), "'as_list' fails to return list."
 
+
 def test_search_fields(datacatalog) -> None:
     """
     Test fields metadata search.
     """
     dc = datacatalog
-    df =  dc.search_fields(by_col='subcategory', keyword='addresses')
+    df = dc.search_fields(by_col='subcategory', keyword='addresses')
     assert not df.empty, "Fields dataframe was returned empty."
     assert df.index.name == "id", "Dataframe index name should be 'id'."
     assert 'name' in list(df.columns), "Name is missing from fields dataframe."
     assert 'add_act' in df.index, "Missing USDC ticker."
     assert df.loc['add_act', 'cryptocompare_id'] == 'active_addresses', "Wrong CC id for active addresses."
+
 
 def test_scrape_stablecoins(datacatalog) -> None:
     """

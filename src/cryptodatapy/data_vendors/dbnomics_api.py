@@ -1,17 +1,10 @@
-import pandas as pd
-import numpy as np
-import logging
-import requests
-from datetime import datetime, timedelta
-from time import sleep
-from importlib import resources
-from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.util.convertparams import ConvertParams
-from cryptodatapy.data_vendors.datavendor import DataVendor
 import dbnomics
-
+import pandas as pd
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.datavendor import DataVendor
+from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
+from typing import Optional, Union, Any
 
 # data credentials
 data_cred = DataCredentials()
@@ -30,12 +23,12 @@ class DBnomics(DataVendor):
             assets: Optional[list[str]] = None,
             markets: Optional[list[str]] = None,
             market_types: Optional[list[str]] = None,
-            fields: dict[str, list[str]] = None,
+            fields: Optional[dict[str, list[str]]] = None,
             frequencies: dict[str, list[str]] = {'macro': ['d', 'w', 'm', 'q', 'y']},
-            base_url: str = None,
-            api_key: str = None,
-            max_obs_per_call: int = None,
-            rate_limit: str = None
+            base_url: Optional[str] = None,
+            api_key: Optional[str] = None,
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[Any] = None
     ):
         """
         Constructor
@@ -56,19 +49,19 @@ class DBnomics(DataVendor):
             List of available markets as base asset/quote currency pairs, e.g. ['btcusdt', 'ethbtc'].
         market_types: list, optional, default None
             List of available market types, e.g. [spot', 'perpetual_future', 'future', 'option'].
-        fields: dictionary
+        fields: dictionary, optional, default None
             Dictionary of available fields, by category-fields key-value pairs,
              e.g. {'macro': 'actual', 'expected', 'suprise'}.
         frequencies: dictionary
             Dictionary of available frequencies, by category-freq key-value pairs, e.g. ['tick', '1min', '5min',
             '10min', '20min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm']
-        base_url: str
+        base_url: str, optional, default None
             Base url used in GET requests. If not provided, default is set to base url stored in DataCredentials.
-        api_key: str
+        api_key: str, optional, default None
             Api key. If not provided, default is set to cryptocompare_api_key stored in DataCredentials.
-        max_obs_per_call: int
+        max_obs_per_call: int, optional, default None
             Maximum number of observations returns per API call.
-        rate_limit: pd.DataFrame or dict
+        rate_limit: any, optional, default None
             Number of API calls made and left by frequency.
         """
         DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
@@ -168,13 +161,13 @@ class DBnomics(DataVendor):
         if data_req.cat not in self.categories:
             raise ValueError(f"Invalid category. Valid categories are: {self.categories}.")
 
-        # check freq
-        if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
-
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
             raise ValueError("Invalid fields. See fields property for available fields.")
+
+        # check freq
+        if data_req.freq not in self.frequencies[data_req.cat]:
+            raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
 
         # emtpy df
         df = pd.DataFrame()

@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.dbnomics_api import DBnomics
 import pytest
@@ -64,11 +63,11 @@ def test_get_data(dbnomics) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_GDP_Sh_PPP', 'EZ_GDP_Sh_PPP', 'CN_GDP_Sh_PPP',
-                                                    'US_Credit/GDP_HH', 'WL_Credit_Banks'], \
+    assert list(df.index.droplevel(0).unique()) == ['US_Credit/GDP_HH', 'WL_Credit_Banks', 'CN_GDP_Sh_PPP',
+                                                    'EZ_GDP_Sh_PPP', 'US_GDP_Sh_PPP'], \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['actual'], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('1980-01-01 00:00:00'), "Wrong start date."  # start date
+    assert df.index[0][0] == pd.Timestamp('1947-10-01 00:00:00'), "Wrong start date."  # start date
     assert isinstance(df.actual.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
 
 

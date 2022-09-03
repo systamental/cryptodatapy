@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional, Union
-from cryptodatapy.util.datacredentials import DataCredentials
+from cryptodatapy.util.datacredentials import DataCredentials, set_credential
 from cryptodatapy.util.convertparams import ConvertParams
 from cryptodatapy.data_vendors.datavendor import DataVendor
 from cryptodatapy.data_requests.datarequest import DataRequest
@@ -223,7 +223,7 @@ class CryptoCompare(DataVendor):
 
                 return assets
 
-    def get_top_market_cap_assets(self, n: int = 100) -> list[str]:
+    def get_top_market_cap_info(self, n: int = 100) -> list[str]:
         """
         Get list of top assets by market cap.
 
@@ -275,8 +275,8 @@ class CryptoCompare(DataVendor):
                         ticker = data['RAW'][i]['USD']['FROMSYMBOL']
                         tickers.append(ticker)
                     except Exception as e:
-                        logging.warning(e)
-                        logging.warning(f"Failed to get data for ticker #{i}.")
+                        logging.info(e)
+                        logging.info(f"Failed to get data for ticker #{i}.")
 
                 return tickers
 

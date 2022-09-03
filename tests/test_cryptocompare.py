@@ -72,7 +72,7 @@ def test_get_top_market_cap_assets(cryptocompare) -> None:
     Test get top market cap assets method.
     """
     cc = cryptocompare
-    assert 'BTC' in cc.get_top_market_cap_assets(), "'BTC' is not in top market cap list."
+    assert 'BTC' in cc.get_top_market_cap_info(), "'BTC' is not in top market cap list."
 
 
 def test_top_market_cap_error(cryptocompare) -> None:
@@ -81,7 +81,7 @@ def test_top_market_cap_error(cryptocompare) -> None:
     """
     cc = cryptocompare
     with pytest.raises(ValueError):
-        cc.get_top_market_cap_assets(n=101)
+        cc.get_top_market_cap_info(n=101)
 
 
 def test_indexes(cryptocompare) -> None:

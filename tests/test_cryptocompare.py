@@ -1,10 +1,9 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from cryptodatapy.util.datacredentials import DataCredentials
+import pandas as pd
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
-import pytest
+from cryptodatapy.util.datacredentials import DataCredentials
 
 
 @pytest.fixture
@@ -256,7 +255,7 @@ def test_get_indexes(cryptocompare) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['MVDA', 'BVIN'], "Tickers are missing from dataframe"  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close'], "Fields are missing from indexes dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2017-07-20'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -274,7 +273,7 @@ def test_get_ohlcv(cryptocompare, datarequest) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['BTC']  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], "Fields are missing from OHLCV dataframe."
     assert df.index[0] == (pd.Timestamp('2010-07-17 00:00:00'), 'BTC'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=1), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -292,7 +291,7 @@ def test_get_onchain(cryptocompare, datarequest) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['BTC']  # tickers
     assert 'add_act' in list(df.columns), "Fields are missing from on-chain dataframe."  # fields
     assert df.index[0] == (pd.Timestamp('2009-01-03 00:00:00'), 'BTC'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 48h ago."  # end date
     assert isinstance(df.add_act.dropna().iloc[-1], np.int64), "Close is not a numpy float."  # dtypes
 
@@ -310,7 +309,7 @@ def test_get_social(cryptocompare, datarequest) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['BTC']  # tickers
     assert 'sm_followers' in list(df.columns), "Fields are missing from social stats dataframe."  # fields
     assert df.index[0] == (pd.Timestamp('2017-05-26 00:00:00'), 'BTC'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.sm_followers.dropna().iloc[-1], np.int64), "Close is not a numpy float."  # dtypes
 
@@ -328,7 +327,7 @@ def test_get_data_integration(cryptocompare) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['BTC', 'ETH', 'SOL']  # tickers
     assert list(df.columns) == ['close', 'add_act', 'sm_followers'], "Fields are missing from dataframe."  # fields
     assert df.index[0] == (pd.Timestamp('2009-01-03 00:00:00'), 'BTC'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=3), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3), \
         "End date is more than 72h ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
     assert isinstance(df.add_act.dropna().iloc[-1], np.int64), "Active addresses is not a numpy int."  # dtypes

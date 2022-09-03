@@ -1,6 +1,5 @@
-# import libraries
-import pandas as pd
-from datetime import datetime, timedelta
+# import pandas as pd
+# from datetime import datetime, timedelta
 from cryptodatapy.data_requests.datarequest import DataRequest
 import pytest
 
@@ -15,7 +14,7 @@ def test_data_source_error(datarequest) -> None:
     Test data source for data request.
     """
     dr = datarequest
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         dr.data_source = ['wrong source type']
 
 
@@ -87,8 +86,8 @@ def test_fields_error(datarequest) -> None:
     Test fields for data request.
     """
     dr = datarequest
-    with pytest.raises(ValueError):
-        dr.fields = ['hacks_count']
+    with pytest.raises(TypeError):
+        dr.fields = None
 
 
 def test_inst_error(datarequest) -> None:

@@ -1,8 +1,8 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.ccxt_api import CCXT
-import pytest
 
 
 @pytest.fixture

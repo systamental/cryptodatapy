@@ -1,14 +1,13 @@
+import ccxt
+import logging
 import numpy as np
 import pandas as pd
-import logging
-from cryptodatapy.util.datacredentials import DataCredentials
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.datavendor import DataVendor
 from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
 from time import sleep
 from typing import Optional, Union, Any
-import ccxt
-
 
 # data credentials
 data_cred = DataCredentials()

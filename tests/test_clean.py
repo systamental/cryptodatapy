@@ -1,14 +1,14 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime
-from datetime import datetime, timedelta
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.ccxt_api import CCXT
-from cryptodatapy.data_cleaning.od import OutlierDetection
+import pandas as pd
+import pytest
+from cryptodatapy.data_cleaning.clean import CleanData
 from cryptodatapy.data_cleaning.filter import Filter
 from cryptodatapy.data_cleaning.impute import Impute
-from cryptodatapy.data_cleaning.clean import CleanData
-import pytest
+from cryptodatapy.data_cleaning.od import OutlierDetection
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.ccxt_api import CCXT
+# from datetime import datetime
+# from datetime import datetime, timedelta
 
 
 @pytest.fixture

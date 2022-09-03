@@ -1,10 +1,10 @@
-import pandas as pd
-import numpy as np
 import matplotlib as plt
-from typing import Union, Optional, Any
-from cryptodatapy.data_cleaning.od import OutlierDetection
+import numpy as np
+import pandas as pd
 from cryptodatapy.data_cleaning.filter import Filter
 from cryptodatapy.data_cleaning.impute import Impute
+from cryptodatapy.data_cleaning.od import OutlierDetection
+from typing import Union, Optional
 
 
 class CleanData():
@@ -311,7 +311,7 @@ class CleanData():
         ax.set_facecolor('whitesmoke')
         ax.legend([plot_series[1] + "_filtered", plot_series[1] + "_raw"], loc='upper left')
 
-    def get(self, attr='df') -> Any:
+    def get(self, attr='df') -> pd.DataFrame:
         """
         Returns GetData object attribute.
 
@@ -322,8 +322,8 @@ class CleanData():
 
         Returns
         -------
-        self: Any
-            Returns GetData oject attribute
+        self: pd.DataFrame
+            Dataframe with GetData object attribute
         """
         self.summary.loc['%_NaN_end', self.df.unstack().columns] = (self.df.unstack().isnull().sum() /
                                                                     self.df.unstack().shape[0]).values * 100

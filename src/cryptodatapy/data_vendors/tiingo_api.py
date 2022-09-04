@@ -1,14 +1,13 @@
-import pandas as pd
 import logging
+import pandas as pd
 import requests
-from datetime import datetime, timedelta
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.datavendor import DataVendor
+from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
+# from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.util.convertparams import ConvertParams
-from cryptodatapy.data_vendors.datavendor import DataVendor
-
 
 # data credentials
 data_cred = DataCredentials()
@@ -242,7 +241,7 @@ class Tiingo(DataVendor):
         """
         return None
 
-    def get_eqty_daily(self, data_req: DataRequest) -> pd.DataFrame:
+    def get_eqty(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Get equities daily data.
 
@@ -549,7 +548,7 @@ class Tiingo(DataVendor):
                 df = self.get_eqty_iex(data_req)
             # get eqty daily OHLCV data
             elif data_req.cat == 'eqty' and data_req.freq in self.frequencies[self.frequencies.index('d'):]:
-                df = self.get_eqty_daily(data_req)
+                df = self.get_eqty(data_req)
             # get crypto OHLCV data
             elif data_req.cat == 'crypto':
                 df = self.get_crypto(data_req)

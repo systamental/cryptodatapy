@@ -1,10 +1,10 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from cryptodatapy.util.datacredentials import DataCredentials
+import pandas as pd
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.tiingo_api import Tiingo
-import pytest
+from cryptodatapy.util.datacredentials import DataCredentials
+# from datetime import datetime, timedelta
 
 
 @pytest.fixture
@@ -148,13 +148,13 @@ def test_api_key_error(tiingo) -> None:
         tg.api_key = float(0.5)
 
 
-def test_get_eqty_daily(tiingo) -> None:
+def test_get_eqty(tiingo) -> None:
     """
     Test get equity daily data method.
     """
     tg = tiingo
     data_req = DataRequest(tickers=['spy', 'tlt', 'gsp'], cat='eqty', start_date='2020-01-01')
-    df = tg.get_eqty_daily(data_req)
+    df = tg.get_eqty(data_req)
     assert not df.empty, "Indexes dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be multiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
@@ -164,7 +164,7 @@ def test_get_eqty_daily(tiingo) -> None:
                                 'open_adj', 'volume_adj', 'dividend', 'split'], \
         "Fields are missing from indexes dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2020-01-02 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -182,7 +182,7 @@ def test_get_eqty_iex(tiingo) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['META', 'AAPL', 'AMZN', 'NFLX', 'GOOG'], \
         "Tickers are missing from dataframe"  # tickers
     assert list(df.columns) == ['close', 'high', 'low', 'open'], "Fields are missing from indexes dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -202,7 +202,7 @@ def test_get_crypto(tiingo) -> None:
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume', 'volume_quote_ccy', 'trades '], \
         "Fields are missing from indexes dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2011-08-19 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -222,7 +222,7 @@ def test_get_fx(tiingo) -> None:
     assert list(df.columns) == ['open', 'high', 'low', 'close'], \
         "Fields are missing from indexes dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1990-01-02 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.unstack().index[-1] < timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.unstack().index[-1] < pd.Timedelta(days=4), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -240,6 +240,10 @@ def test_get_data(tiingo) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['AAPL', 'AMZN', 'NFLX', 'META', 'GOOG'], \
         "Tickers are missing from dataframe"  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from indexes dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
+
+
+if __name__ == "__main__":
+    pytest.main()

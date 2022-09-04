@@ -1,10 +1,10 @@
-import pandas as pd
-import numpy as np
 import matplotlib as plt
-from typing import Union, Optional
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.seasonal import STL
+import numpy as np
+import pandas as pd
 from prophet import Prophet
+from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.seasonal import seasonal_decompose
+from typing import Optional
 
 
 class OutlierDetection():

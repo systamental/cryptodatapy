@@ -1,10 +1,10 @@
-import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from cryptodatapy.util.datacredentials import DataCredentials
+import pandas as pd
+import pytest
 from cryptodatapy.data_requests.datarequest import DataRequest
 from cryptodatapy.data_vendors.pandasdr_api import PandasDataReader
-import pytest
+from cryptodatapy.util.datacredentials import DataCredentials
+from datetime import datetime, timedelta
 
 
 @pytest.fixture
@@ -103,10 +103,12 @@ def test_get_data_av(pandasdr) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['AAPL', 'MSFT', 'SPY', 'TLT', 'QQQ'], \
+    assert set(df.index.droplevel(0).unique()) == {'AAPL', 'MSFT', 'QQQ', 'SPY', 'TLT'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1999-11-01'), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+        "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
 
 
@@ -121,27 +123,32 @@ def test_get_data_av_fx(pandasdr) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['EURUSD', 'GBPUSD', 'JPYUSD'], \
+    assert set(df.index.droplevel(0).unique()) == {'EURUSD', 'GBPUSD', 'USDJPY'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp('2003-07-07 00:00:00'), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+        "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
 
 
+    data_req = DataRequest(data_source='fred', tickers=['US_Credit_BAA_Spread', 'US_BE_Infl_10Y', 'US_Eqty_Vol_Idx',
+                                                        'EM_Eqty_Vol_Idx'], fields='close', cat='eqty')
 def test_get_data_fred(pandasdr) -> None:
     """
     Test get data method for fred.
     """
     pdr = pandasdr
-    data_req = DataRequest(data_source='fred', tickers=['US_Credit_BAA_Spread', 'US_BE_Infl_10Y', 'US_Eqty_Vol_Idx',
-                                                        'EM_Eqty_Vol_Idx'], fields='close', cat='eqty')
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Credit_BAA_Spread', 'US_Eqty_Vol_Idx', 'US_BE_Infl_10Y',
-                                                    'EM_Eqty_Vol_Idx'], "Tickers are missing from dataframe."  # tickers
+    assert set(df.index.droplevel(0).unique()) == {'EM_Eqty_Vol_Idx', 'US_BE_Infl_10Y', 'US_Credit_BAA_Spread',
+                                                   'US_Eqty_Vol_Idx'}, "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1986-01-02 00:00:00'), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+        "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
 
 
@@ -156,10 +163,12 @@ def test_get_data_yahoo(pandasdr) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['AAPL', 'MSFT', 'SPY', 'QQQ', 'TLT'], \
+    assert set(df.index.droplevel(0).unique()) == {'AAPL', 'MSFT', 'QQQ', 'SPY', 'TLT'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1980-12-12 00:00:00'), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+        "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
 
 

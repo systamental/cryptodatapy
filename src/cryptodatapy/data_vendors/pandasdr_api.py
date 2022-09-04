@@ -1,16 +1,12 @@
-import pandas as pd
-import numpy as np
 import logging
-import requests
-from datetime import datetime, timedelta
-from time import sleep
-from importlib import resources
-from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.util.convertparams import ConvertParams
-from cryptodatapy.data_vendors.datavendor import DataVendor
+import numpy as np
+import pandas as pd
 import pandas_datareader.data as web
+from cryptodatapy.data_requests.datarequest import DataRequest
+from cryptodatapy.data_vendors.datavendor import DataVendor
+from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.util.datacredentials import DataCredentials
+from typing import Optional, Any
 
 
 # data credentials
@@ -26,12 +22,12 @@ class PandasDataReader(DataVendor):
             self,
             source_type: str = 'library',
             categories: list[str] = ['fx', 'rates', 'eqty', 'credit', 'macro'],
-            exchanges: list[str] = None,
-            indexes: dict[str, list[str]] = None,
-            assets: dict[str, list[str]] = None,
-            markets: dict[str, list[str]] = None,
+            exchanges: Optional[list[str]] = None,
+            indexes: Optional[dict[str, list[str]]] = None,
+            assets: Optional[dict[str, list[str]]] = None,
+            markets: Optional[dict[str, list[str]]] = None,
             market_types: list[str] = ['spot'],
-            fields: dict[str, list[str]] = None,
+            fields: Optional[dict[str, list[str]]] = None,
             frequencies: dict[str, list[str]] = {
                 'crypto': ['d', 'w', 'm', 'q', 'y'],
                 'fx': ['d', 'w', 'm', 'q', 'y'],
@@ -270,8 +266,6 @@ class PandasDataReader(DataVendor):
         # filter df for desired fields and typecast
         fields = [field for field in data_req.fields if field in df1.columns]
         df = df1.loc[:, fields].copy()
-        # type conversion
-        df = ConvertParams().convert_dtypes(df)
 
         return df.sort_index()
 
@@ -340,5 +334,8 @@ class PandasDataReader(DataVendor):
         df = df[df != 0]  # 0 values
         df = df[~df.index.duplicated()]  # duplicate rows
         df = df.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
+        # type conversion
+        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
 
         return df

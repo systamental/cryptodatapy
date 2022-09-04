@@ -1,9 +1,9 @@
-import pandas as pd
 import logging
-from datetime import datetime, timedelta
-from typing import Union, Optional
-from importlib import resources
+import pandas as pd
 from cryptodatapy.data_requests.datarequest import DataRequest
+from datetime import datetime, timedelta
+from importlib import resources
+from typing import Union, Optional
 
 
 class ConvertParams():
@@ -164,13 +164,13 @@ class ConvertParams():
         elif self.data_source == 'investpy' or self.data_source == 'av-forex-daily':
             if data_req.cat == 'fx':
                 mkts_list = self.convert_fx_tickers(data_req)
-            elif data_req.cat == 'crypto':
-                mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
 
         elif self.data_source == 'tiingo':
             if data_req.cat == 'fx':
                 fx_list = self.convert_fx_tickers(data_req)
                 mkts_list = [ticker.lower().replace('/', '') for ticker in fx_list]
+            elif data_req.cat == 'crypto':
+                mkts_list = [ticker.lower() + quote_ccy for ticker in data_req.tickers]
 
         else:
             mkts_list = None

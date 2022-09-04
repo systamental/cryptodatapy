@@ -161,3 +161,7 @@ def test_source_fields_error(datarequest) -> None:
     with pytest.raises(TypeError):
         dr.source_fields = {'crypto': ['close_price']}
 
+
+if __name__ == "__main__":
+    pytest.main()
+

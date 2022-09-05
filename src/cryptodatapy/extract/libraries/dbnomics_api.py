@@ -1,8 +1,4 @@
 import pandas as pd
-# import numpy as np
-# from datetime import datetime, timedelta
-# from time import sleep
-# from importlib import resources
 from typing import Optional
 from cryptodatapy.util.datacredentials import DataCredentials
 from cryptodatapy.extract.datarequest import DataRequest

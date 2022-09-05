@@ -1,3 +1,0 @@
-from cryptodatapy.data_vendors.datavendor import DataVendor as DataVendor
-from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
-from cryptodatapy.data_vendors.coinmetrics_api import CoinMetrics

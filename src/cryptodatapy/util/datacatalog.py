@@ -1,10 +1,9 @@
-import numpy as np
 import pandas as pd
 from dataclasses import dataclass, field
+from typing import Union, Dict, Optional
 from importlib import resources
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from typing import Union, Dict, Optional
 from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -15,8 +14,8 @@ class DataCatalog():
 
     Parameters
     ----------
-    data_source: dictionary
-        Name of data source, e.g. 'cryptocompare', 'coinmetrics', 'glassnode', etc and data availability url.
+    data_sources: str
+        Name of data source, e.g. 'cryptocompare', 'coinmetrics', 'glassnode', etc.
 
     """
     data_sources: Dict = field(default_factory=lambda: {
@@ -25,9 +24,8 @@ class DataCatalog():
         'coinmetrics': 'https://docs.coinmetrics.io/info/markets',
         'glassnode': 'https://glassnode.com/',
         'tiingo': 'https://api.tiingo.com/products/crypto-api',
-        'av-daily': 'https://www.alphavantage.co/documentation/',
-        'av-forex-daily': 'https://www.alphavantage.co/documentation/',
-        'yahoo': 'https://finance.yahoo.com/',
+        'alpha vantage': 'https://www.alphavantage.co/documentation/',
+        'yahoo finance': 'https://finance.yahoo.com/',
         'investpy': 'https://investpy.readthedocs.io/',
         'dbnomics': 'https://db.nomics.world/providers',
         'fred': 'https://fred.stlouisfed.org/'
@@ -37,43 +35,38 @@ class DataCatalog():
     def get_tickers_metadata(tickers: Optional[Union[str, list[str]]] = None, country_id_2: Optional[str] = None,
                              country_id_3: Optional[str] = None, country_name: Optional[str] = None,
                              agg: Optional[str] = None, cat: Optional[str] = None, subcat: Optional[str] = None,
-                             mkt_type: Optional[str] = None, tenor: Optional[str] = None,
-                             quote_ccy: Optional[str] = None, as_list=False) -> pd.DataFrame():
+                             mkt_type: Optional[str] = None, quote_ccy: Optional[str] = None, as_list=False) -> pd.DataFrame():
         """
-        Gets tickers metadata. Excludes individual equity tickers.
+        Gets ticker metadata. Excludes individual equity tickers.
 
         Parameters
         ----------
         tickers: str or list, optional, default None
             Tickers for which to get metadata.
         country_id_2: str, optional, default None
-            Country code on which to filter tickers in ISO 3166-1 alpha-2 format.
+            Country code for which to filter tickers, ISO 3166-1 alpha-2 format.
         country_id_3: str, optional, default None
-            Country code on which to filter tickers in ISO 3166-1 alpha-3 format.
+            Country code for which to filter tickers, ISO 3166-1 alpha-3 format.
         country_name: str, optional, default None
-            Country name on which to filter tickers.
+            Country name for which to filer tickers.
         agg: str, {'DM', 'EM', 'WL', 'Euro zone'}, optional, default None
-            Country aggregate on which to filter tickers.
+            Country aggregate.
         cat: str, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}
-            Tickers category on which to filter tickers.
+            Tickers category.
         subcat: str, { 'spot rate', 'index', 'effective exchange rate', 'yield', 'swap rate', 'real yield',
-                       'inflation', 'spread', 'etf', 'vol', 'reit', 'industrial metals', 'grains', 'energy',
-                       'softs', 'livestock', 'precious metals', 'growth', 'unemployment', 'money', 'credit',
-                       'property'}, optional, default None
-            Tickers subcategory on which to filter tickers.
+                       'inflation', 'spread', 'etf', 'vol', 'reit', 'industrial metals', 'grains', 'energy', 'softs',
+                       'livestock', 'precious metals', 'growth', 'unemployment', 'money', 'credit', 'property'},
+                       optional, default None
+            Tickers subcategory.
         mkt_type: str, {'spot', 'etf', 'perpetual_future', 'future', 'swap', 'option'}, optional, default None
-            Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option' etc on which to filter tickers.
-        tenor: str, optional, default None
-            Tenor (duration) of asset on which to filter tickers.
+            Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option'.
         quote_ccy: str,  optional, default None
-            Quote currency for base asset on which to filter tickers.
-        as_list: bool, default False
-            Returns filtered tickers as list.
+            Quote currency for base asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD (bitcoin in dollars), etc.
 
         Returns
         -------
-        tickers_df: dataframe
-            DataFrame with tickers and metadata.
+        tickers_df: pd.DataFrame
+            DataFrame with tickers metadata.
         """
         # get tickers csv file
         with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
@@ -104,9 +97,6 @@ class DataCatalog():
         # filter by mkt type
         if mkt_type is not None:
             tickers_df = tickers_df[tickers_df.mkt_type == mkt_type.lower()]
-        # filter by tenor
-        if tenor is not None:
-            tickers_df = tickers_df[tickers_df.tenor == tenor.upper()]
         # filter by quote ccy
         if quote_ccy is not None:
             tickers_df = tickers_df[tickers_df.quote_ccy == quote_ccy.upper()]
@@ -117,19 +107,19 @@ class DataCatalog():
         return tickers_df
 
     @staticmethod
-    def search_tickers(by_col=None, keyword=None) -> pd.DataFrame():
+    def search_tickers(by_col: str = Optional[None], keyword: Optional[str] = None) -> pd.DataFrame():
         """
         Parameters
         ----------
-        by_col: str
-            Column to search.
-        keyword: str
+        by_col: str, optional, default None
+            Column by which to search.
+        keyword: str, optional, default None
             Keyword for which to search.
 
         Returns
         -------
-        tickers_df: dataframe
-            DataFrame with tickers and metadata.
+        tickers_df: pd.DataFrame
+            DataFrame with tickers metadata.
         """
         # get tickers csv file
         with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
@@ -159,13 +149,11 @@ class DataCatalog():
             Fields category, i.e. type of data.
         subcat: str, optional, default None
             Fields subcategory.
-        as_list: bool, default False
-            Returns filtered tickers as list.
 
         Returns
         -------
-        fields_df: dataframe
-            DataFrame with field ids and metadata.
+        fields_df: pd.DataFrame
+            DataFrame with fields metadata.
         """
         # get fields csv file
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
@@ -191,19 +179,19 @@ class DataCatalog():
         return fields_df
 
     @staticmethod
-    def search_fields(by_col=None, keyword=None) -> pd.DataFrame():
+    def search_fields(by_col: Optional[str] = None, keyword: Optional[str] = None) -> pd.DataFrame():
         """
         Parameters
         ----------
-        by_col: str
-            Column to search.
-        keyword: str
+        by_col: str, optional, default None
+            Column by which to search.
+        keyword: str, optional, default None
             Keyword for which to search.
 
         Returns
         -------
-        fields_df: dataframe
-            DataFrame with field ids and metadata.
+        fields_df: pd.DataFrame
+            DataFrame with fields metadata.
         """
         # get fields csv file
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
@@ -218,20 +206,23 @@ class DataCatalog():
         return fields_df
 
     @staticmethod
-    def scrape_stablecoins(source='coingecko', as_list=False):
+    def scrape_stablecoins(source: str = 'coingecko', rank_by: str = 'mkt_cap',
+                           as_list=False) -> Union[pd.DataFrame, list]:
         """
         Web scrapes stablecoin information from CoinGecko or CoinMarketCap websites.
 
         Parameters
         ----------
-        source: str, {'coinmarketcap', 'coingecko'}, default 'coingecko
+        source: str, {'coinmarketcap', 'coingecko'}, default 'coingecko'
             Website from which to scrape list of stablecoins.
-        as_list: bool, default False
-            Returns filtered tickers as list.
+        rank_by: str, default 'mkt_cap'
+            Metrics by which to rank stablecoins.
+        as_list, bool, default 'False'
+            Return stablecoins tickers as list.
 
         Returns
         -------
-        sc: dataframe or list
+        sc: Pd.Dataframe or list
             DataFrame with stablecoin info or list of stablecoin tickers.
         """
         # chrome driver
@@ -239,7 +230,7 @@ class DataCatalog():
         # url
         if source == 'coinmarketcap':
             url = 'http://coinmarketcap.com/view/stablecoin/'
-        else:
+        elif source == 'coingecko':
             url = 'https://www.coingecko.com/en/categories/stablecoins'
         # get url
         driver.get(url)
@@ -260,14 +251,11 @@ class DataCatalog():
             df['price'] = df.Price.str.split("$", 1, expand=True)[1].astype(float)
             df['24h_%_chg'] = df['24h %'].str.split('%', 1, expand=True)[0].astype(float)/100
             df['7d_%_chg'] = df['7d %'].str.split('%', 1, expand=True)[0].astype(float)/100
-            df['mkt_cap'] = df['Market Cap'].str.split('$', 2, expand=True)[2].str.replace(',', '', regex=False).\
-                astype(float)
-            df['volume_24h'] = df['Volume(24h)'].str.split(" ", 1, expand=True)[0].str.replace("$", "", regex=False).\
-                str.replace(",", "", regex=False).astype(float)
-            df['circ_suppkly'] = df['Circulating Supply'].str.split(' ', 1, expand=True)[0].str.\
-                replace(",", "", regex=False).astype(float)
+            df['mkt_cap'] = df['Market Cap'].str.split('$',2, expand=True)[2].str.replace(',','', regex=False).astype(float)
+            df['volume_24h'] = df['Volume(24h)'].str.split(" ", 1, expand=True)[0].str.replace("$", "", regex=False).str.replace(",", "", regex=False).astype(float)
+            df['circ_suppkly'] = df['Circulating Supply'].str.split(' ',1, expand=True)[0].str.replace(",","", regex=False).astype(float)
             # reorder cols
-            df = df.loc[:, 'name':]
+            df = df.loc[:,'name':]
             # set index
             df.set_index('ticker', inplace=True)
 
@@ -279,20 +267,22 @@ class DataCatalog():
                 tickers_list.append(row[1].dropna().iloc[-1])
             df['ticker'] = tickers_list
             df['price'] = df.Price.str.split("$", 0, expand=True)[1].str.replace(",", "").astype(float)
-            df['mkt_cap'] = df['Market Capitalization'].str.split('$', 1, expand=True)[1].str.replace(',', '').\
-                astype(float)
-            df['24h_volume'] = df['24h Volume'].str.split("$", 1, expand=True)[1].str.replace(",", "").astype(float)
+            df['mkt_cap'] = df['Market Capitalization'].str.split('$', 1, expand=True)[1].str.replace(',', '').astype(float)
+            df['24h_volume'] = df['24h Volume'].str.split("$", 1, expand=True)[1].str.replace(",","").astype(float)
             # reorder cols
             df = df.loc[:, 'name':]
             # set index
             df.set_index('ticker', inplace=True)
 
-        # rank by mkt cap
-        sc = df.sort_values(by='mkt_cap', ascending=False)
+        # rank by
+        if rank_by is not None:
+            sc = df.sort_values(by=rank_by, ascending=False)
+        else:
+            sc = df
 
         # tickers list
         if as_list:
             # remove duplicated tickers
-            sc = df.loc[df.index.drop_duplicates().to_list()].index.to_list()
+             sc = df.loc[df.index.drop_duplicates().to_list()].index.to_list()
 
         return sc

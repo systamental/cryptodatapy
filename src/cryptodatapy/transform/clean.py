@@ -21,8 +21,8 @@ class CleanData():
         df: pd.DataFrame
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and field (cols) values.
         """
-        self.df = df
         self.start_df = df.copy()  # keepy copy of raw dataframe
+        self.df = df
         self.outliers = None  # outliers
         self.fcsts = None  # forecasts
         self.filtered_tickers = []  # filtered tickers

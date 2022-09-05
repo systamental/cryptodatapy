@@ -4,9 +4,9 @@ import logging
 import keyring
 from dataclasses import dataclass
 from typing import Union
-from importlib import resources
 
 
+# sets data credentials
 def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
     """
     Sets value for data credential key, e.g. api keys, api secrets, db name, ....
@@ -17,10 +17,6 @@ def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
         Credential key for which value is to be stored.
     cred_val: str or int
         Credential value to be stored.
-
-    Returns
-    -------
-    None
 
     Examples
     --------
@@ -35,6 +31,7 @@ def set_credential(cred_key: str, cred_val: Union[str, int]) -> None:
         logging.warning('Credentials could not be set.')
 
 
+# retrieves data credentials
 def get_credential(cred_key: str) -> str:
     """
     Gets value for data credential key, e.g. api keys, api secrets, db name, ....
@@ -94,8 +91,6 @@ class DataCredentials:
 
     # api limit URLs
     cryptocompare_api_rate_limit: str = 'https://min-api.cryptocompare.com/stats/rate/limit'
-    ndl_api_rate_limit: str = 'https://help.data.nasdaq.com/article/' + \
-                              '490-is-there-a-rate-limit-or-speed-limit-for-api-usage'
 
     # base URLs
     cryptocompare_base_url: str = get_credential('cryptocompare_base_url')
@@ -108,4 +103,5 @@ class DataCredentials:
 
     # search URLs
     dbnomics_search_url: str = 'https://db.nomics.world/'
-    glassnode_search_url: str = 'https://docs.glassnode.com/general-info/on-chain-data'
+
+

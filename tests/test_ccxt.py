@@ -187,7 +187,7 @@ def test_get_funding_rates(ccxt) -> None:
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert df.index.droplevel(0).unique() == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['funding_rate'], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('2019-09-10'), "Wrong start date."  # start date
+    assert df.index[0][0] < pd.Timestamp('2019-10-10'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64), "Funding rate is not a numpy float."  # dtypes

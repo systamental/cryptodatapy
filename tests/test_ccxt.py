@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.ccxt_api import CCXT
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.ccxt_api import CCXT
 
 
 @pytest.fixture
@@ -13,23 +13,6 @@ def datarequest():
 @pytest.fixture
 def ccxt():
     return CCXT()
-
-
-def test_source_type(ccxt) -> None:
-    """
-    Test source type property.
-    """
-    cx = ccxt
-    assert cx.source_type == 'library', "Source type should be 'library'."
-
-
-def test_source_type_error(ccxt) -> None:
-    """
-    Test source type errors.
-    """
-    cx = ccxt
-    with pytest.raises(ValueError):
-        cx.source_type = 'anecdotal'
 
 
 def test_categories(ccxt) -> None:
@@ -204,7 +187,7 @@ def test_get_funding_rates(ccxt) -> None:
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert df.index.droplevel(0).unique() == ['BTC'], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['funding_rate'], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('2019-09-11'), "Wrong start date."  # start date
+    assert df.index[0][0] == pd.Timestamp('2019-09-10'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=1), \
         "End date is more than 24h ago."  # end date
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64), "Funding rate is not a numpy float."  # dtypes

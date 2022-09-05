@@ -1,30 +1,13 @@
 import pandas as pd
 import numpy as np
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.dbnomics_api import DBnomics
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
 import pytest
 
 
 @pytest.fixture
 def dbnomics():
     return DBnomics()
-
-
-def test_source_type(dbnomics) -> None:
-    """
-    Test source type property.
-    """
-    db = dbnomics
-    assert db.source_type == 'library', "Source type should be 'library'."
-
-
-def test_source_type_error(dbnomics) -> None:
-    """
-    Test source type errors.
-    """
-    db = dbnomics
-    with pytest.raises(ValueError):
-        db.source_type = 'anecdotal'
 
 
 def test_categories(dbnomics) -> None:
@@ -63,8 +46,8 @@ def test_get_data(dbnomics) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Credit/GDP_HH', 'WL_Credit_Banks', 'CN_GDP_Sh_PPP',
-                                                    'EZ_GDP_Sh_PPP', 'US_GDP_Sh_PPP'], \
+    assert set(df.index.droplevel(0).unique()) == {'US_Credit/GDP_HH', 'WL_Credit_Banks', 'CN_GDP_Sh_PPP',
+                                                   'EZ_GDP_Sh_PPP', 'US_GDP_Sh_PPP'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['actual'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1947-10-01 00:00:00'), "Wrong start date."  # start date

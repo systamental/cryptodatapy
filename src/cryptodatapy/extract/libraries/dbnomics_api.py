@@ -157,7 +157,7 @@ class DBnomics(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and values macro or off-chain fields (cols).
         """
         # convert data request parameters to InvestPy format
-        dbn_data_req = ConvertParams(data_source='dbnomics').convert_to_source(data_req)
+        dbn_data_req = ConvertParams(data_req, data_source='dbnomics').convert_to_source()
 
         # check cat
         if data_req.cat not in self.categories:

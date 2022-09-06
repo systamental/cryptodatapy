@@ -183,7 +183,7 @@ class PandasDataReader(Library):
             raise ValueError("Data source cannot be None. Select a data source for the data request.")
 
         # convert data request parameters to InvestPy format
-        pdr_data_req = ConvertParams(data_source=data_req.data_source).convert_to_source(data_req)
+        pdr_data_req = ConvertParams(data_req, data_source=data_req.data_source).convert_to_source()
 
         # check cat
         if data_req.cat not in self.categories:

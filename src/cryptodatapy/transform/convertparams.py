@@ -552,36 +552,3 @@ class ConvertParams():
                          'source_tickers': source_tickers, 'source_freq': source_freq, 'source_fields': source_fields}
 
         return source_params
-
-    def convert_fields_to_lib(self, data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Converts fields from data source data resp to CryptoDataPy format.
-        """
-        # fields dictionary
-        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
-            fields_dict_path = f
-        # get fields and data resp
-        fields_df = pd.read_csv(fields_dict_path, index_col=0, encoding='latin1').copy()
-        fields_list, df = fields_df[str(self.data_source) + '_id'].to_list(), data_resp.copy()
-
-        # loop through data resp cols
-        for col in df.columns:
-            if self.data_req.source_fields is not None and col in self.data_req.source_fields:
-                pass
-            elif col in fields_list or col.title() in fields_list or col.lower() in fields_list:
-                df.rename(columns={col: fields_df[(fields_df[str(self.data_source) + '_id'] == col.title()) |
-                                                  (fields_df[str(self.data_source) + '_id'] == col.lower()) |
-                                                  (fields_df[str(self.data_source) + '_id'] == col)].index[0]},
-                          inplace=True)
-            elif col == 'index':
-                df.rename(columns={'index': 'ticker'}, inplace=True)  # rename index col
-            elif col == 'asset':
-                df.rename(columns={'asset': 'ticker'}, inplace=True)  # rename asset col
-            elif col == 'level':
-                df.rename(columns={'level': 'close'}, inplace=True)  # rename level col
-            elif col == 'institution':
-                pass
-            else:
-                df.drop(columns=[col], inplace=True)
-
-        return df

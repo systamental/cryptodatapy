@@ -1,30 +1,13 @@
 import pandas as pd
 import numpy as np
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.investpy_api import InvestPy
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.investpy_api import InvestPy
 import pytest
 
 
 @pytest.fixture
 def investpy():
     return InvestPy()
-
-
-def test_source_type(investpy) -> None:
-    """
-    Test source type property.
-    """
-    ip = investpy
-    assert ip.source_type == 'library', "Source type should be 'library'."
-
-
-def test_source_type_error(investpy) -> None:
-    """
-    Test source type errors.
-    """
-    ip = investpy
-    with pytest.raises(ValueError):
-        ip.source_type = 'anecdotal'
 
 
 def test_categories(investpy) -> None:
@@ -130,7 +113,7 @@ def test_get_indexes(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Eqty_Idx', 'JP_Eqty_Idx', 'EZ_Eqty_Idx'], \
+    assert set(df.index.droplevel(0).unique()) == {'US_Eqty_Idx', 'JP_Eqty_Idx', 'EZ_Eqty_Idx'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
@@ -151,13 +134,13 @@ def test_get_etfs(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['AR_Eqty_MSCI_ETF', 'ARE_Eqty_MSCI_ETF', 'AU_Eqty_MSCI_ETF',
-                                                    'BE_Eqty_MSCI_ETF'], \
+    assert set(df.index.droplevel(0).unique()) == {'AR_Eqty_MSCI_ETF', 'ARE_Eqty_MSCI_ETF', 'AU_Eqty_MSCI_ETF',
+                                                   'BE_Eqty_MSCI_ETF'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2011-03-04 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -172,12 +155,12 @@ def test_get_stocks(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['FB', 'AAPL', 'AMZN', 'NFLX', 'GOOG'], \
+    assert set(df.index.droplevel(0).unique()) == {'FB', 'AAPL', 'AMZN', 'NFLX', 'GOOG'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2012-05-18 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -192,12 +175,12 @@ def test_get_eqty(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Eqty_Idx', 'US_Eqty_MSCI', 'SPY', 'US_Rates_Long_ETF', 'TLT'], \
+    assert set(df.index.droplevel(0).unique()) == {'US_Eqty_Idx', 'US_Eqty_MSCI', 'SPY', 'US_Rates_Long_ETF', 'TLT'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1979-12-26 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -233,8 +216,8 @@ def test_get_rates(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Rates_3M', 'DE_Rates_2Y', 'JP_Rates_5Y', 'CA_Rates_10Y',
-                                                    'GB_Rates_30Y'], "Tickers are missing from dataframe."  # tickers
+    assert set(df.index.droplevel(0).unique()) == {'US_Rates_3M', 'DE_Rates_2Y', 'JP_Rates_5Y', 'CA_Rates_10Y',
+                                                   'GB_Rates_30Y'}, "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1990-01-09 00:00:00'), "Wrong start date."  # start date
@@ -253,12 +236,12 @@ def test_get_cmdty(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['Gold', 'Crude_Oil_Brent', 'Copper', 'Uranium'], \
+    assert set(df.index.droplevel(0).unique()) == {'Gold', 'Crude_Oil_Brent', 'Copper', 'Uranium'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1975-01-03 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
@@ -268,17 +251,16 @@ def test_get_macro(investpy) -> None:
     Test get macro series method.
     """
     ip = investpy
-    data_req = DataRequest(tickers=['US_Manuf_PMI', 'CN_Manuf_PMI', 'EZ_M3'], fields='actual', cat='macro',
-                           start_date='2019-01-01')
+    data_req = DataRequest(tickers=['CN_Manuf_PMI', 'EZ_M3'], fields='actual', cat='macro', start_date='2019-01-01')
     df = ip.get_macro_series(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Manuf_PMI', 'CN_Manuf_PMI', 'EZ_M3'], \
+    assert set(df.index.droplevel(0).unique()) == {'CN_Manuf_PMI', 'EZ_M3'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['actual', 'expected', 'previous', 'surprise'], \
         "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('2019-01-03'), "Wrong start date."  # start date
+    assert df.index[0][0] == pd.Timestamp('2019-01-31 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=30), \
         "End date is more than a month ago."  # end date
     assert isinstance(df.actual.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
@@ -294,11 +276,11 @@ def test_get_data(investpy) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
     assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == ['US_Eqty_Idx', 'SPY', 'US_Eqty_MSCI', 'TLT', 'US_Rates_Long_ETF'], \
+    assert set(df.index.droplevel(0).unique()) == {'US_Eqty_Idx', 'SPY', 'US_Eqty_MSCI', 'TLT', 'US_Rates_Long_ETF'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1979-12-26 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
         "End date is more than 4 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 

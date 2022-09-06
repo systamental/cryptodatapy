@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.glassnode_api import Glassnode
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
 import pytest
 
 
@@ -13,24 +13,6 @@ def datarequest():
 @pytest.fixture
 def glassnode():
     return Glassnode()
-
-
-def test_source_type(glassnode) -> None:
-    """
-    Test source type property.
-    """
-    gn = glassnode
-    assert gn.source_type == 'data_vendor', "Source type should be 'data_vendor'."
-
-
-def test_source_error(glassnode) -> None:
-    """
-    Test source type error.
-    """
-    gn = glassnode
-    with pytest.raises(ValueError):
-        gn.source_type = 'anecdotal'
-
 
 def test_categories(glassnode) -> None:
     """

@@ -1,9 +1,10 @@
 import logging
 import pandas as pd
 import requests
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.datavendor import DataVendor
-from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.extract.data_vendors.datavendor import DataVendor
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.transform.convertparams import ConvertParams
+from cryptodatapy.transform.wrangle import WrangleData
 from cryptodatapy.util.datacredentials import DataCredentials
 from time import sleep
 from typing import Optional, Any, Union
@@ -16,9 +17,9 @@ class Glassnode(DataVendor):
     """
     Retrieves data from Glassnode API.
     """
+
     def __init__(
             self,
-            source_type: str = 'data_vendor',
             categories: list[str] = ['crypto'],
             exchanges: Optional[list[str]] = None,
             indexes: Optional[list[str]] = None,
@@ -37,8 +38,6 @@ class Glassnode(DataVendor):
 
         Parameters
         ----------
-        source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
-            Type of data source, e.g. 'data_vendor', 'exchange', etc.
         categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
             List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
         exchanges: list, optional, default None
@@ -67,7 +66,7 @@ class Glassnode(DataVendor):
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
         """
-        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
+        DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
         # api key
         if api_key is None:
@@ -214,7 +213,7 @@ class Glassnode(DataVendor):
             off-chain fields (cols), in tidy format.
         """
         # convert data request parameters to CryptoCompare format
-        gn_data_req = ConvertParams(data_source='glassnode').convert_to_source(data_req)
+        gn_data_req = ConvertParams(data_req, data_source='glassnode').convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
@@ -308,35 +307,7 @@ class Glassnode(DataVendor):
             Wrangled dataframe with DatetimeIndex (level 0), ticker or institution (level 1), and market, on-chain or
             off-chain values for selected fields (cols), in tidy format.
         """
-        df = data_resp.copy()  # make copy
-
-        # format cols
-        df.rename(columns={'t': 'date'}, inplace=True)
-        if 'o' in df.columns:  # ohlcv data resp
-            df = pd.concat([df.date, df['o'].apply(pd.Series)], axis=1)
-            df.rename(columns={'o': 'open', 'h': 'high', 'c': 'close', 'l': 'low'}, inplace=True)
-            df = df.loc[:, ['date', 'open', 'high', 'low', 'close']]
-        elif 'v' in df.columns:  # on-chain and off-chain data resp
-            df = df.loc[:, ['date', 'v']]
-
-        # convert date and set datetimeindex
-        df = df.set_index('date').sort_index()
-
-        # filter for desired start to end date
-        if data_req.start_date is not None:
-            df = df[(df.index >= data_req.start_date)]
-        if data_req.end_date is not None:
-            df = df[(df.index <= data_req.end_date)]
-
-        # resample freq
-        df = df.resample(data_req.freq).last()
-
-        # remove bad data
-        df = df[df != 0].dropna(how='all')  # 0 values
-        df = df[~df.index.duplicated()]  # duplicate rows
-        df.dropna(how='all', inplace=True)  # remove entire row NaNs
-
-        # type conversion
-        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp, data_source='glassnode').tidy_data()
 
         return df

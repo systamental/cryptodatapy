@@ -2,9 +2,10 @@ import logging
 import numpy as np
 import pandas as pd
 from coinmetrics.api_client import CoinMetricsClient
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.datavendor import DataVendor
-from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.extract.data_vendors.datavendor import DataVendor
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.transform.convertparams import ConvertParams
+from cryptodatapy.transform.wrangle import WrangleData
 from cryptodatapy.util.datacredentials import DataCredentials
 from typing import Optional, Union, Any
 
@@ -20,7 +21,6 @@ class CoinMetrics(DataVendor):
     """
     def __init__(
             self,
-            source_type: str = 'data_vendor',
             categories: list[str] = ['crypto'],
             exchanges: Optional[list[str]] = None,
             indexes: Optional[list[str]] = None,
@@ -40,8 +40,6 @@ class CoinMetrics(DataVendor):
 
         Parameters
         ----------
-        source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
-            Type of data source, e.g. 'data_vendor', 'exchange', etc.
         categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
             List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
         exchanges: list, optional, default None
@@ -69,7 +67,7 @@ class CoinMetrics(DataVendor):
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
         """
-        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
+        DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         self._exchanges = self.get_exchanges_info(as_list=True)
@@ -313,7 +311,7 @@ class CoinMetrics(DataVendor):
         if data_req is None:
             raise TypeError("Provide a data request with 'fields' parameter.")
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
         # fields param
         fields = cm_data_req['fields']
 
@@ -360,7 +358,7 @@ class CoinMetrics(DataVendor):
         """
 
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if avaliable frequency
         if cm_data_req['freq'] not in ['1h', '1d']:
@@ -410,7 +408,7 @@ class CoinMetrics(DataVendor):
         """
 
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if avaliable frequency
         if cm_data_req['freq'] != '1d':
@@ -459,7 +457,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if available frequency
         if cm_data_req['freq'] not in ['1m', '1h', '1d']:
@@ -508,7 +506,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and on-chain values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if valid on-chain frequency
         if cm_data_req['freq'] not in ['1b', '1d']:
@@ -570,7 +568,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and open interest values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check market type
         if data_req.mkt_type not in ['perpetual_future', 'future', 'option']:
@@ -618,7 +616,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check market type
         if data_req.mkt_type not in ['perpetual_future', 'future', 'option']:
@@ -666,7 +664,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and bid/ask price and size values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if available frequency
         if cm_data_req['freq'] != 'tick':
@@ -714,7 +712,7 @@ class CoinMetrics(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and bid/ask price and size values (cols).
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if available frequency
         if cm_data_req['freq'] != 'tick':
@@ -763,7 +761,7 @@ class CoinMetrics(DataVendor):
             fields (cols), in tidy format.
         """
         # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
+        cm_data_req = ConvertParams(data_req, data_source='coinmetrics').convert_to_source()
 
         # check if fields available
         if not all(i in self.fields for i in cm_data_req['fields']):
@@ -833,57 +831,7 @@ class CoinMetrics(DataVendor):
             Wrangled dataframe with DatetimeIndex (level 0), ticker or institution (level 1), and market, on-chain or
             off-chain values for selected fields (cols), in tidy format.
         """
-        # convert data request parameters to Coin Metrics format
-        cm_data_req = ConvertParams(data_source='coinmetrics').convert_to_source(data_req)
-        # convert cols to cryptodatapy format
-        df = ConvertParams(data_source='coinmetrics').convert_fields_to_lib(data_req, data_resp)
-
-        # convert date and set datetimeindex
-        df['date'] = pd.to_datetime(df['date'])
-
-        # format ticker
-        if 'ticker' in df.columns and all(df.ticker.str.contains('-')):
-            df['ticker'] = df.ticker.str.split(pat='-', expand=True)[1].str.upper()  # keep asset ticker only
-        if 'ticker' in df.columns and data_req.mkt_type == 'perpetual_future':
-            df['ticker'] = df.ticker.str.replace(cm_data_req['quote_ccy'].upper(), '')
-        elif 'ticker' in df.columns:
-            df['ticker'] = df.ticker.str.upper()
-
-        # reset index
-        if 'ticker' in df.columns:
-            df = df.set_index(['date', 'ticker']).sort_index()
-        elif 'institution' in df.columns:  # inst resp
-            df = df.set_index(['date', 'institution']).sort_index()
-
-        # reorder cols
-        if 'open' in df.columns:
-            df = df.loc[:, ['open', 'high', 'low', 'close', 'volume', 'vwap']]  # reorder cols
-
-        # resample frequency
-        if data_req.freq == 'tick':
-            pass
-        elif 'institution' in df.index.names:
-            df = df.groupby([pd.Grouper(level='date', freq=data_req.freq), pd.Grouper(level='institution')]).last()
-        else:
-            df = df.groupby([pd.Grouper(level='date', freq=data_req.freq), pd.Grouper(level='ticker')]).last()
-
-        # re-format datetimeindex
-        if data_req.freq in ['d', 'w', 'm', 'q']:
-            df.reset_index(inplace=True)
-            df.date = pd.to_datetime(df.date.dt.date)
-            # reset index
-            if 'institution' in df.columns:  # institution resp
-                df = df.set_index(['date', 'institution']).sort_index()
-            else:
-                df = df.set_index(['date', 'ticker']).sort_index()
-
-        # remove bad data and type cast
-        if data_req.freq != 'tick':
-            df = df.apply(pd.to_numeric, errors='coerce')  # convert to numeric type
-        df = df[df != 0].dropna(how='all')  # 0 values
-        df = df[~df.index.duplicated()]  # duplicate rows
-
-        # type conversion
-        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp, data_source='coinmetrics').tidy_data()
 
         return df

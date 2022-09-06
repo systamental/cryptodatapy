@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.coinmetrics_api import CoinMetrics
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from datetime import datetime
 
 
@@ -14,23 +14,6 @@ def datarequest():
 @pytest.fixture
 def coinmetrics():
     return CoinMetrics()
-
-
-def test_source_type(coinmetrics) -> None:
-    """
-    Test source type property.
-    """
-    cm = coinmetrics
-    assert cm.source_type == 'data_vendor', "Source type should be 'data_vendor'."
-
-
-def test_source_type_error(coinmetrics) -> None:
-    """
-    Test source type errors.
-    """
-    cm = coinmetrics
-    with pytest.raises(ValueError):
-        cm.source_type = 'anecdotal'
 
 
 def test_categories(coinmetrics) -> None:

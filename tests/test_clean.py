@@ -1,14 +1,12 @@
 import numpy as np
 import pandas as pd
 import pytest
-from cryptodatapy.data_cleaning.clean import CleanData
-from cryptodatapy.data_cleaning.filter import Filter
-from cryptodatapy.data_cleaning.impute import Impute
-from cryptodatapy.data_cleaning.od import OutlierDetection
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.ccxt_api import CCXT
-# from datetime import datetime
-# from datetime import datetime, timedelta
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.ccxt_api import CCXT
+from cryptodatapy.transform.clean import CleanData
+from cryptodatapy.transform.od import OutlierDetection
+from cryptodatapy.transform.filter import Filter
+from cryptodatapy.transform.impute import Impute
 
 
 @pytest.fixture
@@ -17,6 +15,7 @@ def ohlcv_df():
     ohlcv_df = cx.get_data(DataRequest(tickers=['BTC', 'ETH', 'ADA'],
                                        fields=['open', 'high', 'low', 'close', 'volume']))
     return ohlcv_df
+
 
 def test_clean_data_integration_filter_outliers(ohlcv_df) -> None:
     """
@@ -118,7 +117,6 @@ def test_clean_data_integration_filter_tickers(ohlcv_df) -> None:
     assert not any((df.describe().loc['max'] == np.inf) &
                    (df.describe().loc['min'] == -np.inf)), "Inf values found in the dataframe"  # inf
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Filtered close is not a numpy float."  # dtypes
-
 
 
 if __name__ == "__main__":

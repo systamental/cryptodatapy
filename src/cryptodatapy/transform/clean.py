@@ -1,9 +1,9 @@
 import matplotlib as plt
 import numpy as np
 import pandas as pd
-from cryptodatapy.data_cleaning.filter import Filter
-from cryptodatapy.data_cleaning.impute import Impute
-from cryptodatapy.data_cleaning.od import OutlierDetection
+from cryptodatapy.transform.filter import Filter
+from cryptodatapy.transform.impute import Impute
+from cryptodatapy.transform.od import OutlierDetection
 from typing import Union, Optional
 
 

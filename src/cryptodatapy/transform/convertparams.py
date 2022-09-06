@@ -12,21 +12,22 @@ class ConvertParams():
     """
     def __init__(
             self,
-            data_source: str = None,
             data_req: DataRequest = None,
+            data_source: str = None,
     ):
         """
         Constructor
 
         Parameters
         ----------
-        data_source: str
-            Name of data source, e.g. 'cryptocompare', 'coinmetrics', 'glassnode', etc.
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        data_source: str
+            Name of data source, e.g. 'cryptocompare', 'coinmetrics', 'glassnode', etc.
         """
-        self.data_source = data_source
         self.data_req = data_req
+        self.data_source = data_source
+
 
     def convert_tickers_to_source(self) -> list[str]:
         """

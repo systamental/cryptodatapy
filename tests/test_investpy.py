@@ -118,8 +118,8 @@ def test_get_indexes(investpy) -> None:
     assert list(df.columns) == ['open', 'high', 'low', 'close', 'volume'], \
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1979-12-26 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
-        "End date is more than 4 days ago."  # end date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -141,7 +141,7 @@ def test_get_etfs(investpy) -> None:
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2011-03-04 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
-        "End date is more than 4 days ago."  # end date
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -161,7 +161,7 @@ def test_get_stocks(investpy) -> None:
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2012-05-18 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
-        "End date is more than 4 days ago."  # end date
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -181,7 +181,7 @@ def test_get_eqty(investpy) -> None:
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1979-12-26 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
-        "End date is more than 4 days ago."  # end date
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -242,7 +242,7 @@ def test_get_cmdty(investpy) -> None:
         "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1975-01-03 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
-        "End date is more than 4 days ago."  # end date
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -281,7 +281,7 @@ def test_get_data(investpy) -> None:
     assert list(df.columns) == ['close'], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('1979-12-26 00:00:00'), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
-        "End date is more than 4 days ago."  # end date
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 

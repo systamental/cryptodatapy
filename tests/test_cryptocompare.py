@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.cryptocompare_api import CryptoCompare
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.util.datacredentials import DataCredentials
 
 
@@ -14,23 +14,6 @@ def datarequest():
 @pytest.fixture
 def cryptocompare():
     return CryptoCompare()
-
-
-def test_source_type(cryptocompare) -> None:
-    """
-    Test source type property.
-    """
-    cc = cryptocompare
-    assert cc.source_type == 'data_vendor', "Source type should be 'data_vendor'."
-
-
-def test_source_type_error(cryptocompare) -> None:
-    """
-    Test source type errors.
-    """
-    cc = cryptocompare
-    with pytest.raises(ValueError):
-        cc.source_type = 'anecdotal'
 
 
 def test_categories(cryptocompare) -> None:

@@ -308,7 +308,7 @@ class CCXT(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and OHLCV values (cols).
         """
         # convert data request parameters to CCXT format
-        cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
+        cx_data_req = ConvertParams(data_req, data_source='ccxt').convert_to_source()
 
         # check exchange
         if cx_data_req['exch'] not in self.exchanges:
@@ -403,7 +403,7 @@ class CCXT(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and funding rates values (col).
         """
         # convert data request parameters to CCXT format
-        cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
+        cx_data_req = ConvertParams(data_req, data_source='ccxt').convert_to_source()
 
         # check exchange
         if cx_data_req['exch'] not in self.exchanges:
@@ -517,7 +517,7 @@ class CCXT(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols).
         """
         # convert data request parameters to CCXT format
-        cx_data_req = ConvertParams(data_source='ccxt').convert_to_source(data_req)
+        cx_data_req = ConvertParams(data_req, data_source='ccxt').convert_to_source()
         # empty df
         df = pd.DataFrame()
 

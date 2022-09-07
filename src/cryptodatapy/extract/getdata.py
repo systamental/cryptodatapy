@@ -9,7 +9,7 @@ from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
 from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
-from cryptodatapy.util.datacredentials import DataCredentials
+from typing import Optional
 
 
 class GetData():
@@ -17,7 +17,7 @@ class GetData():
     Retrieves data from selected data source.
     """
 
-    def __init__(self, data_req: DataRequest):
+    def __init__(self, data_req: DataRequest, api_key: Optional[str] = None):
         """
         Constructor
 
@@ -25,8 +25,11 @@ class GetData():
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        api_key: str
+            Api key for data source if required.
         """
         self.data_req = data_req
+        self.api_key = api_key
 
     def get_meta(self, attr: str = None, method: str = None, **kwargs) -> pd.DataFrame:
         """
@@ -34,8 +37,8 @@ class GetData():
 
         Parameters
         ----------
-        attr: str, {'source_type', 'categories', 'exchanges', 'indexes', 'assets', 'markets', 'market_types',
-                    'fields', 'frequencies', 'base_url', 'api_key', 'max_obs_per_call', 'rate_limit'}, default assets
+        attr: str, {'categories', 'exchanges', 'indexes', 'assets', 'markets', 'market_types', 'fields', 'frequencies',
+                    'base_url', 'api_key', 'max_obs_per_call', 'rate_limit'}, default assets
             Gets the specified attribute or method from the data source object.
         method: str, {'get_exchanges_info', 'get_indexes_info', 'get_assets_info', 'get_markets_info',
                     'get_fields_info', 'get_frequencies_info', 'get_rate_limit_info'}, default 'assets'}
@@ -91,13 +94,18 @@ class GetData():
                       'get_markets_info', 'get_fields_info', 'get_frequencies_info', 'get_rate_limit_info',
                       'get_news_sources', 'get_news', 'get_top_market_cap_info', 'get_avail_assets_info']
 
-        # instantiate data source obj
+        # data source
         ds = data_source_dict[self.data_req.data_source]
+        # instantiate ds obj
+        if self.api_key is not None:
+            ds = ds(api_key=self.api_key)
+        else:
+            ds = ds()
         # get property or method from data source obj
         if attr in valid_attr:
-            meta = getattr(ds(), attr)
+            meta = getattr(ds, attr)
         elif method in valid_meth:
-            meta = getattr(ds(), method)(**kwargs)
+            meta = getattr(ds, method)(**kwargs)
         else:
             raise AttributeError(f"Select a valid attribute or method. Valid attributes: {valid_attr}."
                                  f" Valid methods include: {valid_meth}.")
@@ -163,9 +171,15 @@ class GetData():
                             'dbnomics': DBnomics, 'yahoo': PandasDataReader, 'fred': PandasDataReader,
                             'av-daily': PandasDataReader, 'av-forex-daily': PandasDataReader}
 
-        # instantiate data source obj
+        # data source
         ds = data_source_dict[self.data_req.data_source]
+        # instantiate data source obj
+        # instantiate ds obj
+        if self.api_key is not None:
+            ds = ds(api_key=self.api_key)
+        else:
+            ds = ds()
         # get data
-        df = getattr(ds(), method)(self.data_req)
+        df = getattr(ds, method)(self.data_req)
 
         return df

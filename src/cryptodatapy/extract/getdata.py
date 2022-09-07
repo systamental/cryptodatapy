@@ -14,7 +14,7 @@ from cryptodatapy.util.datacredentials import DataCredentials
 
 class GetData():
     """
-    Retrieves data from data source.
+    Retrieves data from selected data source.
     """
 
     def __init__(self, data_req: DataRequest):
@@ -57,7 +57,7 @@ class GetData():
         Returns
         -------
         meta: Any
-            Returns metadata for selected attribute or method.
+            Metadata for selected attribute or method.
 
         Examples
         --------
@@ -134,8 +134,8 @@ class GetData():
         2020-03-30	BTC	    5876.0	6609.0	5856.0	6396.5	224231.1718'
 
 
-        >>> data_req = DataRequest(data_source='glassnode', tickers=['btc', 'eth'], fields=['add_act', 'tx_count', 'issuance'],
-                                   freq='d', start_date='2016-01-01')
+        >>> data_req = DataRequest(data_source='glassnode', tickers=['btc', 'eth'],
+                                   fields=['add_act', 'tx_count', 'issuance'], freq='d', start_date='2016-01-01')
         >>> GetData(data_req).get_series()
         '		            add_act	    tx_count	issuance
         date	    ticker

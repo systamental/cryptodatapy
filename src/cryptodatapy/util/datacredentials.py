@@ -103,5 +103,3 @@ class DataCredentials:
 
     # search URLs
     dbnomics_search_url: str = 'https://db.nomics.world/'
-
-

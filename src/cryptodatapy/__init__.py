@@ -5,6 +5,6 @@ __version__ = version("cryptodatapy")
 
 from cryptodatapy import(
 util,
-data_requests,
-data_vendors
+extract,
+transform
 )

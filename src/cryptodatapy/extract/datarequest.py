@@ -6,7 +6,7 @@ from datetime import datetime
 
 class DataRequest():
     """
-    Data request class which contains the parameters for the data you would like to retrieve.
+    Data request class which contains parameters for data retrieval.
     """
 
     def __init__(

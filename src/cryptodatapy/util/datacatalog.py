@@ -297,4 +297,3 @@ class DataCatalog():
             sc = df.loc[df.index.drop_duplicates().to_list()].index.to_list()
 
         return sc
-    

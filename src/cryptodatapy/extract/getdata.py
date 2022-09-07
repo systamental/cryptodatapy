@@ -173,7 +173,6 @@ class GetData():
 
         # data source
         ds = data_source_dict[self.data_req.data_source]
-        # instantiate data source obj
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)

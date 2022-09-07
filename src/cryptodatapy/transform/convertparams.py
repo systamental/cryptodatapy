@@ -31,6 +31,11 @@ class ConvertParams():
     def convert_tickers_to_source(self) -> list[str]:
         """
         Converts tickers from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        tickers: list
+            List of tickers converted to data source format.
         """
         # tickers
         with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
@@ -90,7 +95,12 @@ class ConvertParams():
 
     def convert_fx_tickers(self) -> list[str]:
         """
-        Converts from base and quote fx tickers to fx pairs tickers following fx quoting convention.
+        Converts base and quote currency tickers to fx pairs following fx quoting convention.
+
+        Returns
+        -------
+        fx_pairs: list
+            List of fx pairs using quoting convention.
         """
         quote_ccy = self.convert_quote_ccy_to_source()
         fx_pairs = []  # fx pairs list
@@ -114,7 +124,12 @@ class ConvertParams():
 
     def convert_tickers_to_mkts_source(self) -> list[str]:
         """
-        Converts from asset tickers to data source market tickers.
+        Converts asset tickers to market tickers in data source format.
+
+        Returns
+        -------
+        mkts_list: list
+            List of markets in data source format.
         """
         # convert tickers to markets
         mkts_list = []
@@ -183,7 +198,12 @@ class ConvertParams():
 
     def convert_freq_to_source(self) -> str:
         """
-        Converts frequencies from CryptoDataPy to data source format.
+        Converts frequency from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        freq: str
+            Frequency in data source format.
         """
         if self.data_req.source_freq is not None:
             freq = self.data_req.source_freq
@@ -270,6 +290,11 @@ class ConvertParams():
     def convert_quote_ccy_to_source(self) -> str:
         """
         Converts quote currency from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        quote_ccy: str
+            Quote currency in data source format.
         """
         if self.data_source == 'cryptocompare' or self.data_source == 'glassnode' \
                 or self.data_source == 'av-forex-daily' or self.data_source == 'investpy':
@@ -304,6 +329,11 @@ class ConvertParams():
     def convert_exch_to_source(self) -> str:
         """
         Converts exchange from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        exch: str
+            Exchange in data source format.
         """
         if self.data_source == 'cryptocompare':
             if self.data_req.exch is None:
@@ -348,7 +378,12 @@ class ConvertParams():
 
     def convert_tickers_to_ctys_source(self) -> list[str]:
         """
-        Maps tickers from CryptoDataPy to their respective countries.
+        Maps tickers to their respective countries.
+
+        Returns
+        -------
+        ctys_list: list
+            List of countries in ISO/data source format.
         """
         # tickers
         with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
@@ -370,6 +405,11 @@ class ConvertParams():
     def convert_start_date_to_source(self) -> Union[str, int, datetime, pd.Timestamp]:
         """
         Converts start date from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        start_date: str, int, datetime or pd.Timestamp
+            Start date in data source format.
         """
         if self.data_source == 'cryptocompare':
             if self.data_req.freq[-3:] == 'min':  # cryptocompare limits higher frequency data responses
@@ -414,6 +454,11 @@ class ConvertParams():
     def convert_end_date_to_source(self) -> Union[str, int, datetime, pd.Timestamp]:
         """
         Converts end date from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        end_date: str, int, datetime or pd.Timestamp
+            End date in data source format.
         """
         if self.data_source == 'cryptocompare':
             if self.data_req.end_date is None:
@@ -455,6 +500,11 @@ class ConvertParams():
     def convert_fields_to_source(self) -> list[str]:
         """
         Converts fields from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        fields_list: list
+            List of fields in data source format.
         """
         # get fields
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
@@ -479,7 +529,12 @@ class ConvertParams():
 
     def convert_tz_to_source(self) -> str:
         """
-        Converts timezone from CryptoDataPy to data source format.
+        Converts timezone to data source timezone.
+
+        Returns
+        -------
+        tz: str
+            Timezone for data source using Olson tz database.
         """
         us_timezones = ['fred', 'av-daily', 'av-forex-daily', 'yahoo']
         if self.data_source in us_timezones and self.data_req.tz is None:
@@ -494,6 +549,11 @@ class ConvertParams():
     def convert_inst_to_source(self) -> str:
         """
         Converts institution names from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        inst: str
+            Institution name converted to data source format.
         """
         if self.data_source == 'coinmetrics':
             if self.data_req.inst is None:
@@ -513,7 +573,12 @@ class ConvertParams():
 
     def convert_pause_to_source(self) -> str:
         """
-        Converts pause to data source to avoid rate limiting issues.
+        Converts pause to length appropriate for each data source to avoid rate limiting issues.
+
+        Returns
+        -------
+        pause: str
+            Pause time for data source.
         """
         if self.data_source == 'investpy':
             pause = 3
@@ -525,6 +590,11 @@ class ConvertParams():
     def convert_to_source(self) -> dict[str, Union[str, int, list[str]]]:
         """
         Converts data request parameters from CryptoDataPy to data source format.
+
+        Returns
+        -------
+        source_params: dict
+            Dictionary containing all data request parameters converted to data source format.
         """
         tickers = self.convert_tickers_to_source()
         freq = self.convert_freq_to_source()

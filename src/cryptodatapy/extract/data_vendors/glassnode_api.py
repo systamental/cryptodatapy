@@ -29,7 +29,8 @@ class Glassnode(DataVendor):
             fields: Optional[list[str]] = None,
             frequencies: list[str] = ['10min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y'],
             base_url: str = data_cred.glassnode_base_url,
-            api_key: str = data_cred.glassnode_api_key,
+            api_key: str = None,
+            # api_key: str = data_cred.glassnode_api_key,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None
     ):
@@ -68,11 +69,10 @@ class Glassnode(DataVendor):
         """
         DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # api key
+
         if api_key is None:
-            raise TypeError(f"Set your api key. Alternatively, you can use the function "
-                            f"{set_credential.__name__} which uses keyring to store your "
-                            f"api key in {DataCredentials.__name__}.")
+            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses " 
+                            "keyring to store your api key in DataCredentials.")
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info(data_type=None, as_list=True)
         self.rate_limit = self.get_rate_limit_info()

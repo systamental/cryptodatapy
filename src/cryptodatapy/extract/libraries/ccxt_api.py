@@ -71,7 +71,6 @@ class CCXT(Library):
         Library.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                          frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
-        # get meta data
         self.exchanges = self.get_exchanges_info(as_list=True)
         self.assets = self.get_assets_info(as_dict=True)
         self.markets = self.get_markets_info(as_dict=True)

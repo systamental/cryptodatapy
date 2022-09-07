@@ -74,20 +74,13 @@ class Tiingo(DataVendor):
         """
         DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # api key
+
         if api_key is None:
-            raise TypeError(f"Set your api key. Alternatively, you can use the function "
-                            f"{set_credential.__name__} which uses keyring to store your "
-                            f"api key in {DataCredentials.__name__}.")
-        # set exchanges
-        if exchanges is None:
-            self.exchanges = self.get_exchanges_info()
-        # set assets
-        if assets is None:
-            self.assets = self.get_assets_info(as_dict=True)
-        # set fields
-        if fields is None:
-            self.fields = self.get_fields_info()
+            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses " 
+                            "keyring to store your api key in DataCredentials.")
+        self.exchanges = self.get_exchanges_info()
+        self.assets = self.get_assets_info(as_dict=True)
+        self.fields = self.get_fields_info()
 
     def get_exchanges_info(self, cat: Optional[str] = None) -> Union[dict[str, list[str]], pd.DataFrame]:
         """

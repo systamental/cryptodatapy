@@ -67,11 +67,10 @@ class CryptoCompare(DataVendor):
         """
         DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
-        # api key
+
         if api_key is None:
-            raise TypeError(f"Set your api key. Alternatively, you can use the function "
-                            f"{set_credential.__name__} which uses keyring to store your "
-                            f"api key in {DataCredentials.__name__}.")
+            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses " 
+                            "keyring to store your api key in DataCredentials.")
         self.exchanges = self.get_exchanges_info(as_list=True)
         self.indexes = self.get_indexes_info(as_list=True)
         self.assets = self.get_assets_info(as_list=True)

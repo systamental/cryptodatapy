@@ -95,6 +95,11 @@ class CCXT(Library):
         -------
         exch: list or pd.DataFrame
             List or dataframe with info on supported exchanges.
+
+        Examples
+        --------
+        >>> get_exchanges_info()
+        'dcf13983adf7dfa79a0dfa35adf'
         """
         # list
         if as_list:

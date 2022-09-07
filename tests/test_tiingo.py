@@ -1,32 +1,15 @@
 import numpy as np
 import pandas as pd
 import pytest
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.tiingo_api import Tiingo
+from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
+from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.util.datacredentials import DataCredentials
-# from datetime import datetime, timedelta
 
 
 @pytest.fixture
 def tiingo():
+
     return Tiingo()
-
-
-def test_source_type(tiingo) -> None:
-    """
-    Test source type property.
-    """
-    tg = tiingo
-    assert tg.source_type == 'data_vendor', "Source type should be 'library'."
-
-
-def test_source_type_error(tiingo) -> None:
-    """
-    Test source type errors.
-    """
-    tg = tiingo
-    with pytest.raises(ValueError):
-        tg.source_type = 'anecdotal'
 
 
 def test_categories(tiingo) -> None:
@@ -164,8 +147,8 @@ def test_get_eqty(tiingo) -> None:
                                 'open_adj', 'volume_adj', 'dividend', 'split'], \
         "Fields are missing from indexes dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp('2020-01-02 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
-        "End date is more than 4 days ago."  # end date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 
@@ -240,8 +223,8 @@ def test_get_data(tiingo) -> None:
     assert df.index.droplevel(0).unique().to_list() == ['AAPL', 'AMZN', 'NFLX', 'META', 'GOOG'], \
         "Tickers are missing from dataframe"  # tickers
     assert list(df.columns) == ['close'], "Fields are missing from indexes dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=4), \
-        "End date is more than 4 days ago."  # end date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=5), \
+        "End date is more than 5 days ago."  # end date
     assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
 
 

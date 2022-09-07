@@ -1,13 +1,14 @@
 import logging
 import pandas as pd
 import requests
-from cryptodatapy.data_requests.datarequest import DataRequest
-from cryptodatapy.data_vendors.datavendor import DataVendor
-from cryptodatapy.util.convertparams import ConvertParams
+from cryptodatapy.extract.data_vendors.datavendor import DataVendor
+from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.transform.convertparams import ConvertParams
+from cryptodatapy.transform.wrangle import WrangleData
 from cryptodatapy.util.datacredentials import DataCredentials
-# from datetime import datetime, timedelta
 from time import sleep
 from typing import Optional, Union, Any
+
 
 # data credentials
 data_cred = DataCredentials()
@@ -19,7 +20,6 @@ class Tiingo(DataVendor):
     """
     def __init__(
             self,
-            source_type: str = 'data_vendor',
             categories: list[str] = ['crypto', 'fx', 'eqty'],
             exchanges: Optional[dict[str, list[str]]] = None,
             indexes: Optional[dict[str, list[str]]] = None,
@@ -39,8 +39,6 @@ class Tiingo(DataVendor):
 
         Parameters
         ----------
-        source_type: str, {'data_vendor', 'exchange', 'library', 'on-chain', 'web'}
-            Type of data source, e.g. 'data_vendor', 'exchange', etc.
         categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
             List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
         exchanges: dictionary, optional, default None
@@ -74,7 +72,7 @@ class Tiingo(DataVendor):
         rate_limit: pd.DataFrame, optional, Default None
             Number of API calls made and left, by time frequency.
         """
-        DataVendor.__init__(self, source_type, categories, exchanges, indexes, assets, markets, market_types, fields,
+        DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
         # api key
         if api_key is None:
@@ -256,7 +254,7 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and equities OHLCV values (cols).
         """
         # convert data request parameters to CryptoCompare format
-        tg_data_req = ConvertParams(data_source='tiingo').convert_to_source(data_req)
+        tg_data_req = ConvertParams(data_req, data_source='tiingo').convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
@@ -325,7 +323,7 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and equity intrady OHLCV values (cols).
         """
         # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_source='tiingo').convert_to_source(data_req)
+        tg_data_req = ConvertParams(data_req, data_source='tiingo').convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
@@ -395,7 +393,7 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and crypto OHLCV values (cols).
         """
         # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_source='tiingo').convert_to_source(data_req)
+        tg_data_req = ConvertParams(data_req, data_source='tiingo').convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
@@ -466,7 +464,7 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and FX OHLC values (cols).
         """
         # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_source='tiingo').convert_to_source(data_req)
+        tg_data_req = ConvertParams(data_req, data_source='tiingo').convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
@@ -585,27 +583,7 @@ class Tiingo(DataVendor):
             Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and market data
              for selected fields (cols), in tidy format.
         """
-        # convert cols to cryptodatapy format
-        df = ConvertParams(data_source='tiingo').convert_fields_to_lib(data_req, data_resp)
-
-        # convert date and set datetimeindex
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.set_index('date').sort_index()
-        df.index = df.index.tz_localize(None)
-
-        # resample freq
-        df = df.resample(data_req.freq).last()
-        # re-format datetimeindex
-        if data_req.freq in ['d', 'w', 'm', 'q']:
-            df.reset_index(inplace=True)
-            df['date'] = pd.to_datetime(df.date.dt.date)
-            df.set_index('date', inplace=True)
-
-        # remove dups and NaNs
-        df = df[~df.index.duplicated()]  # duplicate rows
-        df.dropna(how='all', inplace=True)  # remove entire row NaNs
-
-        # type conversion
-        df = df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp, data_source='tiingo').tidy_data()
 
         return df

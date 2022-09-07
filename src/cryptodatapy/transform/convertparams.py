@@ -28,7 +28,6 @@ class ConvertParams():
         self.data_req = data_req
         self.data_source = data_source
 
-
     def convert_tickers_to_source(self) -> list[str]:
         """
         Converts tickers from CryptoDataPy to data source format.

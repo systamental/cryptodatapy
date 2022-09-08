@@ -45,6 +45,21 @@ Ready to contribute? Here's how to set up `cryptodatapy` for local development.
 1. Download a copy of `cryptodatapy` locally.
 2. Install `cryptodatapy` using `poetry`:
 
+    Install Poetry (https://python-poetry.org/docs/#installation)
+
+    ```console
+    curl -sSL https://install.python-poetry.org | python3 -
+    ```
+
+    Create a virtualenv (optional)
+
+    ```console
+    $ python3 -m venv venv
+    $ source venv/bin/activate
+    $ poetry env use python3
+    ```
+
+    Install dependencies
     ```console
     $ poetry install
     ```

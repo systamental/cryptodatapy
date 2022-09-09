@@ -227,7 +227,7 @@ class Tiingo(DataVendor):
 
         # eqty assets info
         try:
-            assets_Dict["eqty"] = pd.read_csv(
+            assets_dict["eqty"] = pd.read_csv(
                 f"https://apimedia.tiingo.com/docs/tiingo/daily/"
                 "supported_tickers.zip"
             ).set_index("ticker")
@@ -245,7 +245,7 @@ class Tiingo(DataVendor):
             }
             r = requests.get(url, headers=headers)
             r.raise_for_status()
-            assets_Dict["crypto"] = pd.DataFrame(r.json()).set_index("ticker")
+            assets_dict["crypto"] = pd.DataFrame(r.json()).set_index("ticker")
 
         except Exception as e:
             logging.warning(e)
@@ -253,21 +253,21 @@ class Tiingo(DataVendor):
 
         # fx assets info
         url = "https://api.tiingo.com/documentation/forex"
-        assets_Dict["fx"] = f"For more information, see FX documentation: {url}."
+        assets_dict["fx"] = f"For more information, see FX documentation: {url}."
 
         # as dict
         if as_dict:
             list_dict = {"eqty": [], "crypto": [], "fx": []}
             for asset in list_dict.keys():
                 if asset == "fx":
-                    list_Dict[asset].append(assets_Dict[asset])
+                    list_dict[asset].append(assets_dict[asset])
                 else:
-                    list_Dict[asset].extend(assets_Dict[asset].index.to_list())
+                    list_dict[asset].extend(assets_dict[asset].index.to_list())
             assets_dict = list_dict
 
         # filter cat
         if cat is not None:
-            assets_dict = assets_Dict[cat]
+            assets_dict = assets_dict[cat]
 
         return assets_dict
 

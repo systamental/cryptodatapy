@@ -240,7 +240,7 @@ class CoinMetrics(DataVendor):
                     metrics_list = []
                     for metrics in inst.metrics[0]:
                         metrics_list.append(metrics["metric"])
-                    inst_Dict[institution] = metrics_list
+                    inst_dict[institution] = metrics_list
                 return inst_dict
             else:
                 return inst
@@ -371,7 +371,7 @@ class CoinMetrics(DataVendor):
                 )
             else:
                 # add to dict
-                fields_Dict[field] = df["frequencies"][0]["assets"]
+                fields_dict[field] = df["frequencies"][0]["assets"]
 
         # asset list
         asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
@@ -505,8 +505,7 @@ class CoinMetrics(DataVendor):
             ).to_dataframe()
 
         except Exception as e:
-            logging.warning(e)
-            logging.warning(f"Failed to pull data for {tickers}.")
+            logging.warning(f"Failed to pull data for {cm_data_req}: {e}")
 
         else:
             # wrangle data resp

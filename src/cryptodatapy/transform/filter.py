@@ -53,7 +53,7 @@ class Filter:
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # filter outliers
-        filt_df = outliers_Dict["filt_vals"]
+        filt_df = outliers_dict["filt_vals"]
 
         # add excl cols
         if self.excl_cols is not None:

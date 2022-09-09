@@ -6,9 +6,9 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u"cryptodatapy"
-copyright = u"2022, Systamental"
-author = u"Systamental"
+project = "cryptodatapy"
+copyright = "2022, Systamental"
+author = "Systamental"
 
 # -- General configuration ---------------------------------------------------
 

@@ -1,12 +1,13 @@
+from typing import Dict, List, Optional
+
+import dbnomics
 import pandas as pd
-from typing import Optional
-from cryptodatapy.util.datacredentials import DataCredentials
+
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.library import Library
 from cryptodatapy.transform.convertparams import ConvertParams
 from cryptodatapy.transform.wrangle import WrangleData
-from cryptodatapy.extract.libraries.library import Library
-import dbnomics
-
+from cryptodatapy.util.datacredentials import DataCredentials
 
 # data credentials
 data_cred = DataCredentials()
@@ -18,19 +19,19 @@ class DBnomics(Library):
     """
 
     def __init__(
-            self,
-            categories: list[str] = ['macro'],
-            exchanges: Optional[list[str]] = None,
-            indexes: Optional[list[str]] = None,
-            assets: Optional[list[str]] = None,
-            markets: Optional[list[str]] = None,
-            market_types: Optional[list[str]] = None,
-            fields: Optional[dict[str, list[str]]] = None,
-            frequencies: dict[str, list[str]] = {'macro': ['d', 'w', 'm', 'q', 'y']},
-            base_url: Optional[str] = None,
-            api_key: Optional[str] = None,
-            max_obs_per_call: Optional[int] = None,
-            rate_limit: Optional[str] = None
+        self,
+        categories: List[str] = ["macro"],
+        exchanges: Optional[List[str]] = None,
+        indexes: Optional[List[str]] = None,
+        assets: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        market_types: Optional[List[str]] = None,
+        fields: Optional[Dict[str, List[str]]] = None,
+        frequencies: Dict[str, List[str]] = {"macro": ["d", "w", "m", "q", "y"]},
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        max_obs_per_call: Optional[int] = None,
+        rate_limit: Optional[str] = None,
     ):
         """
         Constructor
@@ -64,8 +65,21 @@ class DBnomics(Library):
         rate_limit: str, optional, default None
             Number of API calls made and left by frequency.
         """
-        Library.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
-                         frequencies, base_url, api_key, max_obs_per_call, rate_limit)
+        Library.__init__(
+            self,
+            categories,
+            exchanges,
+            indexes,
+            assets,
+            markets,
+            market_types,
+            fields,
+            frequencies,
+            base_url,
+            api_key,
+            max_obs_per_call,
+            rate_limit,
+        )
 
         self.fields = self.get_fields_info()
 
@@ -74,7 +88,9 @@ class DBnomics(Library):
         """
         Gets available vendors info.
         """
-        print(f"See providers page to find available vendors: {data_cred.dbnomics_vendors_url} ")
+        print(
+            f"See providers page to find available vendors: {data_cred.dbnomics_vendors_url} "
+        )
 
     @staticmethod
     def get_assets_info():
@@ -98,7 +114,7 @@ class DBnomics(Library):
         return None
 
     @staticmethod
-    def get_fields_info(cat: Optional[str] = None) -> dict[str, list[str]]:
+    def get_fields_info(cat: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Gets fields info.
 
@@ -114,11 +130,11 @@ class DBnomics(Library):
         """
 
         # list of fields
-        macro_fields_list = ['actual']
+        macro_fields_list = ["actual"]
 
         # fields dict
         fields = {
-            'macro': macro_fields_list,
+            "macro": macro_fields_list,
         }
 
         # fields obj
@@ -156,25 +172,33 @@ class DBnomics(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and values macro or off-chain fields (cols).
         """
         # convert data request parameters to InvestPy format
-        dbn_data_req = ConvertParams(data_req, data_source='dbnomics').convert_to_source()
+        dbn_data_req = ConvertParams(
+            data_req, data_source="dbnomics"
+        ).convert_to_source()
 
         # check cat
         if data_req.cat not in self.categories:
-            raise ValueError(f"Invalid category. Valid categories are: {self.categories}.")
+            raise ValueError(
+                f"Invalid category. Valid categories are: {self.categories}."
+            )
 
         # check freq
         if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
+            raise ValueError(
+                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
+            )
 
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError("Invalid fields. See fields property for available fields.")
+            raise ValueError(
+                "Invalid fields. See fields property for available fields."
+            )
 
         # emtpy df
         df = pd.DataFrame()
 
         # get data from dbnomics
-        for dbn_ticker, dr_ticker in zip(dbn_data_req['tickers'], data_req.tickers):
+        for dbn_ticker, dr_ticker in zip(dbn_data_req["tickers"], data_req.tickers):
             # loop through tickers
             df0 = dbnomics.fetch_series(dbn_ticker)
             # wrangle data resp
@@ -183,16 +207,18 @@ class DBnomics(Library):
                 df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to index
                 if data_req.source_tickers is None:
-                    df1['ticker'] = dr_ticker
+                    df1["ticker"] = dr_ticker
                 else:
-                    df1['ticker'] = dbn_ticker
-                df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = dbn_ticker
+                df1.set_index(["ticker"], append=True, inplace=True)
                 # stack ticker dfs
                 df = pd.concat([df, df1])
 
                 # check if df empty
         if df.empty:
-            raise Exception('No data returned. Check data request parameters and try again.')
+            raise Exception(
+                "No data returned. Check data request parameters and try again."
+            )
 
         # filter df for desired fields and typecast
         fields = [field for field in data_req.fields if field in df.columns]
@@ -201,7 +227,9 @@ class DBnomics(Library):
         return df.sort_index()
 
     @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(
+        data_req: DataRequest, data_resp: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -219,6 +247,6 @@ class DBnomics(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source='dbnomics').tidy_data()
+        df = WrangleData(data_req, data_resp, data_source="dbnomics").tidy_data()
 
         return df

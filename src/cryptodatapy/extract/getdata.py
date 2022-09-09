@@ -1,5 +1,8 @@
+from typing import Optional
+
 import numpy as np
 import pandas as pd
+
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
@@ -9,10 +12,9 @@ from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
 from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
-from typing import Optional
 
 
-class GetData():
+class GetData:
     """
     Retrieves data from selected data source.
     """
@@ -82,20 +84,53 @@ class GetData():
          AAVE	        AAVE	    None	    AAVE	    8'
         """
         # data source objects
-        data_source_dict = {'cryptocompare': CryptoCompare, 'coinmetrics': CoinMetrics, 'ccxt': CCXT,
-                            'glassnode': Glassnode, 'tiingo': Tiingo, 'investpy': InvestPy,
-                            'dbnomics': DBnomics, 'yahoo': PandasDataReader, 'fred': PandasDataReader,
-                            'av-daily': PandasDataReader, 'av-forex-daily': PandasDataReader}
+        data_source_dict = {
+            "cryptocompare": CryptoCompare,
+            "coinmetrics": CoinMetrics,
+            "ccxt": CCXT,
+            "glassnode": Glassnode,
+            "tiingo": Tiingo,
+            "investpy": InvestPy,
+            "dbnomics": DBnomics,
+            "yahoo": PandasDataReader,
+            "fred": PandasDataReader,
+            "av-daily": PandasDataReader,
+            "av-forex-daily": PandasDataReader,
+        }
 
         # available properties and methods
-        valid_attr = ['source_type', 'categories', 'exchanges', 'indexes', 'assets', 'markets', 'market_types',
-                      'fields', 'frequencies', 'base_url', 'api_key', 'max_obs_per_call', 'rate_limit']
-        valid_meth = ['get_vendors_info', 'get_exchanges_info', 'get_indexes_info', 'get_assets_info',
-                      'get_markets_info', 'get_fields_info', 'get_frequencies_info', 'get_rate_limit_info',
-                      'get_news_sources', 'get_news', 'get_top_market_cap_info', 'get_avail_assets_info']
+        valid_attr = [
+            "source_type",
+            "categories",
+            "exchanges",
+            "indexes",
+            "assets",
+            "markets",
+            "market_types",
+            "fields",
+            "frequencies",
+            "base_url",
+            "api_key",
+            "max_obs_per_call",
+            "rate_limit",
+        ]
+        valid_meth = [
+            "get_vendors_info",
+            "get_exchanges_info",
+            "get_indexes_info",
+            "get_assets_info",
+            "get_markets_info",
+            "get_fields_info",
+            "get_frequencies_info",
+            "get_rate_limit_info",
+            "get_news_sources",
+            "get_news",
+            "get_top_market_cap_info",
+            "get_avail_assets_info",
+        ]
 
         # data source
-        ds = data_source_dict[self.data_req.data_source]
+        ds = data_source_Dict[self.data_req.data_source]
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)
@@ -107,12 +142,14 @@ class GetData():
         elif method in valid_meth:
             meta = getattr(ds, method)(**kwargs)
         else:
-            raise AttributeError(f"Select a valid attribute or method. Valid attributes: {valid_attr}."
-                                 f" Valid methods include: {valid_meth}.")
+            raise AttributeError(
+                f"Select a valid attribute or method. Valid attributes: {valid_attr}."
+                f" Valid methods include: {valid_meth}."
+            )
 
         return meta
 
-    def get_series(self, method: str = 'get_data') -> pd.DataFrame:
+    def get_series(self, method: str = "get_data") -> pd.DataFrame:
         """
         Get requested data.
 
@@ -166,13 +203,22 @@ class GetData():
                     US_Rates_10Y	3.338	3.361	3.29	3.298'
         """
         # data source objects
-        data_source_dict = {'cryptocompare': CryptoCompare, 'coinmetrics': CoinMetrics, 'ccxt': CCXT,
-                            'glassnode': Glassnode, 'tiingo': Tiingo, 'investpy': InvestPy,
-                            'dbnomics': DBnomics, 'yahoo': PandasDataReader, 'fred': PandasDataReader,
-                            'av-daily': PandasDataReader, 'av-forex-daily': PandasDataReader}
+        data_source_dict = {
+            "cryptocompare": CryptoCompare,
+            "coinmetrics": CoinMetrics,
+            "ccxt": CCXT,
+            "glassnode": Glassnode,
+            "tiingo": Tiingo,
+            "investpy": InvestPy,
+            "dbnomics": DBnomics,
+            "yahoo": PandasDataReader,
+            "fred": PandasDataReader,
+            "av-daily": PandasDataReader,
+            "av-forex-daily": PandasDataReader,
+        }
 
         # data source
-        ds = data_source_dict[self.data_req.data_source]
+        ds = data_source_Dict[self.data_req.data_source]
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)

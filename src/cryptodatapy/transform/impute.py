@@ -1,10 +1,11 @@
+from typing import Optional
+
 import matplotlib as plt
 import numpy as np
 import pandas as pd
-from typing import Optional
 
 
-class Impute():
+class Impute:
     """
     Handles missing values.
     """
@@ -21,7 +22,9 @@ class Impute():
         """
         self.filt_df = filt_df
 
-    def fwd_fill(self, plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> pd.DataFrame:
+    def fwd_fill(
+        self, plot: bool = False, plot_series: tuple = ("BTC", "close")
+    ) -> pd.DataFrame:
         """
         Imputes missing values by imputing missing values with latest non-missing values.
 
@@ -48,15 +51,22 @@ class Impute():
         if plot:
             if not isinstance(plot_series, tuple):
                 raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column).")
+                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
+                )
             else:
                 self.plot_imputed(imp_df, plot_series=plot_series)
 
         return imp_df
 
-    def interpolate(self, method: str = 'linear', order: Optional[int] = None, axis=0,
-                    limit: Optional[int] = None, plot: bool = False,
-                    plot_series: tuple = ('BTC', 'close')) -> pd.DataFrame:
+    def interpolate(
+        self,
+        method: str = "linear",
+        order: Optional[int] = None,
+        axis=0,
+        limit: Optional[int] = None,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> pd.DataFrame:
         """
         Imputes missing values by interpolating using various methods.
 
@@ -86,27 +96,37 @@ class Impute():
         filt_df = self.filt_df.astype(float).copy()
 
         # add order if spline or polynomial
-        if (method == 'spline' or method == 'polynomial') and order is None:
+        if (method == "spline" or method == "polynomial") and order is None:
             order = 3
 
         # interpolate
-        imp_df = filt_df.unstack().interpolate(method=method, order=order, axis=axis, limit=limit).\
-            stack().reindex(filt_df.index)
+        imp_df = (
+            filt_df.unstack()
+            .interpolate(method=method, order=order, axis=axis, limit=limit)
+            .stack()
+            .reindex(filt_df.index)
+        )
 
         # type conversion
-        imp_df = imp_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        imp_df = imp_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
                 raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column).")
+                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
+                )
             else:
                 self.plot_imputed(imp_df, plot_series=plot_series)
 
         return imp_df
 
-    def fcst(self, fcst_df: pd.DataFrame, plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> pd.DataFrame:
+    def fcst(
+        self,
+        fcst_df: pd.DataFrame,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> pd.DataFrame:
         """
         Imputes missing values with forecasts from outlier detection algorithm.
 
@@ -135,13 +155,14 @@ class Impute():
         imp_df = pd.DataFrame(imp_yhat, index=filt_df.index, columns=filt_df.columns)
 
         # type conversion
-        imp_df = imp_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        imp_df = imp_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
                 raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column).")
+                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
+                )
             else:
                 self.plot_imputed(imp_df, plot_series=plot_series)
 
@@ -159,11 +180,14 @@ class Impute():
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
         """
-        ax = imp_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]].droplevel(1).\
-            plot(linewidth=1, figsize=(15, 7), color='#1f77b4', zorder=0)
-        ax.grid(color='black', linewidth=0.05)
+        ax = (
+            imp_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+            .droplevel(1)
+            .plot(linewidth=1, figsize=(15, 7), color="#1f77b4", zorder=0)
+        )
+        ax.grid(color="black", linewidth=0.05)
         ax.xaxis.grid(False)
         ax.set_ylabel(plot_series[0])
-        ax.ticklabel_format(style='plain', axis='y')
-        ax.set_facecolor('whitesmoke')
-        ax.legend([plot_series[1] + "_repaired"], loc='upper left')
+        ax.ticklabel_format(style="plain", axis="y")
+        ax.set_facecolor("whitesmoke")
+        ax.legend([plot_series[1] + "_repaired"], loc="upper left")

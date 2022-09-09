@@ -1,14 +1,15 @@
-import pandas as pd
 from dataclasses import dataclass, field
-from typing import Union, Dict, Optional
 from importlib import resources
+from typing import Dict, List, Optional, Union
+
+import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 
 @dataclass
-class DataCatalog():
+class DataCatalog:
     """
     Data catalog which makes it easy to find, extract, use, and share CryptoDataPy datasets.
 
@@ -18,25 +19,35 @@ class DataCatalog():
         Name and url of available data sources.
 
     """
-    data_sources: Dict = field(default_factory=lambda: {
-        'ccxt': 'https://github.com/ccxt/ccxt',
-        'cryptocompare': 'https://min-api.cryptocompare.com/documentation',
-        'coinmetrics': 'https://docs.coinmetrics.io/info/markets',
-        'glassnode': 'https://glassnode.com/',
-        'tiingo': 'https://api.tiingo.com/products/crypto-api',
-        'alpha vantage': 'https://www.alphavantage.co/documentation/',
-        'yahoo finance': 'https://finance.yahoo.com/',
-        'investpy': 'https://investpy.readthedocs.io/',
-        'dbnomics': 'https://db.nomics.world/providers',
-        'fred': 'https://fred.stlouisfed.org/'
-    })
+
+    data_sources: Dict = field(
+        default_factory=lambda: {
+            "ccxt": "https://github.com/ccxt/ccxt",
+            "cryptocompare": "https://min-api.cryptocompare.com/documentation",
+            "coinmetrics": "https://docs.coinmetrics.io/info/markets",
+            "glassnode": "https://glassnode.com/",
+            "tiingo": "https://api.tiingo.com/products/crypto-api",
+            "alpha vantage": "https://www.alphavantage.co/documentation/",
+            "yahoo finance": "https://finance.yahoo.com/",
+            "investpy": "https://investpy.readthedocs.io/",
+            "dbnomics": "https://db.nomics.world/providers",
+            "fred": "https://fred.stlouisfed.org/",
+        }
+    )
 
     @staticmethod
-    def get_tickers_metadata(tickers: Optional[Union[str, list[str]]] = None, country_id_2: Optional[str] = None,
-                             country_id_3: Optional[str] = None, country_name: Optional[str] = None,
-                             agg: Optional[str] = None, cat: Optional[str] = None, subcat: Optional[str] = None,
-                             mkt_type: Optional[str] = None, quote_ccy: Optional[str] = None, as_list=False) -> \
-            pd.DataFrame():
+    def get_tickers_metadata(
+        tickers: Optional[Union[str, List[str]]] = None,
+        country_id_2: Optional[str] = None,
+        country_id_3: Optional[str] = None,
+        country_name: Optional[str] = None,
+        agg: Optional[str] = None,
+        cat: Optional[str] = None,
+        subcat: Optional[str] = None,
+        mkt_type: Optional[str] = None,
+        quote_ccy: Optional[str] = None,
+        as_list=False,
+    ) -> pd.DataFrame():
         """
         Gets ticker metadata. Excludes individual equity and cryptoasset tickers.
 
@@ -72,9 +83,9 @@ class DataCatalog():
             DataFrame with requested tickers metadata.
         """
         # get tickers csv file
-        with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding='latin1')
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
         # filter by tickers
         if tickers is not None:
@@ -90,7 +101,7 @@ class DataCatalog():
             tickers_df = tickers_df[tickers_df.country_name == country_name.title()]
         # filter by aggregate
         if agg is not None:
-            tickers_df = tickers_df[tickers_df['agg'] == agg]
+            tickers_df = tickers_df[tickers_df["agg"] == agg]
         # filter by category
         if cat is not None:
             tickers_df = tickers_df[tickers_df.category == cat.lower()]
@@ -110,7 +121,9 @@ class DataCatalog():
         return tickers_df
 
     @staticmethod
-    def search_tickers(by_col: str = Optional[None], keyword: Optional[str] = None) -> pd.DataFrame():
+    def search_tickers(
+        by_col: str = Optional[None], keyword: Optional[str] = None
+    ) -> pd.DataFrame():
         """
         Searches for tickers metadata.
 
@@ -127,9 +140,9 @@ class DataCatalog():
             DataFrame with requested tickers metadata.
         """
         # get tickers csv file
-        with resources.path('cryptodatapy.conf', 'tickers.csv') as f:
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding='latin1')
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
         if by_col is None or keyword is None:
             raise ValueError("Provide column name and keyword to search for.")
@@ -139,8 +152,13 @@ class DataCatalog():
         return tickers_df
 
     @staticmethod
-    def get_fields_metadata(fields: Optional[Union[str, list[str]]] = None, name: Optional[str] = None,
-                            cat: Optional[str] = None, subcat: Optional[str] = None, as_list=False) -> pd.DataFrame():
+    def get_fields_metadata(
+        fields: Optional[Union[str, List[str]]] = None,
+        name: Optional[str] = None,
+        cat: Optional[str] = None,
+        subcat: Optional[str] = None,
+        as_list=False,
+    ) -> pd.DataFrame():
         """
         Gets fields metadata.
 
@@ -163,9 +181,9 @@ class DataCatalog():
             DataFrame with requested fields metadata.
         """
         # get fields csv file
-        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
+        with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_path = f
-        fields_df = pd.read_csv(fields_path, index_col=0, encoding='latin1')
+        fields_df = pd.read_csv(fields_path, index_col=0, encoding="latin1")
 
         # filter by field ids
         if fields is not None:
@@ -186,7 +204,9 @@ class DataCatalog():
         return fields_df
 
     @staticmethod
-    def search_fields(by_col: Optional[str] = None, keyword: Optional[str] = None) -> pd.DataFrame():
+    def search_fields(
+        by_col: Optional[str] = None, keyword: Optional[str] = None
+    ) -> pd.DataFrame():
         """
         Searches for fields metadata.
 
@@ -203,9 +223,9 @@ class DataCatalog():
             DataFrame with fields metadata.
         """
         # get fields csv file
-        with resources.path('cryptodatapy.conf', 'fields.csv') as f:
+        with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_path = f
-        fields_df = pd.read_csv(fields_path, index_col=0, encoding='latin1')
+        fields_df = pd.read_csv(fields_path, index_col=0, encoding="latin1")
 
         if by_col is None or keyword is None:
             raise ValueError("Provide column name and keyword to search for.")
@@ -215,8 +235,9 @@ class DataCatalog():
         return fields_df
 
     @staticmethod
-    def scrape_stablecoins(source: str = 'coingecko', rank_by: str = 'mkt_cap', as_list=False) -> \
-            Union[pd.DataFrame, list]:
+    def scrape_stablecoins(
+        source: str = "coingecko", rank_by: str = "mkt_cap", as_list=False
+    ) -> Union[pd.DataFrame, list]:
         """
         Web scrapes stablecoin information from websites.
 
@@ -237,8 +258,10 @@ class DataCatalog():
         # chrome driver
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
         # urls
-        sources = {'coinmarketcap': 'http://coinmarketcap.com/view/stablecoin/',
-                   'coingecko': 'https://www.coingecko.com/en/categories/stablecoins'}
+        sources = {
+            "coinmarketcap": "http://coinmarketcap.com/view/stablecoin/",
+            "coingecko": "https://www.coingecko.com/en/categories/stablecoins",
+        }
         # get url
         driver.get(sources[source])
         # manage wait time
@@ -252,38 +275,72 @@ class DataCatalog():
         driver.close()
 
         # wrangle table
-        if source == 'coinmarketcap':
-            df['name'] = df.Name.str.split('(\\d+)', 1, expand=True)[0]
-            df['ticker'] = df.Name.str.split('(\\d+)', 1, expand=True)[2]
-            df['price'] = df.Price.str.split("$", 1, expand=True)[1].astype(float)
-            df['24h_%_chg'] = df['24h %'].str.split('%', 1, expand=True)[0].astype(float)/100
-            df['7d_%_chg'] = df['7d %'].str.split('%', 1, expand=True)[0].astype(float)/100
-            df['mkt_cap'] = df['Market Cap'].str.split('$', 2, expand=True)[2].str.replace(',', '', regex=False).\
-                astype(float)
-            df['volume_24h'] = df['Volume(24h)'].str.split(" ", 1, expand=True)[0].str.replace("$", "", regex=False).\
-                str.replace(",", "", regex=False).astype(float)
-            df['circ_suppkly'] = df['Circulating Supply'].str.split(' ', 1, expand=True)[0].str.\
-                replace(",", "", regex=False).astype(float)
+        if source == "coinmarketcap":
+            df["name"] = df.Name.str.split("(\\d+)", 1, expand=True)[0]
+            df["ticker"] = df.Name.str.split("(\\d+)", 1, expand=True)[2]
+            df["price"] = df.Price.str.split("$", 1, expand=True)[1].astype(float)
+            df["24h_%_chg"] = (
+                df["24h %"].str.split("%", 1, expand=True)[0].astype(float) / 100
+            )
+            df["7d_%_chg"] = (
+                df["7d %"].str.split("%", 1, expand=True)[0].astype(float) / 100
+            )
+            df["mkt_cap"] = (
+                df["Market Cap"]
+                .str.split("$", 2, expand=True)[2]
+                .str.replace(",", "", regex=False)
+                .astype(float)
+            )
+            df["volume_24h"] = (
+                df["Volume(24h)"]
+                .str.split(" ", 1, expand=True)[0]
+                .str.replace("$", "", regex=False)
+                .str.replace(",", "", regex=False)
+                .astype(float)
+            )
+            df["circ_suppkly"] = (
+                df["Circulating Supply"]
+                .str.split(" ", 1, expand=True)[0]
+                .str.replace(",", "", regex=False)
+                .astype(float)
+            )
             # reorder cols
-            df = df.loc[:, 'name':]
+            df = df.loc[:, "name":]
             # set index
-            df.set_index('ticker', inplace=True)
+            df.set_index("ticker", inplace=True)
 
-        elif source == 'coingecko':
+        elif source == "coingecko":
 
-            df['name'] = df.Coin.str.split(" ", 4, expand=True)[0] + " " + df.Coin.str.split(" ", 4, expand=True)[1]
+            df["name"] = (
+                df.Coin.str.split(" ", 4, expand=True)[0]
+                + " "
+                + df.Coin.str.split(" ", 4, expand=True)[1]
+            )
             tickers_list = []
             for row in df.Coin.str.split(" ", 4, expand=True).iterrows():
                 tickers_list.append(row[1].dropna().iloc[-1])
-            df['ticker'] = tickers_list
-            df['price'] = df.Price.str.split("$", 0, expand=True)[1].str.replace(",", "").astype(float)
-            df['mkt_cap'] = df['Market Capitalization'].str.split('$', 1, expand=True)[1].str.replace(',', '').\
-                astype(float)
-            df['24h_volume'] = df['24h Volume'].str.split("$", 1, expand=True)[1].str.replace(",", "").astype(float)
+            df["ticker"] = tickers_list
+            df["price"] = (
+                df.Price.str.split("$", 0, expand=True)[1]
+                .str.replace(",", "")
+                .astype(float)
+            )
+            df["mkt_cap"] = (
+                df["Market Capitalization"]
+                .str.split("$", 1, expand=True)[1]
+                .str.replace(",", "")
+                .astype(float)
+            )
+            df["24h_volume"] = (
+                df["24h Volume"]
+                .str.split("$", 1, expand=True)[1]
+                .str.replace(",", "")
+                .astype(float)
+            )
             # reorder cols
-            df = df.loc[:, 'name':]
+            df = df.loc[:, "name":]
             # set index
-            df.set_index('ticker', inplace=True)
+            df.set_index("ticker", inplace=True)
 
         # rank by
         if rank_by is not None:

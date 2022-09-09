@@ -1,13 +1,15 @@
+from typing import Optional, Union
+
 import matplotlib as plt
 import numpy as np
 import pandas as pd
+
 from cryptodatapy.transform.filter import Filter
 from cryptodatapy.transform.impute import Impute
 from cryptodatapy.transform.od import OutlierDetection
-from typing import Union, Optional
 
 
-class CleanData():
+class CleanData:
     """
     Cleans data to improve data quality.
     """
@@ -28,12 +30,19 @@ class CleanData():
         self.filtered_tickers = []  # filtered tickers
         self.summary = pd.DataFrame()  # summary of cleaning ops
         # add obs and missing vals
-        self.summary.loc['n_obs', self.df.unstack().columns] = self.df.unstack().notna().sum().values
-        self.summary.loc['%_NaN_start', self.df.unstack().columns] = (self.df.unstack().isnull().sum() /
-                                                                      self.df.unstack().shape[0]).values * 100
+        self.summary.loc["n_obs", self.df.unstack().columns] = (
+            self.df.unstack().notna().sum().values
+        )
+        self.summary.loc["%_NaN_start", self.df.unstack().columns] = (
+            self.df.unstack().isnull().sum() / self.df.unstack().shape[0]
+        ).values * 100
 
-    def filter_outliers(self, excl_cols: Optional[Union[str, list]] = None, od_method: str = 'z_score',
-                        **kwargs) -> pd.DataFrame:
+    def filter_outliers(
+        self,
+        excl_cols: Optional[Union[str, list]] = None,
+        od_method: str = "z_score",
+        **kwargs
+    ) -> pd.DataFrame:
         """
         Filters outliers.
 
@@ -108,19 +117,22 @@ class CleanData():
         # outlier detection
         od = getattr(OutlierDetection(self.df), od_method)(**kwargs)
         # add outliers and fcst to obj
-        self.outliers = od['outliers']
-        self.fcsts = od['yhat']
+        self.outliers = od["outliers"]
+        self.fcsts = od["yhat"]
         # filter outliers
         filt_df = Filter(self.df, excl_cols=excl_cols).outliers(od)
         # add to summary
-        self.summary.loc['%_outliers', self.df.unstack().columns] = (od['outliers'].unstack().notna().sum() /
-                                                                     self.df.unstack().shape[0]).values * 100
+        self.summary.loc["%_outliers", self.df.unstack().columns] = (
+            od["outliers"].unstack().notna().sum() / self.df.unstack().shape[0]
+        ).values * 100
         # filtered df
         self.df = filt_df
 
         return self
 
-    def repair_outliers(self, imp_method: str = 'interpolate', **kwargs) -> pd.DataFrame:
+    def repair_outliers(
+        self, imp_method: str = "interpolate", **kwargs
+    ) -> pd.DataFrame:
         """
         Repairs outliers using an imputation method.
 
@@ -151,19 +163,23 @@ class CleanData():
             Returns GetData object
         """
         # impute missing vals
-        if imp_method == 'fcst':
+        if imp_method == "fcst":
             rep_df = getattr(Impute(self.df), imp_method)(self.fcsts, **kwargs)
         else:
             rep_df = getattr(Impute(self.df), imp_method)(**kwargs)
         # add repaired % to summary
         rep_vals = rep_df.unstack().notna().sum() - self.df.unstack().notna().sum()
-        self.summary.loc['%_repaired', self.df.unstack().columns] = (rep_vals / self.df.unstack().shape[0]) * 100
+        self.summary.loc["%_repaired", self.df.unstack().columns] = (
+            rep_vals / self.df.unstack().shape[0]
+        ) * 100
         # repaired df
         self.df = rep_df
 
         return self
 
-    def filter_avg_trading_val(self, thresh_val: int = 10000000, window_size: int = 30, **kwargs) -> pd.DataFrame:
+    def filter_avg_trading_val(
+        self, thresh_val: int = 10000000, window_size: int = 30, **kwargs
+    ) -> pd.DataFrame:
         """
         Filters values below a threshold of average trading value (price * volume/size in quote currency) over some
         lookback window, replacing them with NaNs.
@@ -188,11 +204,14 @@ class CleanData():
             Returns GetData object
         """
         # filter outliers
-        filt_df = Filter(self.df).avg_trading_val(thresh_val=thresh_val, window_size=window_size, **kwargs)
+        filt_df = Filter(self.df).avg_trading_val(
+            thresh_val=thresh_val, window_size=window_size, **kwargs
+        )
         # add to summary
         filt_vals = self.df.unstack().notna().sum() - filt_df.unstack().notna().sum()
-        self.summary.loc['%_below_avg_trading_val', self.df.unstack().columns] = (filt_vals / self.df.unstack().shape[
-            0]).values * 100
+        self.summary.loc["%_below_avg_trading_val", self.df.unstack().columns] = (
+            filt_vals / self.df.unstack().shape[0]
+        ).values * 100
         # filtered df
         self.df = filt_df
 
@@ -223,9 +242,12 @@ class CleanData():
         # filter outliers
         filt_df = Filter(self.df).missing_vals_gaps(gap_window=gap_window, **kwargs)
         # add to summary
-        missing_vals_gap = self.df.unstack().notna().sum() - filt_df.unstack().notna().sum()
-        self.summary.loc['%_missing_vals_gaps', self.df.unstack().columns] = (missing_vals_gap /
-                                                                              self.df.unstack().shape[0]).values * 100
+        missing_vals_gap = (
+            self.df.unstack().notna().sum() - filt_df.unstack().notna().sum()
+        )
+        self.summary.loc["%_missing_vals_gaps", self.df.unstack().columns] = (
+            missing_vals_gap / self.df.unstack().shape[0]
+        ).values * 100
         # filtered df
         self.df = filt_df
 
@@ -249,11 +271,16 @@ class CleanData():
         filt_df = Filter(self.df).min_nobs(min_obs=min_obs)
         # tickers < min obs
         filt_tickers = list(
-            set(filt_df.index.droplevel(0).unique()).symmetric_difference(set(self.df.index.droplevel(0).unique())))
+            set(filt_df.index.droplevel(0).unique()).symmetric_difference(
+                set(self.df.index.droplevel(0).unique())
+            )
+        )
         # add to obj
         if len(filt_tickers) != 0:
             self.filtered_tickers.extend(filt_tickers)
-        self.summary.loc['n_tickers_below_min_obs', self.df.unstack().columns] = len(filt_tickers)
+        self.summary.loc["n_tickers_below_min_obs", self.df.unstack().columns] = len(
+            filt_tickers
+        )
         # filtered df
         self.df = filt_df
 
@@ -278,17 +305,24 @@ class CleanData():
         filt_df = Filter(self.df).tickers(tickers_list)
         # tickers < min obs
         filt_tickers = list(
-            set(filt_df.index.droplevel(0).unique()).symmetric_difference(set(self.df.index.droplevel(0).unique())))
+            set(filt_df.index.droplevel(0).unique()).symmetric_difference(
+                set(self.df.index.droplevel(0).unique())
+            )
+        )
         # add to obj properties
         if len(filt_tickers) != 0:
             self.filtered_tickers.extend(filt_tickers)
-        self.summary.loc['n_filtered_tickers', self.df.unstack().columns] = len(filt_tickers)
+        self.summary.loc["n_filtered_tickers", self.df.unstack().columns] = len(
+            filt_tickers
+        )
         # filtered df
         self.df = filt_df
 
         return self
 
-    def show_plot(self, plot_series: tuple = ('BTC', 'close'), compare_series: bool = True) -> None:
+    def show_plot(
+        self, plot_series: tuple = ("BTC", "close"), compare_series: bool = True
+    ) -> None:
         """
         Plots clean time series and compares it to the raw series.
 
@@ -299,19 +333,39 @@ class CleanData():
         compare_series: bool, default True
             Compares clean time series with raw series
         """
-        ax = self.df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]].droplevel(1). \
-            plot(linewidth=1, figsize=(15, 7), color='#1f77b4', zorder=0, title='Filtered vs. Raw Data')
+        ax = (
+            self.df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+            .droplevel(1)
+            .plot(
+                linewidth=1,
+                figsize=(15, 7),
+                color="#1f77b4",
+                zorder=0,
+                title="Filtered vs. Raw Data",
+            )
+        )
         if compare_series:
-            ax = self.start_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]].droplevel(1). \
-                plot(linewidth=1, figsize=(15, 7), linestyle=':', color='#FF8785', zorder=0)
-        ax.grid(color='black', linewidth=0.05)
+            ax = (
+                self.start_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+                .droplevel(1)
+                .plot(
+                    linewidth=1,
+                    figsize=(15, 7),
+                    linestyle=":",
+                    color="#FF8785",
+                    zorder=0,
+                )
+            )
+        ax.grid(color="black", linewidth=0.05)
         ax.xaxis.grid(False)
         ax.set_ylabel(plot_series[0])
-        ax.ticklabel_format(style='plain', axis='y')
-        ax.set_facecolor('whitesmoke')
-        ax.legend([plot_series[1] + "_filtered", plot_series[1] + "_raw"], loc='upper left')
+        ax.ticklabel_format(style="plain", axis="y")
+        ax.set_facecolor("whitesmoke")
+        ax.legend(
+            [plot_series[1] + "_filtered", plot_series[1] + "_raw"], loc="upper left"
+        )
 
-    def get(self, attr='df') -> pd.DataFrame:
+    def get(self, attr="df") -> pd.DataFrame:
         """
         Returns GetData object attribute.
 
@@ -325,8 +379,9 @@ class CleanData():
         self: pd.DataFrame
             Dataframe with GetData object attribute
         """
-        self.summary.loc['%_NaN_end', self.df.unstack().columns] = (self.df.unstack().isnull().sum() /
-                                                                    self.df.unstack().shape[0]).values * 100
+        self.summary.loc["%_NaN_end", self.df.unstack().columns] = (
+            self.df.unstack().isnull().sum() / self.df.unstack().shape[0]
+        ).values * 100
         self.summary = self.summary.astype(float).round(2)
 
         return getattr(self, attr)

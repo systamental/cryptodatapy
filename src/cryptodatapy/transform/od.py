@@ -1,13 +1,13 @@
+from typing import Dict, Optional
+
 import matplotlib as plt
 import numpy as np
 import pandas as pd
 from prophet import Prophet
-from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.seasonal import seasonal_decompose
-from typing import Optional
+from statsmodels.tsa.seasonal import STL, seasonal_decompose
 
 
-class OutlierDetection():
+class OutlierDetection:
     """
     Detects outliers.
     """
@@ -23,8 +23,15 @@ class OutlierDetection():
         """
         self.raw_df = raw_df
 
-    def atr(self, log: bool = False, window_size: int = 7, model_type: str = 'estimation', thresh_val: int = 2,
-            plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def atr(
+        self,
+        log: bool = False,
+        window_size: int = 7,
+        model_type: str = "estimation",
+        thresh_val: int = 2,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using OHLC values and H-L range.
 
@@ -63,26 +70,50 @@ class OutlierDetection():
             df0 = df.copy()
 
         # ohlc
-        if not all(col in df.columns for col in ['open', 'high', 'low', 'close']):
+        if not all(col in df.columns for col in ["open", "high", "low", "close"]):
             raise Exception("Dataframe must have OHLC prices to compute ATR.")
 
         # compute true range
-        df0['hl'], df0['hc'], df0['lc'] = (df0.high - df.low).abs(), (df0.high - df.close.shift(1)).abs(), (
-                df0.low - df.close.shift(1)).abs()
-        df0['tr'] = df0.loc[:, 'hl':'lc'].max(axis=1)
+        df0["hl"], df0["hc"], df0["lc"] = (
+            (df0.high - df.low).abs(),
+            (df0.high - df.close.shift(1)).abs(),
+            (df0.low - df.close.shift(1)).abs(),
+        )
+        df0["tr"] = df0.loc[:, "hl":"lc"].max(axis=1)
 
         # compute ATR for estimation and prediction models
-        if model_type == 'estimation':
-            df0['atr'] = df0.tr.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).mean().sort_index()
-            med = df0.loc[:, :'volume'].groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).median().sort_index()
+        if model_type == "estimation":
+            df0["atr"] = (
+                df0.tr.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .mean()
+                .sort_index()
+            )
+            med = (
+                df0.loc[:, :"volume"]
+                .groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .median()
+                .sort_index()
+            )
         else:
-            df0['atr'] = df0.tr.groupby(level=1).ewm(span=window_size).mean().droplevel(0)
-            med = df0.loc[:, :'volume'].groupby(level=1).rolling(window_size).median().droplevel(0)
+            df0["atr"] = (
+                df0.tr.groupby(level=1).ewm(span=window_size).mean().droplevel(0)
+            )
+            med = (
+                df0.loc[:, :"volume"]
+                .groupby(level=1)
+                .rolling(window_size)
+                .median()
+                .droplevel(0)
+            )
 
         # compute dev, score and upper/lower
-        dev = df0.loc[:, :'volume'] - med
+        dev = df0.loc[:, :"volume"] - med
         score = dev.divide(df0.atr, axis=0)
         upper, lower = thresh_val, thresh_val * -1
 
@@ -97,17 +128,30 @@ class OutlierDetection():
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': med.sort_index(), 'outliers': out_df.sort_index(), 'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": med.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def iqr(self, log: bool = True, window_size: int = 7, model_type: str = 'estimation', thresh_val: int = 1.5,
-            plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def iqr(
+        self,
+        log: bool = True,
+        window_size: int = 7,
+        model_type: str = "estimation",
+        thresh_val: int = 1.5,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using interquartile range (IQR) method.
 
@@ -147,16 +191,35 @@ class OutlierDetection():
             df0 = df.copy()
 
         # compute 75th, 50th and 25th percentiles for estimation and prediction models
-        if model_type == 'estimation':
-            perc_75th = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).quantile(0.75)
-            perc_25th = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).quantile(0.25)
-            med = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).median()
+        if model_type == "estimation":
+            perc_75th = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .quantile(0.75)
+            )
+            perc_25th = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .quantile(0.25)
+            )
+            med = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .median()
+            )
         else:
-            perc_75th = df0.groupby(level=1).rolling(window_size).quantile(0.75).droplevel(0)
-            perc_25th = df0.groupby(level=1).rolling(window_size).quantile(0.25).droplevel(0)
+            perc_75th = (
+                df0.groupby(level=1).rolling(window_size).quantile(0.75).droplevel(0)
+            )
+            perc_25th = (
+                df0.groupby(level=1).rolling(window_size).quantile(0.25).droplevel(0)
+            )
             med = df0.groupby(level=1).rolling(window_size).median().droplevel(0)
 
         # compute iqr and upper/lower thresholds
@@ -175,17 +238,30 @@ class OutlierDetection():
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': med.sort_index(), 'outliers': out_df.sort_index(), 'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": med.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def mad(self, log: bool = True, window_size: int = 7, model_type: str = 'estimation', thresh_val: int = 10,
-            plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def mad(
+        self,
+        log: bool = True,
+        window_size: int = 7,
+        model_type: str = "estimation",
+        thresh_val: int = 10,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using a median absolute deviation method, aka Hampler filter.
 
@@ -225,9 +301,14 @@ class OutlierDetection():
             df0 = df
 
         # compute median for estimation and prediction models
-        if model_type == 'estimation':
-            med = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).median()
+        if model_type == "estimation":
+            med = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .median()
+            )
         else:
             med = df0.groupby(level=1).rolling(window_size).median().droplevel(0)
 
@@ -248,17 +329,30 @@ class OutlierDetection():
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': med.sort_index(), 'outliers': out_df.sort_index(), 'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": med.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def z_score(self, log: bool = True, window_size: int = 7, model_type: str = 'estimation', thresh_val: int = 2,
-                plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def z_score(
+        self,
+        log: bool = True,
+        window_size: int = 7,
+        model_type: str = "estimation",
+        thresh_val: int = 2,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using a z-score method, aka simple moving average.
 
@@ -297,14 +391,34 @@ class OutlierDetection():
             df0 = df
 
         # compute rolling mean and std for estimation and prediction models
-        if model_type == 'estimation':
-            roll_mean = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).mean()
-            roll_std = df0.groupby(level=1).shift(-1 * int((window_size + 1) / 2)).sort_index(level=1). \
-                rolling(window_size, min_periods=1).std()
+        if model_type == "estimation":
+            roll_mean = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .mean()
+            )
+            roll_std = (
+                df0.groupby(level=1)
+                .shift(-1 * int((window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(window_size, min_periods=1)
+                .std()
+            )
         else:
-            roll_mean = df0.groupby(level=1).rolling(window_size, min_periods=1).mean().droplevel(0)
-            roll_std = df0.groupby(level=1).rolling(window_size, min_periods=1).std().droplevel(0)
+            roll_mean = (
+                df0.groupby(level=1)
+                .rolling(window_size, min_periods=1)
+                .mean()
+                .droplevel(0)
+            )
+            roll_std = (
+                df0.groupby(level=1)
+                .rolling(window_size, min_periods=1)
+                .std()
+                .droplevel(0)
+            )
 
         # compute z-score and upper/lower thresh
         z = (df0 - roll_mean) / roll_std
@@ -322,18 +436,29 @@ class OutlierDetection():
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': roll_mean.sort_index(), 'outliers': out_df.sort_index(),
-                         'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": roll_mean.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def ewma(self, log: bool = True, window_size: int = 7, thresh_val: int = 1.5, plot: bool = False,
-             plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def ewma(
+        self,
+        log: bool = True,
+        window_size: int = 7,
+        thresh_val: int = 1.5,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using an exponential moving average method.
 
@@ -386,19 +511,33 @@ class OutlierDetection():
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': ewma.sort_index(), 'outliers': out_df.sort_index(), 'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": ewma.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def seasonal_decomp(self, log: bool = True, thresh_val: int = 5, period: int = 7, model: str = 'additive',
-                        filt: Optional[np.array] = None, two_sided: Optional[bool] = True,
-                        extrapolate_trend: Optional[int] = 0, plot: bool = False,
-                        plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def seasonal_decomp(
+        self,
+        log: bool = True,
+        thresh_val: int = 5,
+        period: int = 7,
+        model: str = "additive",
+        filt: Optional[np.array] = None,
+        two_sided: Optional[bool] = True,
+        extrapolate_trend: Optional[int] = 0,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers with seasonal decomposition moving averages from statsmodels.
 
@@ -454,15 +593,27 @@ class OutlierDetection():
             resid_df, yhat_df = pd.DataFrame(index=idx), pd.DataFrame(index=idx)
             for ticker in df0[field].columns:
                 # decompose
-                res = seasonal_decompose(df0[field][ticker].dropna(), period=period, model=model, filt=filt,
-                                         two_sided=two_sided, extrapolate_trend=extrapolate_trend)
+                res = seasonal_decompose(
+                    df0[field][ticker].dropna(),
+                    period=period,
+                    model=model,
+                    filt=filt,
+                    two_sided=two_sided,
+                    extrapolate_trend=extrapolate_trend,
+                )
                 resid_vals, trend_vals = res.resid.fillna(0), res.trend.ffill()
                 # add to dfs
-                resid_df = pd.concat([resid_df, resid_vals], join='outer', axis=1).rename(columns={'resid': ticker})
-                yhat_df = pd.concat([yhat_df, trend_vals], join='outer', axis=1).rename(columns={'trend': ticker})
+                resid_df = pd.concat(
+                    [resid_df, resid_vals], join="outer", axis=1
+                ).rename(columns={"resid": ticker})
+                yhat_df = pd.concat([yhat_df, trend_vals], join="outer", axis=1).rename(
+                    columns={"trend": ticker}
+                )
                 # convert to datetimeindex and rename
-                resid_df.index, yhat_df.index = pd.to_datetime(resid_df.index), pd.to_datetime(yhat_df.index)
-                resid_df.index.name, yhat_df.index.name = 'date', 'date'
+                resid_df.index, yhat_df.index = pd.to_datetime(
+                    resid_df.index
+                ), pd.to_datetime(yhat_df.index)
+                resid_df.index.name, yhat_df.index.name = "date", "date"
 
             # normalize resid using mad
             dev = resid_df - resid_df.median()
@@ -470,7 +621,7 @@ class OutlierDetection():
             dev_df = dev / mad
 
             # add fcst and resid dfs to dict
-            resid_dict[field], yhat_dict[field] = dev_df, yhat_df
+            resid_Dict[field], yhat_Dict[field] = dev_df, yhat_df
 
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
@@ -489,28 +640,46 @@ class OutlierDetection():
         yhat_df = yhat_df.stack().reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': yhat_df.sort_index(), 'outliers': out_df.sort_index(),
-                         'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": yhat_df.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def stl(self, log: bool = True, thresh_val: int = 5, period: Optional[int] = 7, seasonal: Optional[int] = 7,
-            trend: Optional[int] = None, low_pass: Optional[int] = None, seasonal_deg: Optional[int] = 1,
-            trend_deg: Optional[int] = 1, low_pass_deg: Optional[int] = 1, robust: Optional[bool] = False,
-            seasonal_jump: Optional[int] = 1, trend_jump: Optional[int] = 1, low_pass_jump: Optional[int] = 1,
-            plot: bool = False, plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def stl(
+        self,
+        log: bool = True,
+        thresh_val: int = 5,
+        period: Optional[int] = 7,
+        seasonal: Optional[int] = 7,
+        trend: Optional[int] = None,
+        low_pass: Optional[int] = None,
+        seasonal_deg: Optional[int] = 1,
+        trend_deg: Optional[int] = 1,
+        low_pass_deg: Optional[int] = 1,
+        robust: Optional[bool] = False,
+        seasonal_jump: Optional[int] = 1,
+        trend_jump: Optional[int] = 1,
+        low_pass_jump: Optional[int] = 1,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers with seasonal decomposition moving averages from statsmodels.
 
@@ -582,17 +751,33 @@ class OutlierDetection():
             resid_df, yhat_df = pd.DataFrame(index=idx), pd.DataFrame(index=idx)
             for ticker in df0[field].columns:
                 # decompose
-                res = STL(df0[field][ticker].dropna(), period=period, seasonal=seasonal, trend=trend,
-                          low_pass=low_pass, seasonal_deg=seasonal_deg, trend_deg=trend_deg, low_pass_deg=low_pass_deg,
-                          robust=robust, seasonal_jump=seasonal_jump, trend_jump=trend_jump,
-                          low_pass_jump=low_pass_jump).fit()
+                res = STL(
+                    df0[field][ticker].dropna(),
+                    period=period,
+                    seasonal=seasonal,
+                    trend=trend,
+                    low_pass=low_pass,
+                    seasonal_deg=seasonal_deg,
+                    trend_deg=trend_deg,
+                    low_pass_deg=low_pass_deg,
+                    robust=robust,
+                    seasonal_jump=seasonal_jump,
+                    trend_jump=trend_jump,
+                    low_pass_jump=low_pass_jump,
+                ).fit()
                 resid_vals, trend_vals, seas_vals = res.resid, res.trend, res.seasonal
                 # add to dfs
-                resid_df = pd.concat([resid_df, resid_vals], join='outer', axis=1).rename(columns={'resid': ticker})
-                yhat_df = pd.concat([yhat_df, trend_vals], join='outer', axis=1).rename(columns={'trend': ticker})
+                resid_df = pd.concat(
+                    [resid_df, resid_vals], join="outer", axis=1
+                ).rename(columns={"resid": ticker})
+                yhat_df = pd.concat([yhat_df, trend_vals], join="outer", axis=1).rename(
+                    columns={"trend": ticker}
+                )
                 # convert to datetimeindex and rename
-                resid_df.index, yhat_df.index = pd.to_datetime(resid_df.index), pd.to_datetime(yhat_df.index)
-                resid_df.index.name, yhat_df.index.name = 'date', 'date'
+                resid_df.index, yhat_df.index = pd.to_datetime(
+                    resid_df.index
+                ), pd.to_datetime(yhat_df.index)
+                resid_df.index.name, yhat_df.index.name = "date", "date"
 
             # normalize resid using mad
             dev = resid_df - resid_df.median()
@@ -600,7 +785,7 @@ class OutlierDetection():
             dev_df = dev / mad
 
             # add fcst and resid dfs to dict
-            resid_dict[field], yhat_dict[field] = dev_df, yhat_df
+            resid_Dict[field], yhat_Dict[field] = dev_df, yhat_df
 
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
@@ -619,25 +804,35 @@ class OutlierDetection():
         yhat_df = yhat_df.stack().reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': yhat_df.sort_index(), 'outliers': out_df.sort_index(),
-                         'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": yhat_df.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def prophet(self, log: bool = True, interval_width: Optional[float] = 0.99, plot: bool = False,
-                plot_series: tuple = ('BTC', 'close')) -> dict[str, pd.DataFrame]:
+    def prophet(
+        self,
+        log: bool = True,
+        interval_width: Optional[float] = 0.99,
+        plot: bool = False,
+        plot_series: tuple = ("BTC", "close"),
+    ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers using Prophet, a time series forecasting algorithm published by Facebook.
 
@@ -674,35 +869,55 @@ class OutlierDetection():
         # store predictions for fields dfs in dict
         upper_dict, lower_dict, yhat_dict = {}, {}, {}
         for field in df0.columns.get_level_values(0).unique():
-            upper_df, lower_df, yhat_df = pd.DataFrame(index=idx), pd.DataFrame(index=idx), pd.DataFrame(index=idx)
+            upper_df, lower_df, yhat_df = (
+                pd.DataFrame(index=idx),
+                pd.DataFrame(index=idx),
+                pd.DataFrame(index=idx),
+            )
             for ticker in df0[field].columns:
                 # format cols for prophet
-                df1 = df0[field][ticker].to_frame().reset_index().rename(columns={'date': 'ds', ticker: 'y'})
+                df1 = (
+                    df0[field][ticker]
+                    .to_frame()
+                    .reset_index()
+                    .rename(columns={"date": "ds", ticker: "y"})
+                )
                 # fit model
                 m = Prophet(interval_width=interval_width)
                 m = m.fit(df1)
                 # forecast
                 pred = m.predict(df1)
                 # convert to datetimeindex and rename
-                pred['date'] = pd.to_datetime(pred.ds)
-                pred.set_index('date', inplace=True)
+                pred["date"] = pd.to_datetime(pred.ds)
+                pred.set_index("date", inplace=True)
                 # add to dfs
-                upper_df = pd.concat([upper_df, pred['yhat_upper']], join='outer', axis=1). \
-                    rename(columns={'yhat_upper': ticker})
-                lower_df = pd.concat([lower_df, pred['yhat_lower']], join='outer', axis=1). \
-                    rename(columns={'yhat_lower': ticker})
-                yhat_df = pd.concat([yhat_df, pred['yhat']], join='outer', axis=1).rename(columns={'yhat': ticker})
+                upper_df = pd.concat(
+                    [upper_df, pred["yhat_upper"]], join="outer", axis=1
+                ).rename(columns={"yhat_upper": ticker})
+                lower_df = pd.concat(
+                    [lower_df, pred["yhat_lower"]], join="outer", axis=1
+                ).rename(columns={"yhat_lower": ticker})
+                yhat_df = pd.concat(
+                    [yhat_df, pred["yhat"]], join="outer", axis=1
+                ).rename(columns={"yhat": ticker})
 
             # add fcst adfs to dict
-            upper_dict[field], lower_dict[field], yhat_dict[field] = upper_df, lower_df, yhat_df
+            upper_Dict[field], lower_Dict[field], yhat_Dict[field] = (
+                upper_df,
+                lower_df,
+                yhat_df,
+            )
 
         # convert dict to multiindex
-        yhat_upper, yhat_lower, yhat = pd.concat(upper_dict, axis=1), pd.concat(lower_dict, axis=1), \
-            pd.concat(yhat_dict, axis=1)
+        yhat_upper, yhat_lower, yhat = (
+            pd.concat(upper_dict, axis=1),
+            pd.concat(lower_dict, axis=1),
+            pd.concat(yhat_dict, axis=1),
+        )
         # rename cols
-        yhat_upper.columns.names = [None, 'ticker']
-        yhat_lower.columns.names = [None, 'ticker']
-        yhat.columns.names = [None, 'ticker']
+        yhat_upper.columns.names = [None, "ticker"]
+        yhat_lower.columns.names = [None, "ticker"]
+        yhat.columns.names = [None, "ticker"]
 
         # transform log
         if log:
@@ -721,24 +936,31 @@ class OutlierDetection():
         filt_df = filt_df.stack().reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='ignore').convert_dtypes()
+        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
-                raise TypeError("Plot_series must be a tuple specifying the ticker and column/field to "
-                                "plot (ticker, column).")
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
             else:
                 self.plot_outliers(out_df, plot_series=plot_series)
 
-        outliers_dict = {'yhat': yhat_df.sort_index(), 'outliers': out_df.sort_index(),
-                         'filt_vals': filt_df.sort_index()}
+        outliers_dict = {
+            "yhat": yhat_df.sort_index(),
+            "outliers": out_df.sort_index(),
+            "filt_vals": filt_df.sort_index(),
+        }
 
         return outliers_dict
 
-    def plot_outliers(self, outliers_df: pd.DataFrame, plot_series: Optional[tuple] = None) -> None:
+    def plot_outliers(
+        self, outliers_df: pd.DataFrame, plot_series: Optional[tuple] = None
+    ) -> None:
         """
         Plots time series with outliers highlighted (red dots).
 
@@ -749,12 +971,23 @@ class OutlierDetection():
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
         """
-        ax = self.raw_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]].droplevel(1). \
-            plot(linewidth=1, figsize=(15, 7), color='#1f77b4', zorder=0)
-        outliers_df.unstack()[plot_series[1]].reset_index().plot(kind='scatter', x='date', y=plot_series[0],
-                                                                 color='#E64E53', ax=ax, label='outliers')
-        ax.grid(color='black', linewidth=0.05)
+        ax = (
+            self.raw_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+            .droplevel(1)
+            .plot(linewidth=1, figsize=(15, 7), color="#1f77b4", zorder=0)
+        )
+        outliers_df.unstack()[plot_series[1]].reset_index().plot(
+            kind="scatter",
+            x="date",
+            y=plot_series[0],
+            color="#E64E53",
+            ax=ax,
+            label="outliers",
+        )
+        ax.grid(color="black", linewidth=0.05)
         ax.xaxis.grid(False)
-        ax.ticklabel_format(style='plain', axis='y')
-        ax.set_facecolor('whitesmoke')
-        ax.legend([plot_series[1] + "_raw", plot_series[1] + "_outliers"], loc='upper left')
+        ax.ticklabel_format(style="plain", axis="y")
+        ax.set_facecolor("whitesmoke")
+        ax.legend(
+            [plot_series[1] + "_raw", plot_series[1] + "_outliers"], loc="upper left"
+        )

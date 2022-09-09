@@ -1,8 +1,9 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
-import pytest
 
 
 @pytest.fixture
@@ -15,7 +16,7 @@ def test_categories(dbnomics) -> None:
     Test categories property.
     """
     db = dbnomics
-    assert db.categories == ['macro'], "Incorrect categories."
+    assert db.categories == ["macro"], "Incorrect categories."
 
 
 def test_categories_error(dbnomics) -> None:
@@ -24,7 +25,7 @@ def test_categories_error(dbnomics) -> None:
     """
     db = dbnomics
     with pytest.raises(ValueError):
-        db.categories = ['real_estate', 'art']
+        db.categories = ["real_estate", "art"]
 
 
 def test_fields(dbnomics) -> None:
@@ -32,7 +33,7 @@ def test_fields(dbnomics) -> None:
     Test fields property.
     """
     db = dbnomics
-    assert db.fields['macro'] == ['actual'], "Fields for macro cat are incorrect."
+    assert db.fields["macro"] == ["actual"], "Fields for macro cat are incorrect."
 
 
 def test_get_data(dbnomics) -> None:
@@ -40,18 +41,41 @@ def test_get_data(dbnomics) -> None:
     Test get data method.
     """
     db = dbnomics
-    data_req = DataRequest(tickers=['US_GDP_Sh_PPP', 'EZ_GDP_Sh_PPP', 'CN_GDP_Sh_PPP', 'US_Credit/GDP_HH',
-                                    'WL_Credit_Banks'], fields='actual', cat='macro')
+    data_req = DataRequest(
+        tickers=[
+            "US_GDP_Sh_PPP",
+            "EZ_GDP_Sh_PPP",
+            "CN_GDP_Sh_PPP",
+            "US_Credit/GDP_HH",
+            "WL_Credit_Banks",
+        ],
+        fields="actual",
+        cat="macro",
+    )
     df = db.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {'US_Credit/GDP_HH', 'WL_Credit_Banks', 'CN_GDP_Sh_PPP',
-                                                   'EZ_GDP_Sh_PPP', 'US_GDP_Sh_PPP'}, \
-        "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ['actual'], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('1947-10-01 00:00:00'), "Wrong start date."  # start date
-    assert isinstance(df.actual.dropna().iloc[-1], np.float64), "Actual is not a numpy float."  # dtypes
+    assert isinstance(
+        df.index, pd.MultiIndex
+    ), "Dataframe should be MultiIndex."  # multiindex
+    assert isinstance(
+        df.index.droplevel(1), pd.DatetimeIndex
+    ), "Index is not DatetimeIndex."  # datetimeindex
+    assert set(df.index.droplevel(0).unique()) == {
+        "US_Credit/GDP_HH",
+        "WL_Credit_Banks",
+        "CN_GDP_Sh_PPP",
+        "EZ_GDP_Sh_PPP",
+        "US_GDP_Sh_PPP",
+    }, "Tickers are missing from dataframe."  # tickers
+    assert list(df.columns) == [
+        "actual"
+    ], "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp(
+        "1947-10-01 00:00:00"
+    ), "Wrong start date."  # start date
+    assert isinstance(
+        df.actual.dropna().iloc[-1], np.float64
+    ), "Actual is not a numpy float."  # dtypes
 
 
 if __name__ == "__main__":

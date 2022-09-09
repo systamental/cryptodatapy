@@ -1,7 +1,8 @@
 # import pandas as pd
 # from datetime import datetime, timedelta
-from cryptodatapy.data_requests.datarequest import DataRequest
 import pytest
+
+from cryptodatapy.extract.datarequest import DataRequest
 
 
 @pytest.fixture
@@ -15,7 +16,7 @@ def test_data_source_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.data_source = ['wrong source type']
+        dr.data_source = ["wrong source type"]
 
 
 def test_tickers_error(datarequest) -> None:
@@ -33,7 +34,7 @@ def test_freq_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.freq = '5s'
+        dr.freq = "5s"
 
 
 def test_quote_ccy_error(datarequest) -> None:
@@ -42,7 +43,7 @@ def test_quote_ccy_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.quote_ccy = ['usd']
+        dr.quote_ccy = ["usd"]
 
 
 def test_exch_error(datarequest) -> None:
@@ -51,7 +52,7 @@ def test_exch_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.exch = {'crypto': 'binance'}
+        dr.exch = {"crypto": "binance"}
 
 
 def test_mkt_type_error(datarequest) -> None:
@@ -60,7 +61,7 @@ def test_mkt_type_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.mkt_type = 'swaption'
+        dr.mkt_type = "swaption"
 
 
 def test_start_date_error(datarequest) -> None:
@@ -69,7 +70,7 @@ def test_start_date_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.start_date = '01/01/2015'
+        dr.start_date = "01/01/2015"
 
 
 def test_end_date_error(datarequest) -> None:
@@ -78,7 +79,7 @@ def test_end_date_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.end_date = '12-31-2015'
+        dr.end_date = "12-31-2015"
 
 
 def test_fields_error(datarequest) -> None:
@@ -96,7 +97,7 @@ def test_inst_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.inst = ['grayscale']
+        dr.inst = ["grayscale"]
 
 
 def test_tz_error(datarequest) -> None:
@@ -105,7 +106,7 @@ def test_tz_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.tz = 'NYC'
+        dr.tz = "NYC"
 
 
 def test_cat_error(datarequest) -> None:
@@ -114,7 +115,7 @@ def test_cat_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.cat = 'on-chain'
+        dr.cat = "on-chain"
 
 
 def test_trials_error(datarequest) -> None:
@@ -123,7 +124,7 @@ def test_trials_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.trials = ['3']
+        dr.trials = ["3"]
 
 
 def test_pause_error(datarequest) -> None:
@@ -132,7 +133,7 @@ def test_pause_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.pause = ['15s']
+        dr.pause = ["15s"]
 
 
 def test_source_tickers_error(datarequest) -> None:
@@ -141,7 +142,7 @@ def test_source_tickers_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.source_tickers = {'crypto': ['BTC', 'ETH']}
+        dr.source_tickers = {"crypto": ["BTC", "ETH"]}
 
 
 def test_source_freq_error(datarequest) -> None:
@@ -150,7 +151,7 @@ def test_source_freq_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.source_freq = {'crypto': '15s'}
+        dr.source_freq = {"crypto": "15s"}
 
 
 def test_source_fields_error(datarequest) -> None:
@@ -159,9 +160,8 @@ def test_source_fields_error(datarequest) -> None:
     """
     dr = datarequest
     with pytest.raises(TypeError):
-        dr.source_fields = {'crypto': ['close_price']}
+        dr.source_fields = {"crypto": ["close_price"]}
 
 
 if __name__ == "__main__":
     pytest.main()
-

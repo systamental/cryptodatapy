@@ -1,13 +1,14 @@
-import pandas as pd
 import logging
-from typing import Optional, Any
-from cryptodatapy.util.datacredentials import DataCredentials
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+import pandas_datareader.data as web
+
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.library import Library
 from cryptodatapy.transform.convertparams import ConvertParams
 from cryptodatapy.transform.wrangle import WrangleData
-import pandas_datareader.data as web
-
+from cryptodatapy.util.datacredentials import DataCredentials
 
 # data credentials
 data_cred = DataCredentials()
@@ -19,27 +20,31 @@ class PandasDataReader(Library):
     """
 
     def __init__(
-            self,
-            categories: list[str] = ['fx', 'rates', 'eqty', 'credit', 'macro'],
-            exchanges: Optional[list[str]] = None,
-            indexes: Optional[dict[str, list[str]]] = None,
-            assets: Optional[dict[str, list[str]]] = None,
-            markets: Optional[dict[str, list[str]]] = None,
-            market_types: list[str] = ['spot'],
-            fields: Optional[dict[str, list[str]]] = None,
-            frequencies: dict[str, list[str]] = {
-                'crypto': ['d', 'w', 'm', 'q', 'y'],
-                'fx': ['d', 'w', 'm', 'q', 'y'],
-                'rates': ['d', 'w', 'm', 'q', 'y'],
-                'eqty': ['d', 'w', 'm', 'q', 'y'],
-                'credit': ['d', 'w', 'm', 'q', 'y'],
-                'macro': ['d', 'w', 'm', 'q', 'y']
-            },
-            base_url: Optional[str] = None,
-            api_key: dict = {'fred': None, 'yahoo': None, 'av-daily': data_cred.av_api_key,
-                             'av-forex-daily': data_cred.av_api_key},
-            max_obs_per_call: Optional[int] = None,
-            rate_limit: Optional[Any] = None
+        self,
+        categories: List[str] = ["fx", "rates", "eqty", "credit", "macro"],
+        exchanges: Optional[List[str]] = None,
+        indexes: Optional[Dict[str, List[str]]] = None,
+        assets: Optional[Dict[str, List[str]]] = None,
+        markets: Optional[Dict[str, List[str]]] = None,
+        market_types: List[str] = ["spot"],
+        fields: Optional[Dict[str, List[str]]] = None,
+        frequencies: Dict[str, List[str]] = {
+            "crypto": ["d", "w", "m", "q", "y"],
+            "fx": ["d", "w", "m", "q", "y"],
+            "rates": ["d", "w", "m", "q", "y"],
+            "eqty": ["d", "w", "m", "q", "y"],
+            "credit": ["d", "w", "m", "q", "y"],
+            "macro": ["d", "w", "m", "q", "y"],
+        },
+        base_url: Optional[str] = None,
+        api_key: dict = {
+            "fred": None,
+            "yahoo": None,
+            "av-daily": data_cred.av_api_key,
+            "av-forex-daily": data_cred.av_api_key,
+        },
+        max_obs_per_call: Optional[int] = None,
+        rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
@@ -78,8 +83,21 @@ class PandasDataReader(Library):
         rate_limit: Any, optional, default None
             Number of API calls made and left, by time frequency.
         """
-        Library.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
-                         frequencies, base_url, api_key, max_obs_per_call, rate_limit)
+        Library.__init__(
+            self,
+            categories,
+            exchanges,
+            indexes,
+            assets,
+            markets,
+            market_types,
+            fields,
+            frequencies,
+            base_url,
+            api_key,
+            max_obs_per_call,
+            rate_limit,
+        )
 
         self.fields = self.get_fields_info()
 
@@ -88,38 +106,50 @@ class PandasDataReader(Library):
         """
         Get vendors info.
         """
-        print(f"See providers page to find available vendors: {data_cred.pdr_vendors_url} ")
+        print(
+            f"See providers page to find available vendors: {data_cred.pdr_vendors_url} "
+        )
 
     @staticmethod
     def get_exchanges_info():
         """
         Get exchanges info.
         """
-        print(f"See specific data vendor for available exchanges: {data_cred.pdr_vendors_url}")
+        print(
+            f"See specific data vendor for available exchanges: {data_cred.pdr_vendors_url}"
+        )
 
     @staticmethod
     def get_indexes_info():
         """
         Get indexes info.
         """
-        print(f"See specific data vendor for available indexes: {data_cred.pdr_vendors_url}")
+        print(
+            f"See specific data vendor for available indexes: {data_cred.pdr_vendors_url}"
+        )
 
     @staticmethod
     def get_assets_info():
         """
         Get assets info.
         """
-        print(f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} ")
+        print(
+            f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} "
+        )
 
     @staticmethod
     def get_markets_info():
         """
         Get markets info.
         """
-        print(f"See specific data vendor for available markets: {data_cred.pdr_vendors_url}")
+        print(
+            f"See specific data vendor for available markets: {data_cred.pdr_vendors_url}"
+        )
 
     @staticmethod
-    def get_fields_info(data_type: Optional[str] = 'market', cat: Optional[str] = None) -> dict[str, list[str]]:
+    def get_fields_info(
+        data_type: Optional[str] = "market", cat: Optional[str] = None
+    ) -> Dict[str, List[str]]:
         """
         Get fields info.
 
@@ -135,20 +165,22 @@ class PandasDataReader(Library):
         fields: dictionary
             Dictionary with info on available fields, by category.
         """
-        if data_type == 'on-chain':
-            raise ValueError("Pandas Data Reader is a market data aggregator of market and off-chain data.")
+        if data_type == "on-chain":
+            raise ValueError(
+                "Pandas Data Reader is a market data aggregator of market and off-chain data."
+            )
 
         # list of fields
-        market_fields_list = ['open', 'high', 'low', 'close', 'volume']
-        macro_fields_list = ['actual']
+        market_fields_list = ["open", "high", "low", "close", "volume"]
+        macro_fields_list = ["actual"]
 
         # fields dict
         fields = {
-            'fx': market_fields_list,
-            'rates': market_fields_list,
-            'eqty': market_fields_list,
-            'credit': market_fields_list,
-            'macro': macro_fields_list
+            "fx": market_fields_list,
+            "rates": market_fields_list,
+            "eqty": market_fields_list,
+            "credit": market_fields_list,
+            "macro": macro_fields_list,
         }
 
         # fields obj
@@ -179,17 +211,25 @@ class PandasDataReader(Library):
             for selected fields (cols), in tidy format.
         """
         if data_req.data_source is None:
-            raise ValueError("Data source cannot be None. Select a data source for the data request.")
+            raise ValueError(
+                "Data source cannot be None. Select a data source for the data request."
+            )
 
         # convert data request parameters to InvestPy format
-        pdr_data_req = ConvertParams(data_req, data_source=data_req.data_source).convert_to_source()
+        pdr_data_req = ConvertParams(
+            data_req, data_source=data_req.data_source
+        ).convert_to_source()
 
         # check cat
         if data_req.cat not in self.categories:
-            raise ValueError(f"Invalid category. Valid categories are: {self.categories}.")
+            raise ValueError(
+                f"Invalid category. Valid categories are: {self.categories}."
+            )
         # check freq
         if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
+            raise ValueError(
+                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
+            )
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
             raise ValueError(f"Invalid fields. Valid data fields are: {self.fields}.")
@@ -198,11 +238,16 @@ class PandasDataReader(Library):
         df0, df1 = pd.DataFrame(), pd.DataFrame()
 
         # get fred data
-        if data_req.data_source == 'fred' or data_req.data_source == 'yahoo':
+        if data_req.data_source == "fred" or data_req.data_source == "yahoo":
 
             try:
-                df0 = web.DataReader(pdr_data_req['tickers'], data_req.data_source, pdr_data_req['start_date'],
-                                     pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+                df0 = web.DataReader(
+                    pdr_data_req["tickers"],
+                    data_req.data_source,
+                    pdr_data_req["start_date"],
+                    pdr_data_req["end_date"],
+                    api_key=self.api_key[data_req.data_source],
+                )
             except Exception as e:
                 logging.warning(e)
                 logging.warning(f"Failed to get data for: {pdr_data_req['tickers']}.")
@@ -211,14 +256,19 @@ class PandasDataReader(Library):
                 df1 = self.wrangle_data_resp(data_req, df0)
 
         # get alpha vantage data
-        elif data_req.data_source == 'av-daily':
+        elif data_req.data_source == "av-daily":
 
             # get data from dbnomics, loop through tickers
-            for pdr_ticker, dr_ticker in zip(pdr_data_req['tickers'], data_req.tickers):
+            for pdr_ticker, dr_ticker in zip(pdr_data_req["tickers"], data_req.tickers):
 
                 try:
-                    df0 = web.DataReader(pdr_ticker, data_req.data_source, pdr_data_req['start_date'],
-                                         pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+                    df0 = web.DataReader(
+                        pdr_ticker,
+                        data_req.data_source,
+                        pdr_data_req["start_date"],
+                        pdr_data_req["end_date"],
+                        api_key=self.api_key[data_req.data_source],
+                    )
                 except Exception as e:
                     logging.warning(e)
                     logging.warning(f"Failed to get data for: {dr_ticker}.")
@@ -228,22 +278,27 @@ class PandasDataReader(Library):
                     df0 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
                     if data_req.source_tickers is None:
-                        df0['ticker'] = dr_ticker
+                        df0["ticker"] = dr_ticker
                     else:
-                        df0['ticker'] = pdr_ticker
-                    df0.set_index(['ticker'], append=True, inplace=True)
+                        df0["ticker"] = pdr_ticker
+                    df0.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df1 = pd.concat([df1, df0])
 
         # get alpha vantage data
-        elif data_req.data_source == 'av-forex-daily':
+        elif data_req.data_source == "av-forex-daily":
 
             # get data from dbnomics, loop through tickers
-            for pdr_ticker, dr_ticker in zip(pdr_data_req['mkts'], data_req.tickers):
+            for pdr_ticker, dr_ticker in zip(pdr_data_req["mkts"], data_req.tickers):
 
                 try:
-                    df0 = web.DataReader(pdr_ticker, data_req.data_source, pdr_data_req['start_date'],
-                                         pdr_data_req['end_date'], api_key=self.api_key[data_req.data_source])
+                    df0 = web.DataReader(
+                        pdr_ticker,
+                        data_req.data_source,
+                        pdr_data_req["start_date"],
+                        pdr_data_req["end_date"],
+                        api_key=self.api_key[data_req.data_source],
+                    )
                 except Exception as e:
                     logging.warning(e)
                     logging.warning(f"Failed to get data for: {dr_ticker}.")
@@ -252,14 +307,16 @@ class PandasDataReader(Library):
                     # wrangle data resp
                     df0 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df0['ticker'] = pdr_ticker.replace('/', '')
-                    df0.set_index(['ticker'], append=True, inplace=True)
+                    df0["ticker"] = pdr_ticker.replace("/", "")
+                    df0.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df1 = pd.concat([df1, df0])
 
         # check if df empty
         if df1.empty:
-            raise Exception('No data returned. Check data request parameters and try again.')
+            raise Exception(
+                "No data returned. Check data request parameters and try again."
+            )
 
         # filter df for desired fields and typecast
         fields = [field for field in data_req.fields if field in df1.columns]
@@ -268,7 +325,9 @@ class PandasDataReader(Library):
         return df.sort_index()
 
     @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(
+        data_req: DataRequest, data_resp: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -286,6 +345,8 @@ class PandasDataReader(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source=data_req.data_source).tidy_data()
+        df = WrangleData(
+            data_req, data_resp, data_source=data_req.data_source
+        ).tidy_data()
 
         return df

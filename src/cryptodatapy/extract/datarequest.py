@@ -1,33 +1,34 @@
+from datetime import datetime
+from typing import List, Optional, Union
+
 import pandas as pd
 import pytz
-from typing import Union, Optional
-from datetime import datetime
 
 
-class DataRequest():
+class DataRequest:
     """
     Data request class which contains parameters for data retrieval.
     """
 
     def __init__(
-            self,
-            data_source: str = 'ccxt',
-            tickers: Union[str, list[str]] = 'btc',
-            freq: str = 'd',
-            quote_ccy: Optional[str] = None,
-            exch: Optional[str] = None,
-            mkt_type: Optional[str] = 'spot',
-            start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
-            end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
-            fields: Union[str, list[str]] = ['close'],
-            tz: Optional[str] = None,
-            inst: Optional[str] = None,
-            cat: Optional[str] = None,
-            trials: Optional[int] = 3,
-            pause: Optional[float] = 0.1,
-            source_tickers: Optional[Union[str, list[str]]] = None,
-            source_freq: Optional[str] = None,
-            source_fields: Optional[Union[str, list[str]]] = None
+        self,
+        data_source: str = "ccxt",
+        tickers: Union[str, List[str]] = "btc",
+        freq: str = "d",
+        quote_ccy: Optional[str] = None,
+        exch: Optional[str] = None,
+        mkt_type: Optional[str] = "spot",
+        start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
+        end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
+        fields: Union[str, List[str]] = ["close"],
+        tz: Optional[str] = None,
+        inst: Optional[str] = None,
+        cat: Optional[str] = None,
+        trials: Optional[int] = 3,
+        pause: Optional[float] = 0.1,
+        source_tickers: Optional[Union[str, List[str]]] = None,
+        source_freq: Optional[str] = None,
+        source_fields: Optional[Union[str, List[str]]] = None,
     ):
         """
         Constructor
@@ -107,13 +108,26 @@ class DataRequest():
         """
         Sets data source for data request.
         """
-        valid_data_sources = ['cryptocompare', 'coinmetrics', 'ccxt', 'glassnode', 'tiingo', 'investpy', 'yahoo',
-                              'av-daily', 'av-forex-daily', 'fred', 'dbnomics']
+        valid_data_sources = [
+            "cryptocompare",
+            "coinmetrics",
+            "ccxt",
+            "glassnode",
+            "tiingo",
+            "investpy",
+            "yahoo",
+            "av-daily",
+            "av-forex-daily",
+            "fred",
+            "dbnomics",
+        ]
 
         if data_source in valid_data_sources:
             self._data_source = data_source
         else:
-            raise ValueError(f"{data_source} is invalid. Valid data sources are: {valid_data_sources}.")
+            raise ValueError(
+                f"{data_source} is invalid. Valid data sources are: {valid_data_sources}."
+            )
 
     @property
     def tickers(self):
@@ -132,7 +146,7 @@ class DataRequest():
         elif isinstance(tickers, list):
             self._tickers = tickers
         else:
-            raise TypeError('Tickers must be a string or list of strings (tickers).')
+            raise TypeError("Tickers must be a string or list of strings (tickers).")
 
     @property
     def freq(self):
@@ -146,41 +160,44 @@ class DataRequest():
         """
         Sets frequency of observations for data request.
         """
-        freq_dict = {'tick': 'bid/ask quote (quotes) or executed trade (trades)',
-                     'block': 'record of the most recent batch or block of transactions validated by the network',
-                     '1s': 'one second',
-                     '10s': 'ten seconds',
-                     '15s': 'fifteen seconds',
-                     '1min': 'one minute',
-                     '3min': 'three minutes',
-                     '5min': 'five minutes',
-                     '10min': 'ten minutes',
-                     '15min': 'fifteen minutes',
-                     '30min': 'thirty minutes',
-                     '45min': 'forty five minutes',
-                     '1h': 'one hour',
-                     '2h': 'two hours',
-                     '4h': 'four hours',
-                     '6h': 'six hours',
-                     '8h': 'eight hours',
-                     '12h': 'twelve hours',
-                     'b': 'business day',
-                     'd': 'daily',
-                     '3d': 'three days',
-                     '5d': 'five days',
-                     '7d': 'seven days',
-                     'w': 'weekly',
-                     '2w': 'two weeks',
-                     'm': 'monthly',
-                     '3m': 'three months',
-                     '4m': 'four months',
-                     '6m': 'six months',
-                     'q': 'quarterly',
-                     'y': 'yearly'
-                     }
+        freq_dict = {
+            "tick": "bid/ask quote (quotes) or executed trade (trades)",
+            "block": "record of the most recent batch or block of transactions validated by the network",
+            "1s": "one second",
+            "10s": "ten seconds",
+            "15s": "fifteen seconds",
+            "1min": "one minute",
+            "3min": "three minutes",
+            "5min": "five minutes",
+            "10min": "ten minutes",
+            "15min": "fifteen minutes",
+            "30min": "thirty minutes",
+            "45min": "forty five minutes",
+            "1h": "one hour",
+            "2h": "two hours",
+            "4h": "four hours",
+            "6h": "six hours",
+            "8h": "eight hours",
+            "12h": "twelve hours",
+            "b": "business day",
+            "d": "daily",
+            "3d": "three days",
+            "5d": "five days",
+            "7d": "seven days",
+            "w": "weekly",
+            "2w": "two weeks",
+            "m": "monthly",
+            "3m": "three months",
+            "4m": "four months",
+            "6m": "six months",
+            "q": "quarterly",
+            "y": "yearly",
+        }
 
         if frequency not in list(freq_dict.keys()):
-            raise ValueError(f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}")
+            raise ValueError(
+                f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}"
+            )
         else:
             self._frequency = frequency
 
@@ -201,7 +218,7 @@ class DataRequest():
         elif isinstance(quote, str):
             self._quote_ccy = quote
         else:
-            raise TypeError('Quote currency must be a string.')
+            raise TypeError("Quote currency must be a string.")
 
     @property
     def exch(self):
@@ -220,7 +237,7 @@ class DataRequest():
         elif isinstance(exch, str):
             self._exch = exch
         else:
-            raise TypeError('Exchange must be a string.')
+            raise TypeError("Exchange must be a string.")
 
     @property
     def mkt_type(self):
@@ -234,11 +251,20 @@ class DataRequest():
         """
         Sets market type for data request.
         """
-        valid_mkt_types = ['spot', 'etf', 'perpetual_future', 'future', 'swap', 'option']
+        valid_mkt_types = [
+            "spot",
+            "etf",
+            "perpetual_future",
+            "future",
+            "swap",
+            "option",
+        ]
         if mkt_type in valid_mkt_types:
             self._mkt_type = mkt_type
         else:
-            raise ValueError(f"{mkt_type} is invalid. Valid market types are: {valid_mkt_types}.")
+            raise ValueError(
+                f"{mkt_type} is invalid. Valid market types are: {valid_mkt_types}."
+            )
 
     @property
     def start_date(self):
@@ -256,7 +282,7 @@ class DataRequest():
             self._start_date = start_date
         elif isinstance(start_date, str):
             try:
-                start_date = datetime.strptime(start_date, '%Y-%m-%d')
+                start_date = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
                 raise ValueError('Date must be in "YYYY-MM-DD" string format.')
             else:
@@ -266,7 +292,9 @@ class DataRequest():
         elif isinstance(start_date, pd.Timestamp):
             self._start_date = start_date
         else:
-            raise ValueError('Start date must be in "YYYY-MM-DD" string, datetime or pd.Timestamp format.')
+            raise ValueError(
+                'Start date must be in "YYYY-MM-DD" string, datetime or pd.Timestamp format.'
+            )
 
     @property
     def end_date(self):
@@ -284,7 +312,7 @@ class DataRequest():
             self._end_date = end_date
         elif isinstance(end_date, str):
             try:
-                datetime.strptime(end_date, '%Y-%m-%d')
+                datetime.strptime(end_date, "%Y-%m-%d")
             except ValueError:
                 raise ValueError('Date must be in "YYYY-MM-DD" string format.')
             else:
@@ -294,7 +322,9 @@ class DataRequest():
         elif isinstance(end_date, pd.Timestamp):
             self._end_date = end_date
         else:
-            raise ValueError('End date must be in "YYYY-MM-DD" string, datetime or pd.Timestamp format.')
+            raise ValueError(
+                'End date must be in "YYYY-MM-DD" string, datetime or pd.Timestamp format.'
+            )
 
     @property
     def fields(self):
@@ -313,7 +343,7 @@ class DataRequest():
         elif isinstance(fields, list):
             self._fields = fields
         else:
-            raise TypeError('Fields must be a string or list of strings.')
+            raise TypeError("Fields must be a string or list of strings.")
 
     @property
     def inst(self):
@@ -332,7 +362,7 @@ class DataRequest():
         elif isinstance(inst, str):
             self._inst = inst
         else:
-            raise TypeError('Institution must be a string.')
+            raise TypeError("Institution must be a string.")
 
     @property
     def tz(self):
@@ -352,7 +382,9 @@ class DataRequest():
         elif timezone in valid_timezones:
             self._timezone = timezone
         else:
-            raise ValueError(f"{timezone} is an invalid timezone. Valid timezones are: {valid_timezones}.")
+            raise ValueError(
+                f"{timezone} is an invalid timezone. Valid timezones are: {valid_timezones}."
+            )
 
     @property
     def cat(self):
@@ -366,7 +398,17 @@ class DataRequest():
         """
         Sets category for data request.
         """
-        valid_categories = ['crypto', 'fx', 'eqty', 'cmdty', 'rates', 'bonds', 'credit', 'macro', 'alt']
+        valid_categories = [
+            "crypto",
+            "fx",
+            "eqty",
+            "cmdty",
+            "rates",
+            "bonds",
+            "credit",
+            "macro",
+            "alt",
+        ]
         if category is None:
             self._category = category
         elif isinstance(category, list):
@@ -374,7 +416,9 @@ class DataRequest():
         elif category in valid_categories:
             self._category = category
         else:
-            raise ValueError(f"{category} is an invalid category. Valid categories are: {valid_categories}.")
+            raise ValueError(
+                f"{category} is an invalid category. Valid categories are: {valid_categories}."
+            )
 
     @property
     def trials(self):
@@ -393,7 +437,7 @@ class DataRequest():
         elif isinstance(trials, int) or isinstance(trials, str):
             self._trials = int(trials)
         else:
-            raise TypeError('Number of trials must be an integer or string.')
+            raise TypeError("Number of trials must be an integer or string.")
 
     @property
     def pause(self):
@@ -412,7 +456,7 @@ class DataRequest():
         elif isinstance(pause, float) or isinstance(pause, int):
             self._pause = float(pause)
         else:
-            raise TypeError('Number of seconds to pause must be an int or float.')
+            raise TypeError("Number of seconds to pause must be an int or float.")
 
     @property
     def source_tickers(self):
@@ -433,7 +477,9 @@ class DataRequest():
         elif isinstance(tickers, list):
             self._source_tickers = tickers
         else:
-            raise TypeError("Source tickers must be a string or list of strings (tickers) in data source's format.")
+            raise TypeError(
+                "Source tickers must be a string or list of strings (tickers) in data source's format."
+            )
 
     @property
     def source_freq(self):
@@ -452,7 +498,9 @@ class DataRequest():
         elif isinstance(freq, str):
             self._source_freq = freq
         else:
-            raise TypeError("Source data frequency must be a string in data source's format.")
+            raise TypeError(
+                "Source data frequency must be a string in data source's format."
+            )
 
     @property
     def source_fields(self):
@@ -473,5 +521,6 @@ class DataRequest():
         elif isinstance(fields, list):
             self._source_fields = fields
         else:
-            raise TypeError("Source fields must be a string or list of strings (fields) in data source's format.")
-
+            raise TypeError(
+                "Source fields must be a string or list of strings (fields) in data source's format."
+            )

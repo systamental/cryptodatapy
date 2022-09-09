@@ -1,15 +1,16 @@
-import pandas as pd
 import logging
-from time import sleep
 from importlib import resources
-from typing import Optional, Union, Any
-from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.extract.libraries.library import Library
+from time import sleep
+from typing import Any, Dict, List, Optional, Union
+
+import investpy
+import pandas as pd
+
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.libraries.library import Library
 from cryptodatapy.transform.convertparams import ConvertParams
 from cryptodatapy.transform.wrangle import WrangleData
-import investpy
-
+from cryptodatapy.util.datacredentials import DataCredentials
 
 # data credentials
 data_cred = DataCredentials()
@@ -21,25 +22,40 @@ class InvestPy(Library):
     """
 
     def __init__(
-            self,
-            categories: list[str] = ['fx', 'rates', 'eqty', 'cmdty', 'macro'],
-            exchanges: Optional[list[str]] = None,
-            indexes: Optional[dict[str, list[str]]] = None,
-            assets: Optional[dict[str, list[str]]] = None,
-            markets: Optional[dict[str, list[str]]] = None,
-            market_types: list[str] = ['spot', 'future'],
-            fields: Optional[dict[str, list[str]]] = None,
-            frequencies: dict[str, list[str]] = {'fx': ['d', 'w', 'm', 'q', 'y'],
-                                                 'rates': ['d', 'w', 'm', 'q', 'y'],
-                                                 'eqty': ['d', 'w', 'm', 'q', 'y'],
-                                                 'cmdty': ['d', 'w', 'm', 'q', 'y'],
-                                                 'macro': ['1min', '5min', '10min', '15min', '30min',
-                                                           '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']},
-
-            base_url: Optional[str] = None,
-            api_key: Optional[str] = None,
-            max_obs_per_call: Optional[int] = None,
-            rate_limit: Optional[Any] = None
+        self,
+        categories: List[str] = ["fx", "rates", "eqty", "cmdty", "macro"],
+        exchanges: Optional[List[str]] = None,
+        indexes: Optional[Dict[str, List[str]]] = None,
+        assets: Optional[Dict[str, List[str]]] = None,
+        markets: Optional[Dict[str, List[str]]] = None,
+        market_types: List[str] = ["spot", "future"],
+        fields: Optional[Dict[str, List[str]]] = None,
+        frequencies: Dict[str, List[str]] = {
+            "fx": ["d", "w", "m", "q", "y"],
+            "rates": ["d", "w", "m", "q", "y"],
+            "eqty": ["d", "w", "m", "q", "y"],
+            "cmdty": ["d", "w", "m", "q", "y"],
+            "macro": [
+                "1min",
+                "5min",
+                "10min",
+                "15min",
+                "30min",
+                "1h",
+                "2h",
+                "4h",
+                "8h",
+                "d",
+                "w",
+                "m",
+                "q",
+                "y",
+            ],
+        },
+        base_url: Optional[str] = None,
+        api_key: Optional[str] = None,
+        max_obs_per_call: Optional[int] = None,
+        rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
@@ -78,8 +94,21 @@ class InvestPy(Library):
         rate_limit: Any, optional, default None
             Number of API calls made and left, by time frequency.
         """
-        Library.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
-                         frequencies, base_url, api_key, max_obs_per_call, rate_limit)
+        Library.__init__(
+            self,
+            categories,
+            exchanges,
+            indexes,
+            assets,
+            markets,
+            market_types,
+            fields,
+            frequencies,
+            base_url,
+            api_key,
+            max_obs_per_call,
+            rate_limit,
+        )
 
         self.indexes = self.get_indexes_info(cat=None, as_dict=True)
         self.assets = self.get_assets_info(cat=None, as_dict=True)
@@ -93,7 +122,9 @@ class InvestPy(Library):
         return None
 
     @staticmethod
-    def get_indexes_info(cat: Optional[str] = None, as_dict: bool = False) -> Union[dict[str, list[str]], pd.DataFrame]:
+    def get_indexes_info(
+        cat: Optional[str] = None, as_dict: bool = False
+    ) -> Union[Dict[str, List[str]], pd.DataFrame]:
         """
         Get available indexes info.
 
@@ -118,42 +149,50 @@ class InvestPy(Library):
 
         else:
             # wrangle data resp
-            indexes.rename(columns={'symbol': 'ticker'}, inplace=True)
+            indexes.rename(columns={"symbol": "ticker"}, inplace=True)
             # set index and sort
-            indexes.set_index('ticker', inplace=True)
+            indexes.set_index("ticker", inplace=True)
             indexes.sort_index(inplace=True)
 
             # categories
-            cats = {'cmdty': 'commodities', 'rates': 'bonds', 'eqty': ''}
+            cats = {"cmdty": "commodities", "rates": "bonds", "eqty": ""}
 
             # indexes dict
             if as_dict:
                 idx_dict = {}
                 for k in cats.keys():
-                    if k == 'eqty':
-                        idx_dict[k] = indexes[(indexes['class'] != 'commodities') &
-                                              (indexes['class'] != 'bonds')].index.to_list()
+                    if k == "eqty":
+                        idx_Dict[k] = indexes[
+                            (indexes["class"] != "commodities")
+                            & (indexes["class"] != "bonds")
+                        ].index.to_list()
                     else:
-                        idx_dict[k] = indexes[indexes['class'] == cats[k]].index.to_list()
+                        idx_Dict[k] = indexes[
+                            indexes["class"] == cats[k]
+                        ].index.to_list()
 
                 # filter by cat
                 if cat is not None:
-                    indexes = idx_dict[cat]
+                    indexes = idx_Dict[cat]
                 else:
                     indexes = idx_dict
 
             else:
                 # filter df by cat
                 if cat is not None:
-                    if cat == 'eqty':
-                        indexes = indexes[(indexes['class'] != 'commodities') & (indexes['class'] != 'bonds')]
+                    if cat == "eqty":
+                        indexes = indexes[
+                            (indexes["class"] != "commodities")
+                            & (indexes["class"] != "bonds")
+                        ]
                     else:
-                        indexes = indexes[indexes['class'] == cats[cat]]
+                        indexes = indexes[indexes["class"] == cats[cat]]
 
             return indexes
 
-    def get_assets_info(self, cat: Optional[str] = None, as_dict: bool = False) -> \
-            Union[dict[str, list[str]], pd.DataFrame]:
+    def get_assets_info(
+        self, cat: Optional[str] = None, as_dict: bool = False
+    ) -> Union[Dict[str, List[str]], pd.DataFrame]:
         """
         Get assets info.
 
@@ -172,17 +211,19 @@ class InvestPy(Library):
         # store asset info in dict
         assets_info = {}
         # fx
-        if cat == 'fx' or cat is None:
+        if cat == "fx" or cat is None:
             try:
-                fx = investpy.currency_crosses.get_currency_crosses(base=None, second=None)
+                fx = investpy.currency_crosses.get_currency_crosses(
+                    base=None, second=None
+                )
             except Exception as e:
                 logging.warning(e)
                 logging.warning(f"Failed to get {cat} info.")
             else:
-                fx.rename(columns={'name': 'ticker'}, inplace=True)
-                assets_info['fx'] = fx.set_index('ticker')
+                fx.rename(columns={"name": "ticker"}, inplace=True)
+                assets_info["fx"] = fx.set_index("ticker")
         # rates
-        if cat == 'rates' or cat is None:
+        if cat == "rates" or cat is None:
             try:
                 bonds = investpy.bonds.get_bonds()
                 etfs = investpy.etfs.get_etfs()
@@ -191,13 +232,21 @@ class InvestPy(Library):
                 logging.warning(e)
                 logging.warning(f"Failed to get {cat} info.")
             else:
-                bonds['symbol'] = bonds.name
-                etfs = etfs[etfs['asset_class'] == 'bond'].loc[:, ['country', 'name', 'full_name', 'symbol']]
-                idx = idx[idx['class'] == 'bonds'].loc[:, ['country', 'name', 'full_name', 'symbol']]
-                rates = pd.concat([bonds, idx, etfs]).rename(columns={'symbol': 'ticker'}).copy()
-                assets_info['rates'] = rates.set_index('ticker')
+                bonds["symbol"] = bonds.name
+                etfs = etfs[etfs["asset_class"] == "bond"].loc[
+                    :, ["country", "name", "full_name", "symbol"]
+                ]
+                idx = idx[idx["class"] == "bonds"].loc[
+                    :, ["country", "name", "full_name", "symbol"]
+                ]
+                rates = (
+                    pd.concat([bonds, idx, etfs])
+                    .rename(columns={"symbol": "ticker"})
+                    .copy()
+                )
+                assets_info["rates"] = rates.set_index("ticker")
         # cmdty
-        if cat == 'cmdty' or cat is None:
+        if cat == "cmdty" or cat is None:
             try:
                 fut = investpy.commodities.get_commodities()
                 etfs = investpy.etfs.get_etfs()
@@ -206,15 +255,22 @@ class InvestPy(Library):
                 logging.warning(e)
                 logging.warning(f"Failed to get {cat} info.")
             else:
-                fut['symbol'] = fut.name
-                fut = fut.loc[:, ['country', 'name', 'full_name', 'currency', 'symbol']]
-                etfs = etfs[etfs['asset_class'] == 'commodity'].loc[:, ['country', 'name', 'full_name', 'symbol',
-                                                                        'currency']]
-                idx = idx[idx['class'] == 'commodities'].loc[:, ['country', 'name', 'full_name', 'symbol', 'currency']]
-                cmdty = pd.concat([fut, idx, etfs]).rename(columns={'symbol': 'ticker'}).copy()
-                assets_info['cmdty'] = cmdty.set_index('ticker')
+                fut["symbol"] = fut.name
+                fut = fut.loc[:, ["country", "name", "full_name", "currency", "symbol"]]
+                etfs = etfs[etfs["asset_class"] == "commodity"].loc[
+                    :, ["country", "name", "full_name", "symbol", "currency"]
+                ]
+                idx = idx[idx["class"] == "commodities"].loc[
+                    :, ["country", "name", "full_name", "symbol", "currency"]
+                ]
+                cmdty = (
+                    pd.concat([fut, idx, etfs])
+                    .rename(columns={"symbol": "ticker"})
+                    .copy()
+                )
+                assets_info["cmdty"] = cmdty.set_index("ticker")
         # eqty
-        if cat == 'eqty' or cat is None:
+        if cat == "eqty" or cat is None:
             try:
                 stocks = investpy.stocks.get_stocks()
                 etfs = investpy.etfs.get_etfs()
@@ -222,26 +278,36 @@ class InvestPy(Library):
             except Exception as e:
                 logging.warning(e)
             else:
-                stocks = stocks.loc[:, ['country', 'name', 'full_name', 'symbol', 'currency']]
-                etfs = etfs[etfs['asset_class'] == 'equity'].loc[:, ['country', 'name', 'full_name', 'symbol',
-                                                                     'currency']]
-                idx = idx[(idx['class'] != 'commodities') &
-                          (idx['class'] != 'bonds')].loc[:, ['country', 'name', 'full_name', 'symbol', 'currency']]
-                eqty = pd.concat([idx, etfs, stocks]).rename(columns={'symbol': 'ticker'}).copy()
-                assets_info['eqty'] = eqty.set_index('ticker')
+                stocks = stocks.loc[
+                    :, ["country", "name", "full_name", "symbol", "currency"]
+                ]
+                etfs = etfs[etfs["asset_class"] == "equity"].loc[
+                    :, ["country", "name", "full_name", "symbol", "currency"]
+                ]
+                idx = idx[
+                    (idx["class"] != "commodities") & (idx["class"] != "bonds")
+                ].loc[:, ["country", "name", "full_name", "symbol", "currency"]]
+                eqty = (
+                    pd.concat([idx, etfs, stocks])
+                    .rename(columns={"symbol": "ticker"})
+                    .copy()
+                )
+                assets_info["eqty"] = eqty.set_index("ticker")
         # macro
-        if cat == 'macro':
+        if cat == "macro":
             raise ValueError(f"Asset info not available for macro data.")
 
         # not valid cat
         if cat not in self.categories and cat is not None:
-            raise ValueError(f"Asset info is only available for cat: {self.categories}.")
+            raise ValueError(
+                f"Asset info is only available for cat: {self.categories}."
+            )
 
         # asset dict
         if as_dict:
             assets_dict = {}
             for asset in assets_info.keys():
-                assets_dict[asset] = assets_info[asset].index.to_list()
+                assets_Dict[asset] = assets_info[asset].index.to_list()
             assets_info = assets_dict
 
         # asset info cat
@@ -258,7 +324,7 @@ class InvestPy(Library):
         return None
 
     @staticmethod
-    def get_fields_info(cat: Optional[str] = None) -> dict[str, list[str]]:
+    def get_fields_info(cat: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Get fields info.
 
@@ -273,21 +339,22 @@ class InvestPy(Library):
             Dictionary with info on available fields, by category.
         """
         # list of fields
-        crypto_fields_list = ['date', 'open', 'high', 'low', 'close', 'volume']
-        fx_fields_list = ['date', 'open', 'high', 'low', 'close']
-        rates_fields_list = ['date', 'open', 'high', 'low', 'close']
-        eqty_fields_list = ['date', 'open', 'high', 'low', 'close', 'volume']
-        cmdty_fields_list = ['date', 'open', 'high', 'low', 'close', 'volume']
-        macro_fields_list = ['actual', 'previous', 'expected', 'surprise']
+        crypto_fields_list = ["date", "open", "high", "low", "close", "volume"]
+        fx_fields_list = ["date", "open", "high", "low", "close"]
+        rates_fields_list = ["date", "open", "high", "low", "close"]
+        eqty_fields_list = ["date", "open", "high", "low", "close", "volume"]
+        cmdty_fields_list = ["date", "open", "high", "low", "close", "volume"]
+        macro_fields_list = ["actual", "previous", "expected", "surprise"]
 
         # fields dict
-        fields = {'crypto': crypto_fields_list,
-                  'fx': fx_fields_list,
-                  'rates': rates_fields_list,
-                  'eqty': eqty_fields_list,
-                  'cmdty': cmdty_fields_list,
-                  'macro': macro_fields_list,
-                  }
+        fields = {
+            "crypto": crypto_fields_list,
+            "fx": fx_fields_list,
+            "rates": rates_fields_list,
+            "eqty": eqty_fields_list,
+            "cmdty": cmdty_fields_list,
+            "macro": macro_fields_list,
+        }
         # fields obj
         if cat is not None:
             fields = fields[cat]
@@ -316,52 +383,66 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and index OHLCV values data (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # get indexes
         idx_df = self.get_indexes_info()
         # empty df to add data
         df = pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
-                    if idx_df.loc[idx_df.name == ip_ticker].shape[0] > 1:  # get country name
-                        cty = 'united states'
-                        df0 = investpy.indices.get_index_historical_data(ip_ticker, cty,
-                                                                         from_date=ip_data_req['start_date'],
-                                                                         to_date=ip_data_req['end_date'])
+                    if (
+                        idx_df.loc[idx_df.name == ip_ticker].shape[0] > 1
+                    ):  # get country name
+                        cty = "united states"
+                        df0 = investpy.indices.get_index_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     elif idx_df.loc[idx_df.name == ip_ticker].shape[0] == 1:
-                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]['country']
-                        df0 = investpy.indices.get_index_historical_data(ip_ticker, cty,
-                                                                         from_date=ip_data_req['start_date'],
-                                                                         to_date=ip_data_req['end_date'])
+                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]["country"]
+                        df0 = investpy.indices.get_index_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     else:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                 except Exception as e:
                     logging.warning(e)
                     attempts += 1
-                    sleep(ip_data_req['pause'])
-                    if attempts == ip_data_req['trials']:
-                        logging.warning(f"Failed to pull {dr_ticker} after many attempts.")
+                    sleep(ip_data_req["pause"])
+                    if attempts == ip_data_req["trials"]:
+                        logging.warning(
+                            f"Failed to pull {dr_ticker} after many attempts."
+                        )
                         break
 
                 else:
                     # wrangle data resp
                     df1 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df1['ticker'] = dr_ticker
-                    df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = dr_ticker
+                    df1.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df = pd.concat([df, df1])
                     break
@@ -383,50 +464,66 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and ETF OHLCV values (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # get etfs
         etfs_df = investpy.etfs.get_etfs()
         # empty df to add data
         df = pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
-                    if etfs_df.loc[etfs_df.name == ip_ticker].shape[0] > 1:  # get country name
-                        cty = 'united states'
-                        df0 = investpy.etfs.get_etf_historical_data(ip_ticker, cty, from_date=ip_data_req['start_date'],
-                                                                    to_date=ip_data_req['end_date'])
+                    if (
+                        etfs_df.loc[etfs_df.name == ip_ticker].shape[0] > 1
+                    ):  # get country name
+                        cty = "united states"
+                        df0 = investpy.etfs.get_etf_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     elif etfs_df.loc[etfs_df.name == ip_ticker].shape[0] == 1:
-                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]['country']
-                        df0 = investpy.etfs.get_etf_historical_data(ip_ticker, cty, from_date=ip_data_req['start_date'],
-                                                                    to_date=ip_data_req['end_date'])
+                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]["country"]
+                        df0 = investpy.etfs.get_etf_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     else:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                 except Exception as e:
                     logging.warning(e)
                     attempts += 1
-                    sleep(ip_data_req['pause'])
-                    if attempts == ip_data_req['trials']:
-                        logging.warning(f"Failed to pull {dr_ticker} after many attempts.")
+                    sleep(ip_data_req["pause"])
+                    if attempts == ip_data_req["trials"]:
+                        logging.warning(
+                            f"Failed to pull {dr_ticker} after many attempts."
+                        )
                         break
 
                 else:
                     # wrangle data resp
                     df1 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df1['ticker'] = dr_ticker
-                    df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = dr_ticker
+                    df1.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df = pd.concat([df, df1])
                     break
@@ -448,52 +545,68 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and stocks OHLCV values (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # get stocks
         stocks_df = investpy.stocks.get_stocks()
         # empty df to add data
         df = pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
-                    if stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] > 1:  # get country name
-                        cty = 'united states'
-                        df0 = investpy.stocks.get_stock_historical_data(ip_ticker, cty,
-                                                                        from_date=ip_data_req['start_date'],
-                                                                        to_date=ip_data_req['end_date'])
+                    if (
+                        stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] > 1
+                    ):  # get country name
+                        cty = "united states"
+                        df0 = investpy.stocks.get_stock_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     elif stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] == 1:
-                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0]['country']
-                        df0 = investpy.stocks.get_stock_historical_data(ip_ticker, cty,
-                                                                        from_date=ip_data_req['start_date'],
-                                                                        to_date=ip_data_req['end_date'])
+                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0][
+                            "country"
+                        ]
+                        df0 = investpy.stocks.get_stock_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     else:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                 except Exception as e:
                     logging.warning(e)
                     attempts += 1
-                    sleep(ip_data_req['pause'])
-                    if attempts == ip_data_req['trials']:
-                        logging.warning(f"Failed to pull {dr_ticker} after many attempts.")
+                    sleep(ip_data_req["pause"])
+                    if attempts == ip_data_req["trials"]:
+                        logging.warning(
+                            f"Failed to pull {dr_ticker} after many attempts."
+                        )
                         break
 
                 else:
                     # wrangle data resp
                     df1 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df1['ticker'] = dr_ticker
-                    df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = dr_ticker
+                    df1.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df = pd.concat([df, df1])
                     break
@@ -516,7 +629,9 @@ class InvestPy(Library):
         """
 
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # get tickers
         idx_df = self.get_indexes_info()
         etfs_df = investpy.etfs.get_etfs()
@@ -525,49 +640,65 @@ class InvestPy(Library):
         df = pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
                     if idx_df.loc[idx_df.name == ip_ticker].shape[0] == 1:
-                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]['country']
-                        df0 = investpy.indices.get_index_historical_data(ip_ticker, cty,
-                                                                         from_date=ip_data_req['start_date'],
-                                                                         to_date=ip_data_req['end_date'])
+                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]["country"]
+                        df0 = investpy.indices.get_index_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     elif etfs_df.loc[etfs_df.name == ip_ticker].shape[0] == 1:
-                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]['country']
-                        df0 = investpy.etfs.get_etf_historical_data(ip_ticker, cty, from_date=ip_data_req['start_date'],
-                                                                    to_date=ip_data_req['end_date'])
+                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]["country"]
+                        df0 = investpy.etfs.get_etf_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     elif stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] == 1:
-                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0]['country']
-                        df0 = investpy.stocks.get_stock_historical_data(ip_ticker, cty,
-                                                                        from_date=ip_data_req['start_date'],
-                                                                        to_date=ip_data_req['end_date'])
+                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0][
+                            "country"
+                        ]
+                        df0 = investpy.stocks.get_stock_historical_data(
+                            ip_ticker,
+                            cty,
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     else:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                 except Exception as e:
                     logging.warning(e)
                     attempts += 1
-                    sleep(ip_data_req['pause'])
-                    if attempts == ip_data_req['trials']:
-                        logging.warning(f"Failed to pull {dr_ticker} after many attempts.")
+                    sleep(ip_data_req["pause"])
+                    if attempts == ip_data_req["trials"]:
+                        logging.warning(
+                            f"Failed to pull {dr_ticker} after many attempts."
+                        )
                         break
 
                 else:
                     # wrangle data resp
                     df1 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df1['ticker'] = dr_ticker
-                    df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = dr_ticker
+                    df1.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df = pd.concat([df, df1])
                     break
@@ -589,38 +720,45 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and FX OHLC values (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['mkts'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["mkts"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
-                    df0 = investpy.currency_crosses.get_currency_cross_historical_data(ip_ticker, from_date=ip_data_req[
-                        'start_date'], to_date=ip_data_req['end_date'])
+                    df0 = investpy.currency_crosses.get_currency_cross_historical_data(
+                        ip_ticker,
+                        from_date=ip_data_req["start_date"],
+                        to_date=ip_data_req["end_date"],
+                    )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                 except Exception as e:
                     logging.warning(e)
                     attempts += 1
-                    sleep(ip_data_req['pause'])
-                    if attempts == ip_data_req['trials']:
-                        logging.warning(f"Failed to pull {dr_ticker} after many attempts.")
+                    sleep(ip_data_req["pause"])
+                    if attempts == ip_data_req["trials"]:
+                        logging.warning(
+                            f"Failed to pull {dr_ticker} after many attempts."
+                        )
                         break
 
                 else:
                     # wrangle data resp
                     df1 = self.wrangle_data_resp(data_req, df0)
                     # add ticker to index
-                    df1['ticker'] = ip_ticker.replace('/', '')
-                    df1.set_index(['ticker'], append=True, inplace=True)
+                    df1["ticker"] = ip_ticker.replace("/", "")
+                    df1.set_index(["ticker"], append=True, inplace=True)
                     # stack ticker dfs
                     df = pd.concat([df, df1])
                     break
@@ -642,52 +780,61 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and rates OHLC values (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # empty df to add data
         df0, df = pd.DataFrame(), pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 try:  # try get request
-                    df0 = investpy.bonds.get_bond_historical_data(ip_ticker, from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                    df0 = investpy.bonds.get_bond_historical_data(
+                        ip_ticker,
+                        from_date=ip_data_req["start_date"],
+                        to_date=ip_data_req["end_date"],
+                    )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
                     break
 
                 except Exception as e:
                     logging.info(e)
                     logging.info(f"Failed to pull {dr_ticker}.")
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                     try:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                         assert not df0.empty
-                        sleep(ip_data_req['pause'])
+                        sleep(ip_data_req["pause"])
                         break
 
                     except Exception as e:
                         logging.warning(e)
                         attempts += 1
-                        sleep(ip_data_req['pause'])
-                        if attempts == ip_data_req['trials']:
-                            logging.warning(f"Failed to pull data for {dr_ticker} after many attempts.")
+                        sleep(ip_data_req["pause"])
+                        if attempts == ip_data_req["trials"]:
+                            logging.warning(
+                                f"Failed to pull data for {dr_ticker} after many attempts."
+                            )
                             break
 
             if not df0.empty:
                 # wrangle data resp
                 df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to index
-                df1['ticker'] = dr_ticker
-                df1.set_index(['ticker'], append=True, inplace=True)
+                df1["ticker"] = dr_ticker
+                df1.set_index(["ticker"], append=True, inplace=True)
                 # stack ticker dfs
                 df = pd.concat([df, df1])
 
@@ -708,56 +855,63 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and commodities OHLCV values (cols).
         """
         # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
         # empty dfs
         df0, df = pd.DataFrame(), pd.DataFrame()
 
         # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req['tickers'], data_req.tickers):
+        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
 
             # set number of attempts and bool for while loop
             attempts = 0
             # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req['trials']:
+            while attempts < ip_data_req["trials"]:
 
                 df0 = None
 
                 try:  # try get request
-                    df0 = investpy.commodities.get_commodity_historical_data(ip_ticker,
-                                                                             from_date=ip_data_req['start_date'],
-                                                                             to_date=ip_data_req['end_date'])
+                    df0 = investpy.commodities.get_commodity_historical_data(
+                        ip_ticker,
+                        from_date=ip_data_req["start_date"],
+                        to_date=ip_data_req["end_date"],
+                    )
                     assert not df0.empty
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
                     break
 
                 except Exception as e:
                     logging.info(e)
                     logging.info(f"Failed to pull {dr_ticker}.")
-                    sleep(ip_data_req['pause'])
+                    sleep(ip_data_req["pause"])
 
                     try:
                         search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(from_date=ip_data_req['start_date'],
-                                                                  to_date=ip_data_req['end_date'])
+                        df0 = search_res.retrieve_historical_data(
+                            from_date=ip_data_req["start_date"],
+                            to_date=ip_data_req["end_date"],
+                        )
                         assert not df0.empty
-                        sleep(ip_data_req['pause'])
+                        sleep(ip_data_req["pause"])
                         break
 
                     except Exception as e:
                         logging.warning(e)
                         attempts += 1
-                        sleep(ip_data_req['pause'])
+                        sleep(ip_data_req["pause"])
                         if attempts == 3:
                             logging.warning(
-                                f"Failed to pull data for {dr_ticker} after many attempts.")
+                                f"Failed to pull data for {dr_ticker} after many attempts."
+                            )
                             break
 
             if not df0.empty:
                 # wrangle data resp
                 df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to index
-                df1['ticker'] = dr_ticker
-                df1.set_index(['ticker'], append=True, inplace=True)
+                df1["ticker"] = dr_ticker
+                df1.set_index(["ticker"], append=True, inplace=True)
                 # stack ticker dfs
                 df = pd.concat([df, df1])
 
@@ -778,42 +932,54 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and macro series/data release (cols).
         """
         # convert data req params to InvestPy format
-        ip_data_req = ConvertParams(data_req, data_source='investpy').convert_to_source()
+        ip_data_req = ConvertParams(
+            data_req, data_source="investpy"
+        ).convert_to_source()
 
         econ_df = pd.DataFrame()
         # set number of attempts and bool for while loop
         attempts = 0
         # run a while loop to pull ohlcv prices in case the attempt fails
-        while attempts < ip_data_req['trials']:
+        while attempts < ip_data_req["trials"]:
 
             try:  # try get request
                 # get data calendar
-                econ_df = investpy.news.economic_calendar(countries=ip_data_req['ctys'], time_zone='GMT',
-                                                          from_date=ip_data_req['start_date'],
-                                                          to_date=ip_data_req['end_date'])
+                econ_df = investpy.news.economic_calendar(
+                    countries=ip_data_req["ctys"],
+                    time_zone="GMT",
+                    from_date=ip_data_req["start_date"],
+                    to_date=ip_data_req["end_date"],
+                )
                 assert not econ_df.empty
                 break
 
             except Exception as e:
                 logging.warning(e)
                 attempts += 1
-                sleep(ip_data_req['pause'])
-                if attempts == ip_data_req['trials']:
-                    raise Exception("Failed to get economic data release calendar after many attempts.")
+                sleep(ip_data_req["pause"])
+                if attempts == ip_data_req["trials"]:
+                    raise Exception(
+                        "Failed to get economic data release calendar after many attempts."
+                    )
 
         # emtpy df
         df = pd.DataFrame()
 
         # loop through tickers, countries
         if not econ_df.empty:
-            for dr_ticker, ip_ticker, cty in zip(data_req.tickers, ip_data_req['tickers'], ip_data_req['ctys']):
+            for dr_ticker, ip_ticker, cty in zip(
+                data_req.tickers, ip_data_req["tickers"], ip_data_req["ctys"]
+            ):
                 # filter data calendar for ticker, country
-                df0 = econ_df[(econ_df.event.str.startswith(ip_ticker)) & (econ_df.zone.str.match(cty.lower()))].copy()
+                df0 = econ_df[
+                    (econ_df.event.str.startswith(ip_ticker))
+                    & (econ_df.zone.str.match(cty.lower()))
+                ].copy()
                 # wrangle data resp
                 df1 = self.wrangle_data_resp(data_req, df0)
                 # add ticker to index
-                df1['ticker'] = dr_ticker
-                df1.set_index(['ticker'], append=True, inplace=True)
+                df1["ticker"] = dr_ticker
+                df1.set_index(["ticker"], append=True, inplace=True)
                 # stack ticker dfs
                 df = pd.concat([df, df1])
         else:
@@ -837,11 +1003,15 @@ class InvestPy(Library):
         """
         # check cat
         if data_req.cat not in self.categories:
-            raise ValueError(f"Invalid category. Valid categories are: {self.categories}.")
+            raise ValueError(
+                f"Invalid category. Valid categories are: {self.categories}."
+            )
 
         # check freq
         if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(f"Invalid data frequency. Valid data frequencies are: {self.frequencies}.")
+            raise ValueError(
+                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
+            )
 
         # check fields
         if not any(field in self.fields[data_req.cat] for field in data_req.fields):
@@ -851,24 +1021,26 @@ class InvestPy(Library):
 
         try:  # get data
             # fx
-            if data_req.cat == 'fx':
+            if data_req.cat == "fx":
                 df = self.get_fx(data_req)
             # rates
-            elif data_req.cat == 'rates':
+            elif data_req.cat == "rates":
                 df = self.get_rates(data_req)
             # cmdty
-            elif data_req.cat == 'cmdty':
+            elif data_req.cat == "cmdty":
                 df = self.get_cmdty(data_req)
             # eqty
-            elif data_req.cat == 'eqty':
+            elif data_req.cat == "eqty":
                 df = self.get_eqty(data_req)
             # macro
-            elif data_req.cat == 'macro':
+            elif data_req.cat == "macro":
                 df = self.get_macro_series(data_req)
 
         except Exception as e:
             logging.warning(e)
-            raise Exception('No data returned. Check data request parameters and try again.')
+            raise Exception(
+                "No data returned. Check data request parameters and try again."
+            )
 
         else:
             # filter df for desired fields and typecast
@@ -878,7 +1050,9 @@ class InvestPy(Library):
             return df.sort_index()
 
     @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(
+        data_req: DataRequest, data_resp: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -896,6 +1070,6 @@ class InvestPy(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source='investpy').tidy_data()
+        df = WrangleData(data_req, data_resp, data_source="investpy").tidy_data()
 
         return df

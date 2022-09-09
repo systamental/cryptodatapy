@@ -1,13 +1,15 @@
 import logging
+from time import sleep
+from typing import Any, List, Optional, Union
+
 import pandas as pd
 import requests
+
 from cryptodatapy.extract.data_vendors.datavendor import DataVendor
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.transform.convertparams import ConvertParams
 from cryptodatapy.transform.wrangle import WrangleData
 from cryptodatapy.util.datacredentials import DataCredentials
-from time import sleep
-from typing import Optional, Any, Union
 
 # data credentials
 data_cred = DataCredentials()
@@ -19,20 +21,32 @@ class Glassnode(DataVendor):
     """
 
     def __init__(
-            self,
-            categories: list[str] = ['crypto'],
-            exchanges: Optional[list[str]] = None,
-            indexes: Optional[list[str]] = None,
-            assets: Optional[list[str]] = None,
-            markets: Optional[list[str]] = None,
-            market_types: list[str] = ['spot', 'perpetual_future', 'future', 'option'],
-            fields: Optional[list[str]] = None,
-            frequencies: list[str] = ['10min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y'],
-            base_url: str = data_cred.glassnode_base_url,
-            api_key: str = None,
-            # api_key: str = data_cred.glassnode_api_key,
-            max_obs_per_call: Optional[int] = None,
-            rate_limit: Optional[Any] = None
+        self,
+        categories: List[str] = ["crypto"],
+        exchanges: Optional[List[str]] = None,
+        indexes: Optional[List[str]] = None,
+        assets: Optional[List[str]] = None,
+        markets: Optional[List[str]] = None,
+        market_types: List[str] = ["spot", "perpetual_future", "future", "option"],
+        fields: Optional[List[str]] = None,
+        frequencies: List[str] = [
+            "10min",
+            "30min",
+            "1h",
+            "2h",
+            "4h",
+            "8h",
+            "d",
+            "w",
+            "m",
+            "q",
+            "y",
+        ],
+        base_url: str = data_cred.glassnode_base_url,
+        api_key: str = None,
+        # api_key: str = data_cred.glassnode_api_key,
+        max_obs_per_call: Optional[int] = None,
+        rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
@@ -67,12 +81,27 @@ class Glassnode(DataVendor):
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
         """
-        DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
-                            frequencies, base_url, api_key, max_obs_per_call, rate_limit)
+        DataVendor.__init__(
+            self,
+            categories,
+            exchanges,
+            indexes,
+            assets,
+            markets,
+            market_types,
+            fields,
+            frequencies,
+            base_url,
+            api_key,
+            max_obs_per_call,
+            rate_limit,
+        )
 
         if api_key is None:
-            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses " 
-                            "keyring to store your api key in DataCredentials.")
+            raise TypeError(
+                "Set your api key. Alternatively, you can use the function set_credential which uses "
+                "keyring to store your api key in DataCredentials."
+            )
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info(data_type=None, as_list=True)
         self.rate_limit = self.get_rate_limit_info()
@@ -91,7 +120,7 @@ class Glassnode(DataVendor):
         """
         return None
 
-    def get_assets_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
+    def get_assets_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
         """
          Get assets info.
 
@@ -106,10 +135,8 @@ class Glassnode(DataVendor):
             List or dataframe with info for available assets.
         """
         try:  # try get request
-            url = data_cred.glassnode_base_url + 'assets'
-            params = {
-                'api_key': self.api_key
-            }
+            url = data_cred.glassnode_base_url + "assets"
+            params = {"api_key": self.api_key}
             r = requests.get(url, params=params)
             r.raise_for_status()
 
@@ -121,8 +148,8 @@ class Glassnode(DataVendor):
             # format response
             assets = pd.DataFrame(r.json())
             # rename cols and set index
-            assets.rename(columns={'symbol': 'ticker'}, inplace=True)
-            assets = assets.set_index('ticker')
+            assets.rename(columns={"symbol": "ticker"}, inplace=True)
+            assets = assets.set_index("ticker")
             # asset list
             if as_list:
                 assets = list(assets.index)
@@ -136,7 +163,9 @@ class Glassnode(DataVendor):
         """
         return None
 
-    def get_fields_info(self, data_type: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
+    def get_fields_info(
+        self, data_type: Optional[str] = None, as_list: bool = False
+    ) -> Union[List[str], pd.DataFrame]:
         """
         Get fields info.
 
@@ -153,10 +182,8 @@ class Glassnode(DataVendor):
             List or dataframe with info on available fields.
         """
         try:  # try get request
-            url = 'https://api.glassnode.com/v2/metrics/endpoints'
-            params = {
-                'api_key': self.api_key
-            }
+            url = "https://api.glassnode.com/v2/metrics/endpoints"
+            params = {"api_key": self.api_key}
             r = requests.get(url, params=params)
             r.raise_for_status()
 
@@ -168,21 +195,38 @@ class Glassnode(DataVendor):
             # format response
             fields = pd.DataFrame(r.json())
             # create fields and cat cols
-            fields['fields'] = fields.path.str.split(pat='/', expand=True, n=3)[3]
-            fields['categories'] = fields.path.str.split(pat='/', expand=True)[3]
+            fields["fields"] = fields.path.str.split(pat="/", expand=True, n=3)[3]
+            fields["categories"] = fields.path.str.split(pat="/", expand=True)[3]
             # rename and reorder cols, and set index
-            fields.rename(columns={'resolutions': 'frequencies'}, inplace=True)
-            fields = fields.loc[:, ['fields', 'categories', 'tier', 'assets', 'currencies', 'frequencies', 'formats',
-                                    'path']]
-            fields.set_index('fields', inplace=True)
+            fields.rename(columns={"resolutions": "frequencies"}, inplace=True)
+            fields = fields.loc[
+                :,
+                [
+                    "fields",
+                    "categories",
+                    "tier",
+                    "assets",
+                    "currencies",
+                    "frequencies",
+                    "formats",
+                    "path",
+                ],
+            ]
+            fields.set_index("fields", inplace=True)
 
             # filter fields info
-            if data_type == 'market':
-                fields = fields[(fields.categories == 'market') | (fields.categories == 'derivatives')]
-            elif data_type == 'on-chain':
-                fields = fields[(fields.categories != 'market') | (fields.categories != 'derivatives')]
-            elif data_type == 'off-chain':
-                fields = fields[fields.categories == 'institutions']
+            if data_type == "market":
+                fields = fields[
+                    (fields.categories == "market")
+                    | (fields.categories == "derivatives")
+                ]
+            elif data_type == "on-chain":
+                fields = fields[
+                    (fields.categories != "market")
+                    | (fields.categories != "derivatives")
+                ]
+            elif data_type == "off-chain":
+                fields = fields[fields.categories == "institutions"]
             else:
                 fields = fields
             # fields list
@@ -213,64 +257,89 @@ class Glassnode(DataVendor):
             off-chain fields (cols), in tidy format.
         """
         # convert data request parameters to CryptoCompare format
-        gn_data_req = ConvertParams(data_req, data_source='glassnode').convert_to_source()
+        gn_data_req = ConvertParams(
+            data_req, data_source="glassnode"
+        ).convert_to_source()
         # empty df to add data
         df = pd.DataFrame()
 
         # check tickers
         tickers = self.assets
-        if not any(ticker.upper() in tickers for ticker in gn_data_req['tickers']):
-            raise ValueError(f"Assets are not available. Available assets include {self.assets}.")
+        if not any(ticker.upper() in tickers for ticker in gn_data_req["tickers"]):
+            raise ValueError(
+                f"Assets are not available. Available assets include {self.assets}."
+            )
 
         # check fields
         fields = self.fields
-        if not any(i in fields for i in gn_data_req['fields']):
-            raise ValueError(f"Fields are not available. Available fields include: {self.fields}.")
+        if not any(i in fields for i in gn_data_req["fields"]):
+            raise ValueError(
+                f"Fields are not available. Available fields include: {self.fields}."
+            )
 
         # check freq
-        if data_req.freq not in ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q']:
-            raise ValueError(f"On-chain data is only available for {self.frequencies} frequencies."
-                             f" Change data request frequency and try again.")
+        if data_req.freq not in [
+            "10min",
+            "15min",
+            "30min",
+            "1h",
+            "2h",
+            "4h",
+            "8h",
+            "d",
+            "w",
+            "m",
+            "q",
+        ]:
+            raise ValueError(
+                f"On-chain data is only available for {self.frequencies} frequencies."
+                f" Change data request frequency and try again."
+            )
 
         # loop through tickers and fields
-        for ticker in gn_data_req['tickers']:  # loop tickers
+        for ticker in gn_data_req["tickers"]:  # loop tickers
 
             df0 = pd.DataFrame()  # ticker df
 
-            for gn_field, dr_field in zip(gn_data_req['fields'], data_req.fields):  # loop fields
+            for gn_field, dr_field in zip(
+                gn_data_req["fields"], data_req.fields
+            ):  # loop fields
 
                 # set number of attempts and bool for while loop
                 attempts = 0
                 # run a while loop to onchain data in case the attempt fails
-                while attempts < gn_data_req['trials']:
+                while attempts < gn_data_req["trials"]:
                     try:  # get request
-                        url = 'https://api.glassnode.com/v1/metrics/' + gn_field
+                        url = "https://api.glassnode.com/v1/metrics/" + gn_field
                         params = {
-                            'api_key': self.api_key,
-                            'a': ticker,
-                            's': gn_data_req['start_date'],
-                            'u': gn_data_req['end_date'],
-                            'i': gn_data_req['freq'],
+                            "api_key": self.api_key,
+                            "a": ticker,
+                            "s": gn_data_req["start_date"],
+                            "u": gn_data_req["end_date"],
+                            "i": gn_data_req["freq"],
                         }
                         r = requests.get(url, params=params)
                         r.raise_for_status()
-                        df1 = pd.read_json(r.text, convert_dates=['t'])
+                        df1 = pd.read_json(r.text, convert_dates=["t"])
                         assert not df1.empty
 
                     except Exception as e:
                         logging.warning(e)
                         attempts += 1
-                        sleep(gn_data_req['pause'])
-                        logging.warning(f"Failed to pull {dr_field} data for {ticker} after attempt #{str(attempts)}.")
+                        sleep(gn_data_req["pause"])
+                        logging.warning(
+                            f"Failed to pull {dr_field} data for {ticker} after attempt #{str(attempts)}."
+                        )
                         if attempts == 3:
                             logging.warning(
-                                f"Failed to pull {dr_field} data for {ticker} after many attempts.")
+                                f"Failed to pull {dr_field} data for {ticker} after many attempts."
+                            )
                             break
 
                     else:
                         # rename val col
-                        if 'v' in df1.columns:
-                            df1.rename(columns={'v': dr_field}, inplace=True)
+                        if "v" in df1.columns:
+                            df1.rename(columns={"v": dr_field}, inplace=True)
                         # wrangle data resp
                         df2 = self.wrangle_data_resp(data_req, df1)
                         # add fields to ticker df
@@ -278,8 +347,8 @@ class Glassnode(DataVendor):
                         break
 
             # add ticker to index
-            df0['ticker'] = ticker.upper()
-            df0.set_index(['ticker'], append=True, inplace=True)
+            df0["ticker"] = ticker.upper()
+            df0.set_index(["ticker"], append=True, inplace=True)
             # stack ticker dfs
             df = pd.concat([df, df0])
 
@@ -290,7 +359,9 @@ class Glassnode(DataVendor):
         return df.sort_index()
 
     @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(
+        data_req: DataRequest, data_resp: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -308,6 +379,6 @@ class Glassnode(DataVendor):
             off-chain values for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source='glassnode').tidy_data()
+        df = WrangleData(data_req, data_resp, data_source="glassnode").tidy_data()
 
         return df

@@ -1,6 +1,7 @@
-import pandas as pd
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Any
+from typing import Any, Dict, List, Optional, Union
+
+import pandas as pd
 
 
 class DataVendor(ABC):
@@ -8,20 +9,21 @@ class DataVendor(ABC):
     DataVendor is an abstract base class which provides a blueprint for properties and methods for the
     data vendor subclass.
     """
+
     def __init__(
-            self,
-            categories,
-            exchanges,
-            assets,
-            indexes,
-            markets,
-            market_types,
-            fields,
-            frequencies,
-            base_url,
-            api_key,
-            max_obs_per_call,
-            rate_limit
+        self,
+        categories,
+        exchanges,
+        assets,
+        indexes,
+        markets,
+        market_types,
+        fields,
+        frequencies,
+        base_url,
+        api_key,
+        max_obs_per_call,
+        rate_limit,
     ):
         self.categories = categories
         self.exchanges = exchanges
@@ -44,11 +46,22 @@ class DataVendor(ABC):
         return self._categories
 
     @categories.setter
-    def categories(self, categories: Union[str, list[str]]):
+    def categories(self, categories: Union[str, List[str]]):
         """
         Sets a list of available categories for the data vendor.
         """
-        valid_categories = ['crypto', 'fx', 'eqty', 'cmdty', 'index', 'rates',  'bonds', 'credit', 'macro', 'alt']
+        valid_categories = [
+            "crypto",
+            "fx",
+            "eqty",
+            "cmdty",
+            "index",
+            "rates",
+            "bonds",
+            "credit",
+            "macro",
+            "alt",
+        ]
         cat = []
 
         if not isinstance(categories, str) and not isinstance(categories, list):
@@ -59,7 +72,9 @@ class DataVendor(ABC):
             if category in valid_categories:
                 cat.append(category)
             else:
-                raise ValueError(f"{category} is invalid. Valid categories are: {valid_categories}")
+                raise ValueError(
+                    f"{category} is invalid. Valid categories are: {valid_categories}"
+                )
         self._categories = cat
 
     @property
@@ -70,17 +85,25 @@ class DataVendor(ABC):
         return self._exchanges
 
     @exchanges.setter
-    def exchanges(self, exchanges: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def exchanges(
+        self, exchanges: Optional[Union[str, List[str], Dict[str, List[str]]]]
+    ):
         """
         Sets a list of available exchanges for the data vendor.
         """
-        if exchanges is None or isinstance(exchanges, list) or isinstance(exchanges, dict):
+        if (
+            exchanges is None
+            or isinstance(exchanges, list)
+            or isinstance(exchanges, dict)
+        ):
             self._exchanges = exchanges
         elif isinstance(exchanges, str):
             self._exchanges = [exchanges]
         else:
-            raise TypeError("Exchanges must be a string, list of strings (exchanges) or"
-                            " dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Exchanges must be a string, list of strings (exchanges) or"
+                " dict with {cat: List[str]} key-value pairs."
+            )
 
     @abstractmethod
     def get_exchanges_info(self):
@@ -97,7 +120,7 @@ class DataVendor(ABC):
         return self._indexes
 
     @indexes.setter
-    def indexes(self, indexes: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def indexes(self, indexes: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available indexes for the data vendor.
         """
@@ -106,8 +129,10 @@ class DataVendor(ABC):
         elif isinstance(indexes, str):
             self._indexes = [indexes]
         else:
-            raise TypeError("Indexes must be a string (ticker), list of strings (tickers) or"
-                            " a dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Indexes must be a string (ticker), list of strings (tickers) or"
+                " a dict with {cat: List[str]} key-value pairs."
+            )
 
     @abstractmethod
     def get_indexes_info(self):
@@ -124,7 +149,7 @@ class DataVendor(ABC):
         return self._assets
 
     @assets.setter
-    def assets(self, assets: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def assets(self, assets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available assets for the data vendor.
         """
@@ -133,8 +158,10 @@ class DataVendor(ABC):
         elif isinstance(assets, str):
             self._assets = [assets]
         else:
-            raise TypeError("Assets must be a string (ticker), list of strings (tickers) or"
-                            " a dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Assets must be a string (ticker), list of strings (tickers) or"
+                " a dict with {cat: List[str]} key-value pairs."
+            )
 
     @abstractmethod
     def get_assets_info(self):
@@ -151,7 +178,7 @@ class DataVendor(ABC):
         return self._markets
 
     @markets.setter
-    def markets(self, markets: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def markets(self, markets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available markets for the data vendor.
         """
@@ -160,8 +187,10 @@ class DataVendor(ABC):
         elif isinstance(markets, str):
             self._markets = [markets]
         else:
-            raise TypeError("Markets must be a string (ticker), list of strings (tickers) or"
-                            " a dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Markets must be a string (ticker), list of strings (tickers) or"
+                " a dict with {cat: List[str]} key-value pairs."
+            )
 
     @abstractmethod
     def get_markets_info(self):
@@ -178,11 +207,19 @@ class DataVendor(ABC):
         return self._market_types
 
     @market_types.setter
-    def market_types(self, market_types: Optional[Union[str, list[str]]]):
+    def market_types(self, market_types: Optional[Union[str, List[str]]]):
         """
         Sets a list of available market types for the data vendor.
         """
-        valid_mkt_types, mkt_types_list = [None, 'spot', 'etf', 'perpetual_future', 'future', 'swap', 'option'], []
+        valid_mkt_types, mkt_types_list = [
+            None,
+            "spot",
+            "etf",
+            "perpetual_future",
+            "future",
+            "swap",
+            "option",
+        ], []
 
         if market_types is None:
             self._market_types = market_types
@@ -193,7 +230,9 @@ class DataVendor(ABC):
                 if mkt in valid_mkt_types:
                     mkt_types_list.append(mkt)
                 else:
-                    raise ValueError(f"{mkt} is invalid. Valid market types are: {valid_mkt_types}")
+                    raise ValueError(
+                        f"{mkt} is invalid. Valid market types are: {valid_mkt_types}"
+                    )
             self._market_types = mkt_types_list
         else:
             raise TypeError("Market types must be a string or list of strings.")
@@ -206,7 +245,7 @@ class DataVendor(ABC):
         return self._fields
 
     @fields.setter
-    def fields(self, fields: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def fields(self, fields: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available fields for the data vendor.
         """
@@ -215,8 +254,10 @@ class DataVendor(ABC):
         elif isinstance(fields, str):
             self._fields = [fields]
         else:
-            raise TypeError("Fields must be a string (field), list of strings (fields) or"
-                            " a dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Fields must be a string (field), list of strings (fields) or"
+                " a dict with {cat: List[str]} key-value pairs."
+            )
 
     @abstractmethod
     def get_fields_info(self, data_type: Optional[str]):
@@ -233,17 +274,25 @@ class DataVendor(ABC):
         return self._frequencies
 
     @frequencies.setter
-    def frequencies(self, frequencies: Optional[Union[str, list[str], dict[str, list[str]]]]):
+    def frequencies(
+        self, frequencies: Optional[Union[str, List[str], Dict[str, List[str]]]]
+    ):
         """
         Sets a list of available data frequencies for the data vendor.
         """
-        if frequencies is None or isinstance(frequencies, list) or isinstance(frequencies, dict):
+        if (
+            frequencies is None
+            or isinstance(frequencies, list)
+            or isinstance(frequencies, dict)
+        ):
             self._frequencies = frequencies
         elif isinstance(frequencies, str):
             self._frequencies = [frequencies]
         else:
-            raise TypeError("Frequencies must be a string (frequency), list of strings (frequencies) or"
-                            " a dict with {cat: list[str]} key-value pairs.")
+            raise TypeError(
+                "Frequencies must be a string (frequency), list of strings (frequencies) or"
+                " a dict with {cat: List[str]} key-value pairs."
+            )
 
     @property
     def base_url(self):
@@ -260,8 +309,10 @@ class DataVendor(ABC):
         if url is None or isinstance(url, str):
             self._base_url = url
         else:
-            raise TypeError("Base url must be a string containing the data vendor's base URL to which endpoint paths"
-                            " are appended.")
+            raise TypeError(
+                "Base url must be a string containing the data vendor's base URL to which endpoint paths"
+                " are appended."
+            )
 
     @property
     def api_key(self):
@@ -278,7 +329,9 @@ class DataVendor(ABC):
         if api_key is None or isinstance(api_key, str) or isinstance(api_key, dict):
             self._api_key = api_key
         else:
-            raise TypeError('Api key must be a string or dict with data source-api key key-value pairs.')
+            raise TypeError(
+                "Api key must be a string or dict with data source-api key key-value pairs."
+            )
 
     @property
     def max_obs_per_call(self):
@@ -297,7 +350,9 @@ class DataVendor(ABC):
         elif isinstance(limit, int) or isinstance(limit, str):
             self._max_obs_per_call = int(limit)
         else:
-            raise TypeError('Maximum number of observations per API call must be an integer or string.')
+            raise TypeError(
+                "Maximum number of observations per API call must be an integer or string."
+            )
 
     @property
     def rate_limit(self):

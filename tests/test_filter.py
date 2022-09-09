@@ -37,7 +37,7 @@ def test_filter_atr(ohlc_df) -> None:
     """
     # outlier detection
     outliers_dict = OutlierDetection(ohlc_df).atr()
-    filt_df = outliers_Dict["filt_vals"]
+    filt_df = outliers_dict["filt_vals"]
     # assert statements
     assert filt_df.shape == ohlc_df.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
@@ -65,7 +65,7 @@ def test_filter_iqr(raw_df) -> None:
     """
     # outlier detection
     outliers_dict = OutlierDetection(raw_df).iqr()
-    filt_df = outliers_Dict["filt_vals"]
+    filt_df = outliers_dict["filt_vals"]
     # assert statements
     assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(

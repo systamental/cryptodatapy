@@ -621,7 +621,7 @@ class OutlierDetection:
             dev_df = dev / mad
 
             # add fcst and resid dfs to dict
-            resid_Dict[field], yhat_Dict[field] = dev_df, yhat_df
+            resid_dict[field], yhat_dict[field] = dev_df, yhat_df
 
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
@@ -785,7 +785,7 @@ class OutlierDetection:
             dev_df = dev / mad
 
             # add fcst and resid dfs to dict
-            resid_Dict[field], yhat_Dict[field] = dev_df, yhat_df
+            resid_dict[field], yhat_dict[field] = dev_df, yhat_df
 
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
@@ -902,7 +902,7 @@ class OutlierDetection:
                 ).rename(columns={"yhat": ticker})
 
             # add fcst adfs to dict
-            upper_Dict[field], lower_Dict[field], yhat_Dict[field] = (
+            upper_dict[field], lower_dict[field], yhat_dict[field] = (
                 upper_df,
                 lower_df,
                 yhat_df,

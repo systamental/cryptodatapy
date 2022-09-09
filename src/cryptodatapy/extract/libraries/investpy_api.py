@@ -145,7 +145,7 @@ class InvestPy(Library):
 
         except Exception as e:
             logging.warning(e)
-            loggin.warning(f"Failed to get indexes info.")
+            logging.warning(f"Failed to get indexes info.")
 
         else:
             # wrangle data resp
@@ -162,18 +162,18 @@ class InvestPy(Library):
                 idx_dict = {}
                 for k in cats.keys():
                     if k == "eqty":
-                        idx_Dict[k] = indexes[
+                        idx_dict[k] = indexes[
                             (indexes["class"] != "commodities")
                             & (indexes["class"] != "bonds")
                         ].index.to_list()
                     else:
-                        idx_Dict[k] = indexes[
+                        idx_dict[k] = indexes[
                             indexes["class"] == cats[k]
                         ].index.to_list()
 
                 # filter by cat
                 if cat is not None:
-                    indexes = idx_Dict[cat]
+                    indexes = idx_dict[cat]
                 else:
                     indexes = idx_dict
 
@@ -307,7 +307,7 @@ class InvestPy(Library):
         if as_dict:
             assets_dict = {}
             for asset in assets_info.keys():
-                assets_Dict[asset] = assets_info[asset].index.to_list()
+                assets_dict[asset] = assets_info[asset].index.to_list()
             assets_info = assets_dict
 
         # asset info cat

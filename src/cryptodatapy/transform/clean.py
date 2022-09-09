@@ -111,8 +111,12 @@ class CleanData:
 
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_outliers(od_method='z_score')
         """
         # outlier detection
         od = getattr(OutlierDetection(self.df), od_method)(**kwargs)
@@ -159,8 +163,12 @@ class CleanData:
 
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(filt_df).repair_outliers(imp_method='fcst')
         """
         # impute missing vals
         if imp_method == "fcst":
@@ -200,8 +208,12 @@ class CleanData:
 
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_avg_trading_val(thresh_val=10000000, window_size=7)
         """
         # filter outliers
         filt_df = Filter(self.df).avg_trading_val(
@@ -233,11 +245,14 @@ class CleanData:
         plot_series: tuple, default ('BTC', 'close')
             Plots the time series of a specific (ticker, field/column) tuple.
 
-
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_missing_vals_gaps(gap_window=30)
         """
         # filter outliers
         filt_df = Filter(self.df).missing_vals_gaps(gap_window=gap_window, **kwargs)
@@ -264,8 +279,12 @@ class CleanData:
 
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_min_nobs(min_obs=30)
         """
         # filter outliers
         filt_df = Filter(self.df).min_nobs(min_obs=min_obs)
@@ -298,8 +317,12 @@ class CleanData:
 
         Returns
         -------
-        self: object
-            Returns GetData object
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_tickers(tickers_list=stablecoin_list)
         """
         # filter tickers
         filt_df = Filter(self.df).tickers(tickers_list)
@@ -332,6 +355,10 @@ class CleanData:
             Plots the time series of a specific (ticker, field) tuple.
         compare_series: bool, default True
             Compares clean time series with raw series
+
+        Examples
+        --------
+        >>> CleanData(df).filter_outliers().show_plot(plot_series=('ETH', 'add_act'), compare_series=True)
         """
         ax = (
             self.df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
@@ -376,8 +403,12 @@ class CleanData:
 
         Returns
         -------
-        self: pd.DataFrame
-            Dataframe with GetData object attribute
+        CleanData: CleanData
+            CleanData object
+
+        Examples
+        --------
+        >>> CleanData(df).filter_outliers().repair_outliers().get(attr='summary')
         """
         self.summary.loc["%_NaN_end", self.df.unstack().columns] = (
             self.df.unstack().isnull().sum() / self.df.unstack().shape[0]

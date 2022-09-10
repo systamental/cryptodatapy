@@ -76,12 +76,12 @@ class GetData:
 
         >>> data_req = DataRequest(data_source='ccxt')
         >>> GetData(data_req).get_meta(method='get_assets_info')
-        '                   id	    numericId	 code	precision
-         ticker
-         1INCH	        1INCH	    None	    1INCH	    8
-         1INCHDOWN	    1INCHDOWN	None	    1INCHDOWN	8
-         1INCHUP	    1INCHUP	    None	    1INCHUP	    8
-         AAVE	        AAVE	    None	    AAVE	    8'
+                        id          numericId       code        precision
+        ticker
+        1INCH	        1INCH	       None	        1INCH	        8
+        1INCHDOWN	    1INCHDOWN	   None	        1INCHDOWN	    8
+        1INCHUP	        1INCHUP	       None	        1INCHUP	        8
+        AAVE	        AAVE	       None	        AAVE	        8
         """
         # data source objects
         data_source_dict = {
@@ -130,7 +130,7 @@ class GetData:
         ]
 
         # data source
-        ds = data_source_Dict[self.data_req.data_source]
+        ds = data_source_dict[self.data_req.data_source]
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)
@@ -170,37 +170,37 @@ class GetData:
         >>> data_req = DataRequest(data_source='ccxt', tickers=['btc', 'eth'], fields=['open', 'high', 'low', 'close',
                                    'volume'], freq='d', exch='ftx', start_date='2017-01-01')
         >>> GetData(data_req).get_series()
-        '                    open	high	low	    close	volume
+                                open        high        low         close       volume
         date	    ticker
-        2020-03-28	BTC	    6243.25	6298.5	6028.0	6237.5	3888.9424
-                    ETH	    128.995	133.0	125.11	131.04	1751.65972
-        2020-03-29	BTC	    6233.5	6262.5	5869.5	5876.5	114076.5831
-                    ETH	    130.98	131.84	123.81	124.33	138449.60906
-        2020-03-30	BTC	    5876.0	6609.0	5856.0	6396.5	224231.1718'
+        2020-03-28	BTC	        6243.25	    6298.5	    6028.0	    6237.5	    3888.9424
+                    ETH	        128.995	    133.0	    125.11	    131.04	    1751.65972
+        2020-03-29	BTC	        6233.5	    6262.5	    5869.5	    5876.5	    114076.5831
+                    ETH	        130.98	    131.84	    123.81	    124.33	    138449.60906
+        2020-03-30	BTC	        5876.0	    6609.0	    5856.0	    6396.5	    224231.1718
 
 
         >>> data_req = DataRequest(data_source='glassnode', tickers=['btc', 'eth'],
                                    fields=['add_act', 'tx_count', 'issuance'], freq='d', start_date='2016-01-01')
         >>> GetData(data_req).get_series()
-        '		            add_act	    tx_count	issuance
-        date	    ticker
-        2016-01-01	BTC	    316489	    123957	    0.085386
-                    ETH	    2350	    8232	    0.133048
-        2016-01-02	BTC	    419389	    148893	    0.09197
-                    ETH	    2410	    9164	    0.140147
-        2016-01-03	BTC	    394047	    142463	    0.091947'
+                                add_act     tx_count    issuance
+        date        ticker
+        2016-01-01	BTC	        316489	    123957	    0.085386
+                    ETH	        2350	    8232	    0.133048
+        2016-01-02	BTC	        419389	    148893	    0.09197
+                    ETH	        2410	    9164	    0.140147
+        2016-01-03	BTC	        394047	    142463	    0.091947
 
         >>> data_req = DataRequest(data_source='investpy', tickers=['US_Rates_10Y', 'DE_Rates_10Y', 'JP_Rates_10Y'],
                        fields=['open', 'high', 'low', 'close'], freq='d', cat='rates', start_date='1990-01-01')
         >>> GetData(data_req).get_series().tail()
-        '                            open	 high	 low	close
+                                     open	 high	 low	close
         date	    ticker
         2022-09-06	DE_Rates_10Y	1.5625	1.636	1.48	1.614
                     JP_Rates_10Y	0.238	0.24	0.235	0.24
                     US_Rates_10Y	3.223	3.355	3.208	3.351
         2022-09-07	DE_Rates_10Y	1.6415	1.6415	1.5435	1.5755
                     JP_Rates_10Y	0.241	0.244	0.241	0.243
-                    US_Rates_10Y	3.338	3.361	3.29	3.298'
+                    US_Rates_10Y	3.338	3.361	3.29	3.298
         """
         # data source objects
         data_source_dict = {
@@ -218,7 +218,7 @@ class GetData:
         }
 
         # data source
-        ds = data_source_Dict[self.data_req.data_source]
+        ds = data_source_dict[self.data_req.data_source]
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)

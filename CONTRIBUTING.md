@@ -64,6 +64,12 @@ Ready to contribute? Here's how to set up `cryptodatapy` for local development.
     $ poetry install
     ```
 
+    ```console
+    # Install pre-commit hooks
+    pre-commit install
+    pre-commit run --all-files
+    ```
+
 3. Use `git` (or similar) to create a branch for local development and make your changes:
 
     ```console

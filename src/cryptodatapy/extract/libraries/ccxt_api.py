@@ -172,7 +172,7 @@ class CCXT(Library):
 
         return exchanges
 
-
+    @staticmethod
     def get_indexes_info():
         """
         Get indexes info.
@@ -526,7 +526,7 @@ class CCXT(Library):
                 sleep(self.get_rate_limit_info(exch=cx_data_req['exch'])[cx_data_req['exch']] / 1000)
 
         return df
-
+    @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangle data response.

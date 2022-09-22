@@ -15,7 +15,7 @@ class DataRequest:
 
     def __init__(
         self,
-        data_source: str = "ccxt",
+        source: str = "ccxt",
         tickers: Union[str, List[str]] = "btc",
         freq: str = "d",
         quote_ccy: Optional[str] = None,
@@ -38,9 +38,8 @@ class DataRequest:
 
         Parameters
         ----------
-        data_source: str, default 'ccxt'
-            Name of data source. Should only be specified when data request can be made from a library which provides
-             data from a wide range of sources, e.g. pandas-datareader.
+        source: str, default 'ccxt'
+            Name of data source.
         tickers: list or str, default 'btc'
             Ticker symbols for assets or time series.
             e.g. 'BTC', 'EURUSD', 'SPY', 'US_Manuf_PMI', 'EZ_Rates_10Y', etc.
@@ -81,7 +80,7 @@ class DataRequest:
             fields will be converted from CryptoDataPy to data source format.
         """
         # params
-        self.data_source = data_source  # specific data source
+        self.source = source  # specific data source
         self.tickers = tickers  # tickers
         self.freq = freq  # frequency
         self.quote_ccy = quote_ccy  # quote ccy
@@ -100,14 +99,14 @@ class DataRequest:
         self.source_fields = source_fields  # fields used by data source
 
     @property
-    def data_source(self):
+    def source(self):
         """
         Returns data source for data request.
         """
-        return self._data_source
+        return self._source
 
-    @data_source.setter
-    def data_source(self, data_source):
+    @source.setter
+    def source(self, source):
         """
         Sets data source for data request.
         """
@@ -119,17 +118,15 @@ class DataRequest:
             "tiingo",
             "investpy",
             "yahoo",
-            "av-daily",
-            "av-forex-daily",
             "fred",
             "dbnomics",
         ]
 
-        if data_source in valid_data_sources:
-            self._data_source = data_source
+        if source in valid_data_sources:
+            self._source = source
         else:
             raise ValueError(
-                f"{data_source} is invalid. Valid data sources are: {valid_data_sources}."
+                f"{source} is invalid. Valid data sources are: {valid_data_sources}."
             )
 
     @property

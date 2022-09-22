@@ -235,6 +235,11 @@ class OutlierDetection:
         if log:
             med = np.exp(med)
 
+        # type conversion
+        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
@@ -325,6 +330,11 @@ class OutlierDetection:
         # log
         if log:
             med = np.exp(med)
+
+        # type conversion
+        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
         # plot
         if plot:
@@ -433,6 +443,11 @@ class OutlierDetection:
         if log:
             roll_mean = np.exp(roll_mean)
 
+        # type conversion
+        roll_mean = roll_mean.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
         # plot
         if plot:
             if not isinstance(plot_series, tuple):
@@ -507,6 +522,11 @@ class OutlierDetection:
         # log
         if log:
             ewma = np.exp(ewma)
+
+        # type conversion
+        ewam = ewma.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
         # plot
         if plot:

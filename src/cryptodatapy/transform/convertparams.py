@@ -433,8 +433,8 @@ class ConvertParams:
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
+            tickers = [ticker.split('/')[0] for ticker in self.data_req.source_tickers]
+            self.data_req.tickers = tickers
         else:
             tickers = [ticker.upper() for ticker in self.data_req.tickers]
         # convert freq
@@ -496,31 +496,34 @@ class ConvertParams:
             exch = self.data_req.exch.lower()
         # convert tickers to mkts
         mkts_list = []
-        for ticker in self.data_req.tickers:
-            if self.data_req.mkt_type == "spot":
-                mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
-            elif self.data_req.mkt_type == "perpetual_future":
-                if exch == "binanceusdm":
+        if self.data_req.source_tickers is not None:
+            mkts_list = self.data_req.source_tickers
+        else:
+            for ticker in self.data_req.tickers:
+                if self.data_req.mkt_type == "spot":
                     mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
-                elif (
-                    exch == "ftx"
-                    or exch == "okx"
-                    or exch == "kucoinfutures"
-                    or exch == "huobipro"
-                    or exch == "cryptocom"
-                    or exch == "bitfinex2"
-                    or exch == "bybit"
-                    or exch == "mexc3"
-                    or exch == "aax"
-                    or exch == "bitmex"
-                ):
-                    mkts_list.append(
-                        ticker.upper()
-                        + "/"
-                        + quote_ccy.upper()
-                        + ":"
-                        + quote_ccy.upper()
-                    )
+                elif self.data_req.mkt_type == "perpetual_future":
+                    if exch == "binanceusdm":
+                        mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
+                    elif (
+                        exch == "ftx"
+                        or exch == "okx"
+                        or exch == "kucoinfutures"
+                        or exch == "huobipro"
+                        or exch == "cryptocom"
+                        or exch == "bitfinex2"
+                        or exch == "bybit"
+                        or exch == "mexc3"
+                        or exch == "aax"
+                        or exch == "bitmex"
+                    ):
+                        mkts_list.append(
+                            ticker.upper()
+                            + "/"
+                            + quote_ccy.upper()
+                            + ":"
+                            + quote_ccy.upper()
+                        )
         # convert start date
         if self.data_req.start_date is None:
             start_date = round(

@@ -1,9 +1,7 @@
 import logging
-from time import sleep
 from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
-import requests
 
 from cryptodatapy.extract.data_vendors.datavendor import DataVendor
 from cryptodatapy.extract.datarequest import DataRequest
@@ -21,34 +19,34 @@ class Tiingo(DataVendor):
     """
 
     def __init__(
-        self,
-        categories: List[str] = ["crypto", "fx", "eqty"],
-        exchanges: Optional[Dict[str, List[str]]] = None,
-        indexes: Optional[Dict[str, List[str]]] = None,
-        assets: Optional[Dict[str, List[str]]] = None,
-        markets: Optional[Dict[str, List[str]]] = None,
-        market_types: List[str] = ["spot"],
-        fields: Dict[str, List[str]] = None,
-        frequencies: List[str] = [
-            "1min",
-            "5min",
-            "10min",
-            "15min",
-            "30min",
-            "1h",
-            "2h",
-            "4h",
-            "8h",
-            "d",
-            "w",
-            "m",
-            "q",
-            "y",
-        ],
-        base_url: str = data_cred.tiingo_base_url,
-        api_key: str = data_cred.tiingo_api_key,
-        max_obs_per_call: Optional[int] = None,
-        rate_limit: Optional[Any] = None,
+            self,
+            categories: List[str] = ["crypto", "fx", "eqty"],
+            exchanges: Optional[Dict[str, List[str]]] = None,
+            indexes: Optional[Dict[str, List[str]]] = None,
+            assets: Optional[Dict[str, List[str]]] = None,
+            markets: Optional[Dict[str, List[str]]] = None,
+            market_types: List[str] = ["spot"],
+            fields: Dict[str, List[str]] = None,
+            frequencies: List[str] = [
+                "1min",
+                "5min",
+                "10min",
+                "15min",
+                "30min",
+                "1h",
+                "2h",
+                "4h",
+                "8h",
+                "d",
+                "w",
+                "m",
+                "q",
+                "y",
+            ],
+            base_url: str = data_cred.tiingo_base_url,
+            api_key: str = data_cred.tiingo_api_key,
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
@@ -110,11 +108,11 @@ class Tiingo(DataVendor):
                 "keyring to store your api key in DataCredentials."
             )
         self.exchanges = self.get_exchanges_info()
-        self.assets = self.get_assets_info(as_dict=True)
+        self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info()
 
     def get_exchanges_info(
-        self, cat: Optional[str] = None
+            self, cat: Optional[str] = None
     ) -> Union[Dict[str, List[str]], pd.DataFrame]:
         """
         Get exchanges info.
@@ -129,9 +127,7 @@ class Tiingo(DataVendor):
         exch: dictionary or pd.DataFrame
             Dictionary or dataframe with info for supported exchanges.
         """
-        eqty_exch_list = list(
-            self.get_assets_info(cat="eqty", as_dict=False).exchange.unique()
-        )
+        eqty_exch_list = list(self.get_assets_info(cat="eqty").exchange.unique())
         crypto_exch_list = [
             "Apeswap",
             "ASCENDEX",
@@ -204,8 +200,75 @@ class Tiingo(DataVendor):
         """
         return None
 
+    @staticmethod
+    def get_eqty_info(as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get equity markets info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns eqty info as list.
+
+        Returns
+        -------
+        eqty: list or pd.DataFrame
+            List or dataframe with info on available equities.
+        """
+        # eqty info
+        try:
+            eqty = pd.read_csv(
+                f"https://apimedia.tiingo.com/docs/tiingo/daily/"
+                "supported_tickers.zip"
+            ).set_index("ticker")
+
+        except Exception as e:
+            logging.warning(e)
+            raise Exception(f"Failed to get eqty info.")
+
+        # as list
+        if as_list:
+            eqty = eqty.index.to_list()
+
+        return eqty
+
+    def req_crypto(self) -> Dict[str, Any]:
+        """
+        Submit get request for crypto metadata.
+        """
+        # req crypto asset info
+        return DataRequest().get_req(url=self.base_url + 'crypto', params={},
+                                     headers={
+                                         "Content-Type": "application/json",
+                                         "Authorization": f"Token {self.api_key}",
+                                     })
+
+    def get_crypto_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get cryptoassets info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns cryptoasset info as list.
+
+        Returns
+        -------
+        crypto: list or pd.DataFrame
+            List or dataframe with info on available cryptoassets.
+        """
+        # data req
+        data_resp = self.req_crypto()
+        # wrangle data resp
+        crypto = pd.DataFrame(data_resp).set_index('ticker')
+        # as list
+        if as_list:
+            crypto = crypto.index.to_list()
+
+        return crypto
+
     def get_assets_info(
-        self, cat: Optional[str] = None, as_dict: bool = False
+            self, cat: Optional[str] = None, as_list: bool = False
     ) -> Union[Dict[str, List[str]], pd.DataFrame]:
         """
         Get assets info.
@@ -213,63 +276,34 @@ class Tiingo(DataVendor):
         Parameters
         ----------
         cat: str, {'crypto', 'eqty', 'fx'}, optional, default None
-            Asset class or time series category, e.g. 'crypto', 'fx', 'macro', 'alt', etc.
-        as_dict: bool, default False
-            Returns assets info as dictionary, by category.
+            Asset class or time series category, e.g. 'crypto', 'fx', etc.
+        as_list: bool, default False
+            Returns asset info as list.
 
         Returns
         -------
-        assets: dictionary or pd.DataFrame
-            Dictionary or dataframe with info on available assets, by category.
+        assets_info: dictionary
+            Dictionary of dataframes or lists with info on available assets, by category.
         """
-        # store assets info in dict
-        assets_dict = {}
+        eqty = self.get_eqty_info()  # eqty info
+        crypto = self.get_crypto_info()  # crypto info
+        fx_url = "https://api.tiingo.com/documentation/forex"  # fx info
 
-        # eqty assets info
-        try:
-            assets_dict["eqty"] = pd.read_csv(
-                f"https://apimedia.tiingo.com/docs/tiingo/daily/"
-                "supported_tickers.zip"
-            ).set_index("ticker")
+        # as list
+        if as_list:
+            eqty = eqty.index.to_list()
+            crypto = crypto.index.to_list()
 
-        except Exception as e:
-            logging.warning(e)
-            raise Exception(f"Failed to get eqty {cat} info.")
-
-        # crypto assets info
-        try:
-            url = self.base_url + "crypto"
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Token {self.api_key}",
-            }
-            r = requests.get(url, headers=headers)
-            r.raise_for_status()
-            assets_dict["crypto"] = pd.DataFrame(r.json()).set_index("ticker")
-
-        except Exception as e:
-            logging.warning(e)
-            raise Exception(f"Failed to get {cat} asset info.")
-
-        # fx assets info
-        url = "https://api.tiingo.com/documentation/forex"
-        assets_dict["fx"] = f"For more information, see FX documentation: {url}."
-
-        # as dict
-        if as_dict:
-            list_dict = {"eqty": [], "crypto": [], "fx": []}
-            for asset in list_dict.keys():
-                if asset == "fx":
-                    list_dict[asset].append(assets_dict[asset])
-                else:
-                    list_dict[asset].extend(assets_dict[asset].index.to_list())
-            assets_dict = list_dict
+        # add to dict
+        assets_info = {'eqty': eqty,
+                       'crypto': crypto,
+                       'fx': f"For more information, see FX documentation: {fx_url}."}
 
         # filter cat
         if cat is not None:
-            assets_dict = assets_dict[cat]
+            assets_info = assets_info[cat]
 
-        return assets_dict
+        return assets_info
 
     @staticmethod
     def get_markets_info():
@@ -336,9 +370,232 @@ class Tiingo(DataVendor):
         """
         return None
 
+    def set_urls_params(self, data_req: DataRequest, data_type: str, ticker: str) -> Dict[str, Union[str, int]]:
+        """
+        Sets url and params for get request.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
+            Data type to retrieve.
+        ticker: str
+            Ticker symbol.
+
+        Returns
+        -------
+        dict: dictionary
+            Dictionary with url and params values for get request.
+
+        """
+        # convert data req params
+        tg_data_req = ConvertParams(data_req).to_tiingo()
+
+        url, params, headers = None, {}, {}
+
+        # eqty daily
+        if data_type == 'eqty':
+            url = self.base_url + f"daily/prices"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Token {self.api_key}",
+            }
+            params = {
+                "tickers": ticker,
+                "startDate": tg_data_req["start_date"],
+                "endDate": tg_data_req["end_date"],
+            }
+
+        # eqty intraday
+        elif data_type == 'iex':
+            url = f"https://api.tiingo.com/iex/{ticker}/prices"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Token {self.api_key}",
+            }
+            params = {
+                "startDate": tg_data_req["start_date"],
+                "endDate": tg_data_req["end_date"],
+                "resampleFreq": tg_data_req["freq"],
+            }
+
+        # crypto
+        elif data_type == 'crypto':
+            url = self.base_url + "crypto/prices"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Token {self.api_key}",
+            }
+            params = {
+                "tickers": ticker,
+                "startDate": tg_data_req["start_date"],
+                "endDate": tg_data_req["end_date"],
+                "resampleFreq": tg_data_req["freq"],
+            }
+
+        # fx
+        elif data_type == 'fx':
+            url = self.base_url + f"fx/prices"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Token {self.api_key}",
+            }
+            params = {
+                "tickers": ticker,
+                "startDate": tg_data_req["start_date"],
+                "endDate": tg_data_req["end_date"],
+                "resampleFreq": tg_data_req["freq"],
+            }
+
+        return {'url': url, 'params': params, 'headers': headers}
+
+    def req_data(self, data_req: DataRequest, data_type: str, ticker: str) -> Dict[str, Any]:
+        """
+        Submits get request to Tiingo API.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
+            Data type to retrieve.
+        ticker: str
+            Ticker symbol.|
+
+        Returns
+        -------
+        data_resp: dict
+            Data response in JSON format.
+        """
+        # set params
+        urls_params = self.set_urls_params(data_req, data_type, ticker)
+        url, params, headers = urls_params['url'], urls_params['params'], urls_params['headers']
+
+        # data req
+        data_resp = DataRequest().get_req(url=url, params=params, headers=headers)
+
+        return data_resp
+
+    @staticmethod
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Dict[str, Any], data_type: str) -> pd.DataFrame:
+        """
+        Wrangle data response.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        data_resp: dictionary
+            Data response from data request in JSON format.
+        data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
+            Data type retrieved.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Wrangled dataframe with DatetimeIndex and market data for selected fields (cols), in tidy format.
+        """
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp).tiingo(data_type)
+
+        return df
+
+    def get_tidy_data(self, data_req: DataRequest, data_type: str, ticker: str) -> pd.DataFrame:
+        """
+        Submits data request and wrangles the data response into tidy data format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
+            Data type to retrieve.
+        ticker: str
+            Requested ticker symbol.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with DatetimeIndex and field values (col) wrangled into tidy data format.
+        """
+        # get entire data history
+        df = self.req_data(data_req, data_type, ticker)
+        # wrangle df
+        df = self.wrangle_data_resp(data_req, df, data_type)
+
+        return df
+
+    def get_all_tickers(self, data_req: DataRequest, data_type: str) -> pd.DataFrame:
+        """
+        Loops list of tickers, retrieves data in tidy format for each ticker and stores it in a
+        multiindex dataframe.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
+            Data type to retrieve.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            Dataframe with DatetimeIndex (level 0), ticker (level 1) and values for fields (cols), in tidy data format.
+        """
+        # convert data request parameters to CryptoCompare format
+        tg_data_req = ConvertParams(data_req).to_tiingo()
+
+        # empty df to add data
+        df = pd.DataFrame()
+
+        if data_type == 'crypto':
+            # loop through mkts
+            for mkt, ticker in zip(tg_data_req['mkts'], data_req.tickers):
+                try:
+                    df0 = self.get_tidy_data(data_req, data_type, mkt)
+                except Exception:
+                    logging.info(f"Failed to get {data_type} data for {ticker} after many attempts.")
+                else:
+                    # add ticker to index
+                    df0['ticker'] = ticker.upper()
+                    df0.set_index(['ticker'], append=True, inplace=True)
+                    # concat df and df1
+                    df = pd.concat([df, df0])
+
+        elif data_type == 'fx':
+            # loop through mkts
+            for mkt, ticker in zip(tg_data_req['mkts'], data_req.tickers):
+                try:
+                    df0 = self.get_tidy_data(data_req, data_type, mkt)
+                except Exception:
+                    logging.info(f"Failed to get {data_type} data for {mkt} after many attempts.")
+                else:
+                    # add ticker to index
+                    df0['ticker'] = mkt.upper()
+                    df0.set_index(['ticker'], append=True, inplace=True)
+                    # concat df and df1
+                    df = pd.concat([df, df0])
+
+        else:
+            # loop through mkts
+            for tg_ticker, dr_ticker in zip(tg_data_req['tickers'], data_req.tickers):
+                try:
+                    df0 = self.get_tidy_data(data_req, data_type, tg_ticker)
+                except Exception:
+                    logging.info(f"Failed to get {data_type} data for {dr_ticker} after many attempts.")
+                else:
+                    # add ticker to index
+                    df0['ticker'] = dr_ticker.upper()
+                    df0.set_index(['ticker'], append=True, inplace=True)
+                    # concat df and df1
+                    df = pd.concat([df, df0])
+
+        return df
+
     def get_eqty(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Get equities daily data.
+        Get daily eqty data.
 
         Parameters
         ----------
@@ -351,68 +608,23 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and equities OHLCV values (cols).
         """
         # convert data request parameters to CryptoCompare format
-        tg_data_req = ConvertParams(data_req, data_source="tiingo").convert_to_source()
-        # empty df to add data
-        df = pd.DataFrame()
+        tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        tickers = self.get_assets_info(cat="eqty", as_dict=True)
-        if not any(ticker.upper() in tickers for ticker in tg_data_req["tickers"]):
-            raise ValueError(
-                "Assets are not available. To explore available assets use assets property."
-            )
+        if any(ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']) and \
+                any(field in self.fields['eqty'] for field in tg_data_req['fields']):
+            try:
+                df = self.get_all_tickers(data_req, data_type='eqty')
 
-        # loop through tickers
-        for ticker in tg_data_req["tickers"]:
+            except Exception as e:
+                logging.warning(e)
 
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < tg_data_req["trials"]:
-
-                try:  # try get request
-                    url = self.base_url + f"daily/{ticker}/prices"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Token {self.api_key}",
-                    }
-                    params = {
-                        "startDate": tg_data_req["start_date"],
-                        "endDate": tg_data_req["end_date"],
-                    }
-                    r = requests.get(url, headers=headers, params=params)
-                    r.raise_for_status()
-                    assert len(r.json()) != 0
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(tg_data_req["pause"])
-                    logging.warning(
-                        f"Failed to get data for {ticker} after attempt #{str(attempts)}."
-                    )
-                    if attempts == tg_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to get data for {ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    df0 = pd.DataFrame(r.json())
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = ticker.upper()
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
+            else:
+                return df
 
     def get_eqty_iex(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Get equities intraday data.
+        Get daily eqty data.
 
         Parameters
         ----------
@@ -422,68 +634,26 @@ class Tiingo(DataVendor):
         Returns
         -------
         df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and equity intrady OHLCV values (cols).
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and equities OHLCV values (cols).
         """
-        # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_req, data_source="tiingo").convert_to_source()
-        # empty df to add data
-        df = pd.DataFrame()
+        # convert data request parameters to CryptoCompare format
+        tg_data_req = ConvertParams(data_req).to_tiingo()
+
+        # check freq
+        if data_req.freq in ['d', 'w', 'm', 'q', 'y']:
+            raise ValueError("Data frequency must be intraday for IEX. Change freq parameter and try again.")
 
         # check tickers
-        tickers = self.get_assets_info(cat="eqty", as_dict=True)
-        if not any(ticker.upper() in tickers for ticker in tg_data_req["tickers"]):
-            raise ValueError(
-                "Assets are not available. To explore available assets use assets property."
-            )
+        if any(ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']) and \
+                any(field in self.fields['eqty'] for field in tg_data_req['fields']):
+            try:
+                df = self.get_all_tickers(data_req, data_type='iex')
 
-        # loop through tickers
-        for ticker in tg_data_req["tickers"]:
+            except Exception as e:
+                logging.warning(e)
 
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < tg_data_req["trials"]:
-
-                try:  # try get request
-                    url = f"https://api.tiingo.com/iex/{ticker}/prices"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Token {self.api_key}",
-                    }
-                    params = {
-                        "startDate": tg_data_req["start_date"],
-                        "endDate": tg_data_req["end_date"],
-                        "resampleFreq": tg_data_req["freq"],
-                    }
-                    r = requests.get(url, headers=headers, params=params)
-                    r.raise_for_status()
-                    assert len(r.json()) != 0
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(tg_data_req["pause"])
-                    logging.warning(
-                        f"Failed to get data for {ticker} after attempt #{str(attempts)}."
-                    )
-                    if attempts == tg_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to get data for {ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    df0 = pd.DataFrame(r.json())
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = ticker.upper()
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
+            else:
+                return df
 
     def get_crypto(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -499,71 +669,21 @@ class Tiingo(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and crypto OHLCV values (cols).
         """
-        # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_req, data_source="tiingo").convert_to_source()
-        # empty df to add data
-        df = pd.DataFrame()
+        # convert data request parameters to CryptoCompare format
+        tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        tickers = self.get_assets_info(cat="crypto", as_dict=True)
-        if not any(
-            ticker + tg_data_req["quote_ccy"] in tickers
-            for ticker in tg_data_req["tickers"]
-        ):
-            raise ValueError(
-                "Assets are not available."
-                "To explore available assets use assets property."
-            )
+        if any(ticker in self.assets['crypto'] for ticker in tg_data_req['mkts']) and \
+                any(field in self.fields['crypto'] for field in tg_data_req['fields']):
 
-        # loop through tickers
-        for ticker, mkt in zip(tg_data_req["tickers"], tg_data_req["mkts"]):
+            try:
+                df = self.get_all_tickers(data_req, data_type='crypto')
 
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < tg_data_req["trials"]:
+            except Exception as e:
+                logging.warning(e)
 
-                try:  # try get request
-                    url = self.base_url + "crypto/prices"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Token {self.api_key}",
-                    }
-                    params = {
-                        "tickers": mkt,
-                        "startDate": tg_data_req["start_date"],
-                        "endDate": tg_data_req["end_date"],
-                        "resampleFreq": tg_data_req["freq"],
-                    }
-                    r = requests.get(url, headers=headers, params=params)
-                    r.raise_for_status()
-                    assert len(r.json()) != 0
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(tg_data_req["pause"])
-                    logging.warning(
-                        f"Failed to get data for {mkt} after attempt #{str(attempts)}."
-                    )
-                    if attempts == tg_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to get data for {mkt} after many attempts."
-                        )
-                        break
-
-                else:
-                    df0 = pd.DataFrame(r.json()[0]["priceData"])
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = ticker.upper()
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
+            else:
+                return df
 
     def get_fx(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -579,60 +699,47 @@ class Tiingo(DataVendor):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1) and FX OHLC values (cols).
         """
-        # convert data request parameters to Tiingo format
-        tg_data_req = ConvertParams(data_req, data_source="tiingo").convert_to_source()
-        # empty df to add data
-        df = pd.DataFrame()
+        # convert data request parameters to CryptoCompare format
+        tg_data_req = ConvertParams(data_req).to_tiingo()
 
-        # loop through tickers
-        for ticker, mkt in zip(tg_data_req["tickers"], tg_data_req["mkts"]):
+        # check tickers
+        if any(field in self.fields['fx'] for field in tg_data_req['fields']):
 
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < tg_data_req["trials"]:
+            try:
+                df = self.get_all_tickers(data_req, data_type='fx')
 
-                try:  # try get request
-                    url = self.base_url + f"fx/{mkt}/prices"
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Token {self.api_key}",
-                    }
-                    params = {
-                        "tickers": mkt,
-                        "startDate": tg_data_req["start_date"],
-                        "endDate": tg_data_req["end_date"],
-                        "resampleFreq": tg_data_req["freq"],
-                    }
-                    r = requests.get(url, headers=headers, params=params)
-                    r.raise_for_status()
-                    assert len(r.json()) != 0
+            except Exception as e:
+                logging.warning(e)
 
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(tg_data_req["pause"])
-                    logging.warning(
-                        f"Failed to get data for {mkt} after attempt #{str(attempts)}."
-                    )
-                    if attempts == tg_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to get data for {mkt} after many attempts."
-                        )
-                        break
+            else:
+                return df
 
-                else:
-                    df0 = pd.DataFrame(r.json())
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = mkt.upper()
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
+    def check_params(self, data_req: DataRequest) -> None:
+        """
+        Checks the parameters of the data request before requesting data to reduce API calls
+        and improve efficiency.
 
-        return df
+        """
+        tg_data_req = ConvertParams(data_req).to_tiingo()
+
+        # check cat
+        if data_req.cat is None:
+            raise ValueError(
+                f"Cat cannot be None. Please provide category. Categories include: {self.categories}."
+            )
+
+        # check assets
+        if not any(ticker.upper() in self.assets[data_req.cat] for ticker in tg_data_req['tickers']) and \
+                data_req.cat != 'fx':
+            raise ValueError(
+                f"Selected tickers are not available. Use assets attribute to see available tickers."
+            )
+
+            # check fields
+        if not any(field in self.fields[data_req.cat] for field in tg_data_req['fields']):
+            raise ValueError(
+                f"Selected fields are not available. Use fields attribute to see available fields."
+            )
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -648,38 +755,34 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market or series data
             for selected fields (cols), in tidy format.
         """
-        # empty df
+        logging.info("Retrieving data request from Tiingo...")
+
+        # check data req params
+        self.check_params(data_req)
+
+        # df to store data
         df = pd.DataFrame()
-
-        # check cat
-        if data_req.cat is None:
-            raise ValueError(
-                f"Please provide category. Categories include: {self.categories}."
-            )
-
-        # check fields
-        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError(
-                f"Those fields are not available. Available fields include: {self.fields}."
-            )
 
         # get data
         try:
             # get eqty intraday OHLCV data
             if (
-                data_req.cat == "eqty"
-                and data_req.freq in self.frequencies[: self.frequencies.index("d")]
+                    data_req.cat == "eqty"
+                    and data_req.freq in self.frequencies[: self.frequencies.index("d")]
             ):
                 df = self.get_eqty_iex(data_req)
+
             # get eqty daily OHLCV data
             elif (
-                data_req.cat == "eqty"
-                and data_req.freq in self.frequencies[self.frequencies.index("d") :]
+                    data_req.cat == "eqty"
+                    and data_req.freq in self.frequencies[self.frequencies.index("d"):]
             ):
                 df = self.get_eqty(data_req)
+
             # get crypto OHLCV data
             elif data_req.cat == "crypto":
                 df = self.get_crypto(data_req)
+
             # get fx OHLCV data
             elif data_req.cat == "fx":
                 df = self.get_fx(data_req)
@@ -696,28 +799,3 @@ class Tiingo(DataVendor):
             df = df.loc[:, fields]
 
             return df.sort_index()
-
-    @staticmethod
-    def wrangle_data_resp(
-        data_req: DataRequest, data_resp: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        Wrangle data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from data request.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and market data
-             for selected fields (cols), in tidy format.
-        """
-        # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source="tiingo").tidy_data()
-
-        return df

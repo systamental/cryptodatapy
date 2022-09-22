@@ -1,16 +1,22 @@
-import logging
+from time import sleep
+from typing import Optional, Any, Union, Dict, List
+
 import pandas as pd
 import requests
+import logging
+
 from cryptodatapy.extract.data_vendors.datavendor import DataVendor
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.transform.convertparams import ConvertParams
-from cryptodatapy.transform.wrangle import WrangleData
+from cryptodatapy.transform.wrangle import WrangleData, WrangleInfo
 from cryptodatapy.util.datacredentials import DataCredentials
-from time import sleep
-from typing import Optional, Any, Union
+
 
 # data credentials
 data_cred = DataCredentials()
+
+# url endpoints
+urls = {'assets_info': 'assets', 'fields_info': 'endpoints'}
 
 
 class Glassnode(DataVendor):
@@ -27,7 +33,7 @@ class Glassnode(DataVendor):
             markets: Optional[list[str]] = None,
             market_types: list[str] = ['spot', 'perpetual_future', 'future', 'option'],
             fields: Optional[list[str]] = None,
-            frequencies: list[str] = ['10min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y'],
+            frequencies: list[str] = ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y'],
             base_url: str = data_cred.glassnode_base_url,
             api_key: str = data_cred.glassnode_api_key,
             max_obs_per_call: Optional[int] = None,
@@ -70,7 +76,7 @@ class Glassnode(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if api_key is None:
-            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses " 
+            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses "
                             "keyring to store your api key in DataCredentials.")
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info(data_type=None, as_list=True)
@@ -90,9 +96,20 @@ class Glassnode(DataVendor):
         """
         return None
 
+    def req_assets(self) -> Dict[str, Any]:
+        """
+        Get request for assets info.
+
+        Returns
+        -------
+        dict: dictionary
+            Data response with asset info in json format.
+        """
+        return DataRequest().get_req(url=self.base_url + urls['assets_info'], params={'api_key': self.api_key})
+
     def get_assets_info(self, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
-         Get assets info.
+        Get assets info.
 
         Parameters
         ----------
@@ -102,31 +119,14 @@ class Glassnode(DataVendor):
         Returns
         -------
         assets: list or pd.DataFrame
-            List or dataframe with info for available assets.
+            List or dataframe with info on available assets.
         """
-        try:  # try get request
-            url = data_cred.glassnode_base_url + 'assets'
-            params = {
-                'api_key': self.api_key
-            }
-            r = requests.get(url, params=params)
-            r.raise_for_status()
+        # data req
+        data_resp = self.req_assets()
+        # wrangle data resp
+        assets = WrangleInfo(data_resp).gn_assets_info(as_list=as_list)
 
-        except Exception as e:
-            logging.warning(e)
-            logging.warning(f"Failed to get asset info.")
-
-        else:
-            # format response
-            assets = pd.DataFrame(r.json())
-            # rename cols and set index
-            assets.rename(columns={'symbol': 'ticker'}, inplace=True)
-            assets = assets.set_index('ticker')
-            # asset list
-            if as_list:
-                assets = list(assets.index)
-
-            return assets
+        return assets
 
     @staticmethod
     def get_markets_info():
@@ -134,6 +134,18 @@ class Glassnode(DataVendor):
         Get markets info.
         """
         return None
+
+    def req_fields(self) -> Dict[str, Any]:
+        """
+        Get request for fields info.
+
+        Returns
+        -------
+        dict: dictionary
+            Data response with fields info in json format.
+        """
+        return DataRequest().get_req(url=self.base_url.replace('v1', 'v2') + urls['fields_info'],
+                                     params={'api_key': self.api_key})
 
     def get_fields_info(self, data_type: Optional[str] = None, as_list: bool = False) -> Union[list[str], pd.DataFrame]:
         """
@@ -151,44 +163,12 @@ class Glassnode(DataVendor):
         fields: list or pd.DataFrame
             List or dataframe with info on available fields.
         """
-        try:  # try get request
-            url = 'https://api.glassnode.com/v2/metrics/endpoints'
-            params = {
-                'api_key': self.api_key
-            }
-            r = requests.get(url, params=params)
-            r.raise_for_status()
+        # data req
+        data_resp = self.req_fields()
+        # wrangle data resp
+        fields = WrangleInfo(data_resp).gn_fields_info(data_type=data_type, as_list=as_list)
 
-        except Exception as e:
-            logging.warning(e)
-            logging.warning(f"Failed to get asset info.")
-
-        else:
-            # format response
-            fields = pd.DataFrame(r.json())
-            # create fields and cat cols
-            fields['fields'] = fields.path.str.split(pat='/', expand=True, n=3)[3]
-            fields['categories'] = fields.path.str.split(pat='/', expand=True)[3]
-            # rename and reorder cols, and set index
-            fields.rename(columns={'resolutions': 'frequencies'}, inplace=True)
-            fields = fields.loc[:, ['fields', 'categories', 'tier', 'assets', 'currencies', 'frequencies', 'formats',
-                                    'path']]
-            fields.set_index('fields', inplace=True)
-
-            # filter fields info
-            if data_type == 'market':
-                fields = fields[(fields.categories == 'market') | (fields.categories == 'derivatives')]
-            elif data_type == 'on-chain':
-                fields = fields[(fields.categories != 'market') | (fields.categories != 'derivatives')]
-            elif data_type == 'off-chain':
-                fields = fields[fields.categories == 'institutions']
-            else:
-                fields = fields
-            # fields list
-            if as_list:
-                fields = list(fields.index)
-
-            return fields
+        return fields
 
     @staticmethod
     def get_rate_limit_info():
@@ -197,85 +177,190 @@ class Glassnode(DataVendor):
         """
         return None
 
+    def req_data(self, data_req: DataRequest, ticker: str, field: str) -> Dict[str, Any]:
+        """
+        Submits data request to API.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        ticker: str
+            Requested ticker symbol.
+        field: str
+            Requested field.
+
+        Returns
+        -------
+        data_resp: dict
+            Data response in json format.
+        """
+        # convert data request parameters to CryptoCompare format
+        gn_data_req = ConvertParams(data_req).to_glassnode()
+
+        # set url, params
+        url = self.base_url + field
+        params = {
+            'api_key': self.api_key,
+            'a': ticker,
+            's': gn_data_req['start_date'],
+            'u': gn_data_req['end_date'],
+            'i': gn_data_req['freq'],
+        }
+        # data req
+        data_resp = DataRequest().get_req(url=url, params=params)
+
+        return data_resp
+
+    @staticmethod
+    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame, field: str) -> pd.DataFrame:
+        """
+        Wrangle data response into tidy data format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        data_resp: pd.DataFrame
+            Data response.
+        field: str
+            Requested field.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Wrangled dataframe with DatetimeIndex and selected field values (cols), in tidy format.
+        """
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp).glassnode(field)
+
+        return df
+
+    def get_tidy_data(self, data_req: DataRequest, ticker: str, field: str) -> pd.DataFrame:
+        """
+        Submits data request and wrangles the data response into tidy data format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        ticker: str
+            Requested ticker symbol.
+        field: str
+            Requested field.
+
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with DatetimeIndex and field values (col) wrangled into tidy data format.
+        """
+        # get entire data history
+        df = self.req_data(data_req, ticker=ticker, field=field)
+        # wrangle df
+        df = self.wrangle_data_resp(data_req, df, field)
+
+        return df
+
+    def get_all_fields(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+        """
+        Loops list of tickers, retrieves data in tidy format for each ticker and stores it in a dataframe.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        ticker: str
+            Requested ticker symbol.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with DatetimeIndex and values for fields (cols), in tidy data format.
+        """
+        # convert data request parameters to CryptoCompare format
+        gn_data_req = ConvertParams(data_req).to_glassnode()
+
+        df = pd.DataFrame()  # empty fields df
+        counter = 0  # ohlc counter to avoid requesting OHLC data multiples times
+
+        for field in gn_data_req['fields']:  # loop through fields
+
+            df0 = pd.DataFrame()
+
+            # get tidy data
+            if field == 'market/price_usd_ohlc' and counter == 0:
+                df0 = self.get_tidy_data(data_req, ticker, field)
+                counter += 1
+            elif field != 'market/price_usd_ohlc':
+                df0 = self.get_tidy_data(data_req, ticker, field)
+
+            # add field to fields df
+            if not df0.empty:
+                df = pd.concat([df, df0], axis=1)
+
+        return df
+
+    def check_params(self, data_req: DataRequest) -> None:
+        """
+        Check data request parameters before calling API to improve efficiency.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        """
+        # convert data request parameters to CryptoCompare format
+        gn_data_req = ConvertParams(data_req).to_glassnode()
+
+        # check tickers
+        tickers = self.assets
+        if not all(ticker.upper() in tickers for ticker in gn_data_req['tickers']):
+            raise ValueError(f"Some of the selected assets are not available."
+                             " See assets attribute for a list of available assets.")
+
+        # check fields
+        fields = self.fields
+        if not all(i in fields for i in gn_data_req['fields']):
+            raise ValueError(f"Some of the selected fields are not available."
+                             " See fields attribue for a list of available fields.")
+
+        # check freq
+        if data_req.freq not in self.frequencies:
+            raise ValueError(f"On-chain data is only available for {self.frequencies} frequencies."
+                             f" Change data request frequency and try again.")
+
+        return None
+
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Get market, on-chain or off-chain data.
 
         Parameters
+        ----------
         data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
+            Data request parameters in CryptoDataPy format.
 
         Returns
         -------
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market, on-chain and/or
-            off-chain fields (cols), in tidy format.
+            off-chain fields (cols), in tidy data format.
         """
         # convert data request parameters to CryptoCompare format
-        gn_data_req = ConvertParams(data_req, data_source='glassnode').convert_to_source()
+        gn_data_req = ConvertParams(data_req).to_glassnode()
+
+        # check params
+        self.check_params(data_req)
+
         # empty df to add data
         df = pd.DataFrame()
-
-        # check tickers
-        tickers = self.assets
-        if not any(ticker.upper() in tickers for ticker in gn_data_req['tickers']):
-            raise ValueError(f"Assets are not available. Available assets include {self.assets}.")
-
-        # check fields
-        fields = self.fields
-        if not any(i in fields for i in gn_data_req['fields']):
-            raise ValueError(f"Fields are not available. Available fields include: {self.fields}.")
-
-        # check freq
-        if data_req.freq not in ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q']:
-            raise ValueError(f"On-chain data is only available for {self.frequencies} frequencies."
-                             f" Change data request frequency and try again.")
 
         # loop through tickers and fields
         for ticker in gn_data_req['tickers']:  # loop tickers
 
-            df0 = pd.DataFrame()  # ticker df
-
-            for gn_field, dr_field in zip(gn_data_req['fields'], data_req.fields):  # loop fields
-
-                # set number of attempts and bool for while loop
-                attempts = 0
-                # run a while loop to onchain data in case the attempt fails
-                while attempts < gn_data_req['trials']:
-                    try:  # get request
-                        url = 'https://api.glassnode.com/v1/metrics/' + gn_field
-                        params = {
-                            'api_key': self.api_key,
-                            'a': ticker,
-                            's': gn_data_req['start_date'],
-                            'u': gn_data_req['end_date'],
-                            'i': gn_data_req['freq'],
-                        }
-                        r = requests.get(url, params=params)
-                        r.raise_for_status()
-                        df1 = pd.DataFrame(r.json())
-                        assert not df1.empty
-
-                    except Exception as e:
-                        logging.warning(e)
-                        attempts += 1
-                        sleep(gn_data_req['pause'])
-                        logging.warning(f"Failed to pull {dr_field} data for {ticker} after attempt #{str(attempts)}.")
-                        if attempts == 3:
-                            logging.warning(
-                                f"Failed to pull {dr_field} data for {ticker} after many attempts.")
-                            break
-
-                    else:
-                        # rename val col
-                        if 'v' in df1.columns:
-                            df1.rename(columns={'v': dr_field}, inplace=True)
-                        # wrangle data resp
-                        df2 = self.wrangle_data_resp(data_req, df1)
-                        # add fields to ticker df
-                        df0 = pd.concat([df0, df2], axis=1)
-                        break
-
+            # get all fields for ticker
+            df0 = self.get_all_fields(data_req, ticker)
             # add ticker to index
             df0['ticker'] = ticker.upper()
             df0.set_index(['ticker'], append=True, inplace=True)
@@ -287,26 +372,3 @@ class Glassnode(DataVendor):
         df = df.loc[:, fields]
 
         return df.sort_index()
-
-    @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
-        """
-        Wrangle data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from API.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            Wrangled dataframe with DatetimeIndex (level 0), ticker or institution (level 1), and market, on-chain or
-            off-chain values for selected fields (cols), in tidy format.
-        """
-        # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source='glassnode').tidy_data()
-
-        return df

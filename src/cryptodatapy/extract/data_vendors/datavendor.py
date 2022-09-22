@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+from cryptodatapy.extract.datarequest import DataRequest
+
 
 class DataVendor(ABC):
     """
@@ -376,14 +378,14 @@ class DataVendor(ABC):
         # to be implemented by subclasses
 
     @abstractmethod
-    def get_data(self, data_req) -> pd.DataFrame:
+    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Submits get data request to API.
         """
         # to be implemented by subclasses
 
     @abstractmethod
-    def wrangle_data_resp(self, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(self, data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

@@ -8,7 +8,7 @@ class DataCredentials:
     Stores data credentials used by the CryptoDataPy project for data extraction, storage, etc.
     """
 
-git    # SQL db for structured data
+    # SQL db for structured data
     # postgresql db credentials
     postgresql_db_address: str = None
     postgresql_db_port: str = None

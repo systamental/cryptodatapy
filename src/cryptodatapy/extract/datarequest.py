@@ -1,7 +1,10 @@
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Dict, Any, Optional, Union
+from time import sleep
 
 import pandas as pd
+import requests
+import logging
 import pytz
 
 
@@ -524,3 +527,43 @@ class DataRequest:
             raise TypeError(
                 "Source fields must be a string or list of strings (fields) in data source's format."
             )
+
+    def get_req(self, url: str, params: Dict[str, Union[str, int]],
+                headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
+        """
+        Submits get request to API.
+
+        Parameters
+        ----------
+        url: str
+            Endpoint url for get request. Base urls are stored in DataCredentials.
+        params: dict
+            Dictionary containing parameter values for get request.
+        headers: dict, optional, default None
+            Dictionary containing headers for get request.
+
+        Returns
+        -------
+        resp: dict
+            Data response in JSON format.
+        """
+        # set number of attempts
+        attempts = 0
+        # run a while loop in case the attempt fails
+        while attempts < self.trials:
+
+            # get request
+            try:
+                resp = requests.get(url, params=params, headers=headers)
+                assert resp.status_code == 200
+            # exception
+            except AssertionError as e:
+                logging.warning(e)
+                attempts += 1
+                logging.warning(f"Failed to get data on attempt #{attempts}.")
+                sleep(self.pause)
+                if attempts == 3:
+                    break
+
+            else:
+                return resp.json()

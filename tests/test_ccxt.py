@@ -6,7 +6,7 @@ from cryptodatapy.extract.libraries.ccxt_api import CCXT
 
 
 @pytest.fixture
-def datarequest():
+def data_req():
     return DataRequest()
 
 
@@ -15,182 +15,115 @@ def ccxt():
     return CCXT()
 
 
-def test_categories(ccxt) -> None:
-    """
-    Test categories property.
-    """
-    cx = ccxt
-    assert cx.categories == ["crypto"], "Category should be 'crypto'."
-
-
-def test_categories_error(ccxt) -> None:
-    """
-    Test categories errors.
-    """
-    cx = ccxt
-    with pytest.raises(ValueError):
-        cx.categories = ["real_estate", "art"]
-
-
-def test_exchanges(ccxt) -> None:
-    """
-    Test exchanges property.
-    """
-    cx = ccxt
-    assert "binance" in cx.exchanges, "Exchanges list is missing 'binance'."
-
-
 def test_get_exchanges_info(ccxt) -> None:
     """
     Test get exchanges info method.
     """
-    cx = ccxt
-    assert (
-        cx.get_exchanges_info(exch="ftx").loc["ftx", "name"] == "FTX"
-    ), "Exchanges info is missing 'Binance'."
-
-
-def test_assets(ccxt) -> None:
-    """
-    Test assets property.
-    """
-    cx = ccxt
-    assert "BTC" in cx.assets["binance"], "Assets list is missing 'BTC'."
+    df = ccxt.get_exchanges_info(exch='binance')
+    assert df.loc['binance', 'rateLimit'] == '50'
 
 
 def test_get_assets_info(ccxt) -> None:
     """
     Test get assets info method.
     """
-    cx = ccxt
-    assert (
-        cx.get_assets_info().loc["BTC", "id"] == "BTC"
-    ), "Asset info is missing 'Bitcoin'."
-
-
-def test_markets(ccxt) -> None:
-    """
-    Test markets info method.
-    """
-    cx = ccxt
-    assert "ETH/BTC" in cx.markets["binance"], "Markets list is missing 'ETH/BTC'."
+    df = ccxt.get_assets_info(exch='binance')
+    assert df.loc['BTC', 'id'] == 'BTC'
 
 
 def test_get_markets_info(ccxt) -> None:
     """
-    Test get markets info method.
+    Test get assets info method.
     """
-    cx = ccxt
-    assert (
-        cx.get_markets_info().loc["ETH/BTC", "base"] == "ETH"
-    ), "Markets info is incorrect."
-
-
-def test_market_types(ccxt) -> None:
-    """
-    Test market types.
-    """
-    cx = ccxt
-    assert cx.market_types == [
-        "spot",
-        "future",
-        "perpetual_future",
-        "option",
-    ], "Some market types are missing'."
-
-
-def test_market_types_error(ccxt) -> None:
-    """
-    Test market types errors.
-    """
-    cx = ccxt
-    with pytest.raises(ValueError):
-        cx.market_types = ["swaps"]
-
-
-def test_fields(ccxt) -> None:
-    """
-    Test fields property.
-    """
-    cx = ccxt
-    assert cx.fields == [
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-        "funding_rate",
-    ], "Fields list is missing incorrect."
-
-
-def test_frequencies(ccxt) -> None:
-    """
-    Test frequencies property.
-    """
-    cx = ccxt
-    assert cx.frequencies["binance"] == {
-        "1m": "1m",
-        "3m": "3m",
-        "5m": "5m",
-        "15m": "15m",
-        "30m": "30m",
-        "1h": "1h",
-        "2h": "2h",
-        "4h": "4h",
-        "6h": "6h",
-        "8h": "8h",
-        "12h": "12h",
-        "1d": "1d",
-        "3d": "3d",
-        "1w": "1w",
-        "1M": "1M",
-    }, "Frequencies list is missing 'd'."
-
-
-def test_frequencies_error(ccxt) -> None:
-    """
-    Test frequencies error.
-    """
-    cx = ccxt
-    with pytest.raises(TypeError):
-        cx.frequencies = 5
+    df = ccxt.get_assets_info(exch='binance')
+    assert df.loc['BTC', 'id'] == 'BTC'
 
 
 def test_get_frequencies_info(ccxt) -> None:
     """
-    Test get markets info method.
+    Test get frequencies info method.
     """
-    cx = ccxt
-    assert (
-        cx.get_frequencies_info(exch="ftx")["ftx"]["15m"] == "900"
-    ), "Frequencies info is incorrect."
-
-
-def test_rate_limit(ccxt) -> None:
-    """
-    Test rate limit property.
-    """
-    cx = ccxt
-    assert cx.rate_limit["binance"] == 50, "Rate limit is incorrect'."
+    freq = ccxt.get_frequencies_info(exch='binance')
+    assert freq == {'1s': '1s', '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m',
+                    '30m': '30m', '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h',
+                    '8h': '8h', '12h': '12h', '1d': '1d', '3d': '3d', '1w': '1w',
+                    '1M': '1M'}, "Wrong data frequencies for binance."
 
 
 def test_get_rate_limit_info(ccxt) -> None:
     """
     Test get rate limit info method.
     """
-    cx = ccxt
-    assert (
-        cx.get_rate_limit_info(exch="ftx")["ftx"] == 28.57
-    ), "Rate limit info is incorrect."
+    rate_limit = ccxt.get_rate_limit_info(exch='binance')['binance']
+    assert rate_limit == 50, "Rate limit should be 50 for binance"
 
 
-def test_get_ohlcv(ccxt, datarequest) -> None:
+def test_integration_get_all_ohlcv_hist(ccxt, data_req) -> None:
     """
-    Test get OHLCV data method.
+    Test integration of req_data in a loop until the full data history has been retrieved.
     """
-    cx = ccxt
-    data_req = datarequest
-    df = cx.get_ohlcv(data_req)
+    df = ccxt.get_all_ohlcv_hist(data_req, ticker='BTC/USDT')
+    assert not df.empty
+    assert pd.to_datetime(df.datetime.min(), unit='ms') <= pd.Timestamp('2019-09-08 00:00:00'), \
+        "Wrong index start date."  # start date
+
+
+def test_integration_get_all_funding_hist(ccxt) -> None:
+    """
+    Test integration of req_data in a loop until the full data history has been retrieved.
+    """
+
+    data_req = DataRequest(mkt_type='perpetual_future')
+    df = ccxt.get_all_funding_hist(data_req, ticker='BTC/USDT')
+    assert not df.empty
+    assert df.datetime.min() <= '2019-09-10T08:00:00.000Z', "Wrong funding rates start date."  # start date
+
+
+@pytest.fixture
+def ccxt_data_resp():
+    return pd.read_csv('tests/data/ccxt_ohlcv_df.csv', index_col=0)
+
+
+def test_wrangle_data_resp(ccxt, data_req, ccxt_data_resp) -> None:
+    """
+    Test wrangling of data response from get_all_data_hist into tidy data format.
+    """
+    df = ccxt.wrangle_data_resp(data_req, ccxt_data_resp)
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert (df == 0).sum().sum() == 0, "Found zero values."  # 0s
+    assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
+    assert list(df.columns) == ["open", "high", "low", "close", "volume"], \
+        "Fields are missing from dataframe."  # fields
+    assert df.index[0] == pd.Timestamp('2017-08-17 00:00:00'), "Wrong start date."  # start date
+    assert isinstance(
+        df.close.dropna().iloc[-1], np.float64
+    ), "Close is not a numpy float."  # dtypes
+
+
+def test_check_params(ccxt) -> None:
+    """
+    Test parameter values before calling API.
+    """
+    data_req = DataRequest(fields='funding_rate')  # check mkt type
+    with pytest.raises(ValueError):
+        ccxt.check_params(data_req)
+    data_req = DataRequest(tickers='notaticker')  # check tickers
+    with pytest.raises(ValueError):
+        ccxt.check_params(data_req)
+    data_req = DataRequest(fields='notafield')  # check fields
+    with pytest.raises(ValueError):
+        ccxt.check_params(data_req)
+    data_req = DataRequest(freq='tick')
+    with pytest.raises(ValueError):
+        ccxt.check_params(data_req)
+
+
+def test_integration_get_ohlcv(ccxt, data_req) -> None:
+    """
+    Test integration of get_ohlcv method.
+    """
+
+    df = ccxt.get_ohlcv(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
         df.index, pd.MultiIndex
@@ -219,21 +152,13 @@ def test_get_ohlcv(ccxt, datarequest) -> None:
     ), "Close is not a numpy float."  # dtypes
 
 
-# TODO: add open interest test
-# def test_open_interest(ccxt) -> None:
-#     """
-#     Test get funding rates data method.
-#     """
-#     pass
-
-
 def test_get_funding_rates(ccxt) -> None:
     """
-    Test get funding rates data method.
+    Test integration of get_funding_rates method.
     """
-    cx = ccxt
+
     data_req = DataRequest(mkt_type="perpetual_future")
-    df = cx.get_funding_rates(data_req)
+    df = ccxt.get_funding_rates(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
         df.index, pd.MultiIndex
@@ -258,17 +183,16 @@ def test_get_funding_rates(ccxt) -> None:
     ), "Funding rate is not a numpy float."  # dtypes
 
 
-def test_get_data_integration(ccxt) -> None:
+def test_integration_get_data(ccxt) -> None:
     """
     Test get data methods integration.
     """
-    cx = ccxt
     data_req = DataRequest(
         tickers=["btc", "eth"],
         fields=["close", "funding_rate"],
         mkt_type="perpetual_future",
     )
-    df = cx.get_data(data_req)
+    df = ccxt.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
         df.index, pd.MultiIndex

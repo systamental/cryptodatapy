@@ -1,119 +1,129 @@
 import numpy as np
 import pandas as pd
 import pytest
+import responses
+import json
 
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.util.datacredentials import DataCredentials
+from cryptodatapy.transform.wrangle import WrangleInfo, WrangleData
+
+# url endpoints
+base_url = DataCredentials().glassnode_base_url
+urls = {'assets_info': 'assets', 'fields_info': 'endpoints'}
 
 
 @pytest.fixture
-def datarequest():
+def data_req():
     return DataRequest()
 
 
 @pytest.fixture
-def glassnode():
+def gn():
     return Glassnode()
 
 
-def test_categories(glassnode) -> None:
+@pytest.fixture
+def gn_req_assets():
+    with open('tests/data/gn_assets_req.json') as f:
+        return json.load(f)
+
+@responses.activate
+def test_req_assets(gn_req_assets, gn):
     """
-    Test categories property.
+    Test get request for assets info.
     """
-    gn = glassnode
-    assert gn.categories == ["crypto"], "Category should be 'crypto'."
+    url = base_url + urls['assets_info'] + '?api_key=' + gn.api_key
+    responses.add(responses.GET, url, json=gn_req_assets, status=200)
+
+    req_assets = gn.req_assets()
+    assert req_assets == gn_req_assets
 
 
-def test_categories_error(glassnode) -> None:
+
+@pytest.fixture
+def gn_req_fields():
+    with open('tests/data/gn_fields_req.json') as f:
+        return json.load(f)
+
+
+@responses.activate
+def test_req_fields(gn_req_fields, gn):
     """
-    Test categories errors.
+    Test get request for fields info.
     """
-    gn = glassnode
+    url = base_url.replace('v1', 'v2') + urls['fields_info'] + '?api_key=' + gn.api_key
+    responses.add(responses.GET, url, json=gn_req_fields, status=200)
+
+    req_fields = gn.req_fields()
+    assert req_fields == gn_req_fields
+
+
+@pytest.fixture
+def gn_req_data():
+    with open('tests/data/gn_data_req.json') as f:
+        return json.load(f)
+
+
+@responses.activate
+def test_req_data(gn_req_data, data_req, gn):
+    """
+    Test get request for data.
+    """
+    url = base_url + 'addresses/count' + '?api_key=' + gn.api_key + '&a=btc&s=1230940800&i=24h'
+    responses.add(responses.GET, url, json=gn_req_data, status=200)
+
+    req_data = gn.req_data(data_req, ticker='btc', field='addresses/count')
+    assert req_data == gn_req_data
+
+
+def test_wrangle_data_resp(data_req, gn, gn_req_data) -> None:
+    """
+    Test wrangling of data response into tidy data format.
+    """
+    df = gn.wrangle_data_resp(data_req, gn_req_data , field='addresses/count')
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert df.shape[1] == 1, "Dataframe should only have 1 column."  # shape
+    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
+    assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
+    assert list(df.columns) == ["add_tot"], "Column name is incorrect."  # fields
+    assert df.index[0] == pd.Timestamp('2009-01-03 00:00:00'), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1] < pd.Timedelta(days=3), \
+        "End date is more than 72h ago."  # end date
+    assert isinstance(df.add_tot.iloc[-1], np.int64), "Total addresses should be a numpy int."  # dtypes
+
+
+def test_integration_get_all_fields(gn) ->  None:
+    """
+    Test integration of req_data, wrangle_data_resp (get_tidy_data) to retrieve data for all fields
+    by looping through fields and adding them to a dataframe.
+    """
+    data_req = DataRequest(fields=['open', 'high', 'low', 'close', 'add_act', 'tx_count', 'issuance'])
+    df = gn.get_all_fields(data_req, ticker='btc')
+    assert set(df.columns) == {'open', 'high', 'low', 'close', 'add_act', 'tx_count', 'issuance'}
+
+
+def test_check_params(gn) -> None:
+    """
+    Test parameter values before calling API.
+    """
+    data_req = DataRequest(tickers=['ADA', 'BTC'])
     with pytest.raises(ValueError):
-        gn.categories = ["real_estate", "art"]
-
-
-def test_assets(glassnode) -> None:
-    """
-    Test assets property.
-    """
-    gn = glassnode
-    assert "BTC" in gn.assets, "Assets list is missing 'BTC'."
-
-
-def test_get_assets_info(glassnode) -> None:
-    """
-    Test get assets info method.
-    """
-    gn = glassnode
-    assert (
-        gn.get_assets_info().loc["BTC", "name"] == "Bitcoin"
-    ), "Asset info is missing 'Bitcoin'."
-
-
-def test_market_types(glassnode) -> None:
-    """
-    Test market types.
-    """
-    gn = glassnode
-    assert gn.market_types == [
-        "spot",
-        "perpetual_future",
-        "future",
-        "option",
-    ], "Some market types are missing'."
-
-
-def test_market_types_error(glassnode) -> None:
-    """
-    Test market types errors.
-    """
-    gn = glassnode
+        gn.check_params(data_req)
+    data_req = DataRequest(fields=['close', 'volume'])
     with pytest.raises(ValueError):
-        gn.market_types = ["swaps"]
+        gn.check_params(data_req)
+    data_req = DataRequest(freq='tick')
+    with pytest.raises(ValueError):
+        gn.check_params(data_req)
 
 
-def test_fields_close(glassnode) -> None:
-    """
-    Test close field.
-    """
-    gn = glassnode
-    assert "market/price_usd_ohlc" in gn.fields, "Fields list is missing 'price_close'."
-
-
-def test_fields_active_addresses(glassnode) -> None:
-    """
-    Test active addresses field.
-    """
-    gn = glassnode
-    assert "addresses/active_count" in gn.fields, "Fields list is missing 'AdrActCnt'."
-
-
-def test_frequencies(glassnode) -> None:
-    """
-    Test frequencies.
-    """
-    gn = glassnode
-    assert "d" in gn.frequencies, "Frequencies list is missing 'd'."
-
-
-def test_frequencies_error(glassnode) -> None:
-    """
-    Test frequencies error.
-    """
-    gn = glassnode
-    with pytest.raises(TypeError):
-        gn.frequencies = 5
-
-
-def test_get_data_integration(glassnode) -> None:
+def test_get_data_integration(gn) -> None:
     """
     Test integration of data retrieval methods.
     """
-    gn = glassnode
-    data_req = DataRequest(
-        tickers=["btc", "eth"], freq="d", fields=["close", "add_act", "tx_count"]
-    )
+    data_req = DataRequest(tickers=["btc", "eth"], freq="d", fields=["close", "add_act", "tx_count"])
     df = gn.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(

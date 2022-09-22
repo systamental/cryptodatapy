@@ -7,40 +7,52 @@ from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
 
 
 @pytest.fixture
-def dbnomics():
+def db():
     return DBnomics()
 
 
-def test_categories(dbnomics) -> None:
-    """
-    Test categories property.
-    """
-    db = dbnomics
-    assert db.categories == ["macro"], "Incorrect categories."
+@pytest.fixture
+def data_req():
+    return DataRequest()
 
 
-def test_categories_error(dbnomics) -> None:
+@pytest.fixture
+def db_data_req():
+    return pd.read_csv('tests/data/db_series_df.csv', index_col=0)
+
+
+def test_wrangle_data_resp(db, data_req, db_data_req) -> None:
     """
-    Test categories errors.
+    Test wrangling of data response into tidy data format.
     """
-    db = dbnomics
+    df = db.wrangle_data_resp(data_req, db_data_req)
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert df.shape[1] == 1, "Dataframe should have one column."
+    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
+    assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
+    assert list(df.columns) == ['actual'], "Missing columns."  # fields
+    assert isinstance(df.actual.iloc[-1], np.float64), "Actual should be a numpy float."  # dtypes
+
+
+def test_check_params(db) -> None:
+    """
+    Test parameter values before calling API.
+    """
+    data_req = DataRequest(cat='crypto')
     with pytest.raises(ValueError):
-        db.categories = ["real_estate", "art"]
+        db.check_params(data_req)
+    data_req = DataRequest(freq='tick')
+    with pytest.raises(ValueError):
+        db.check_params(data_req)
+    data_req = DataRequest(fields=['forecasts'])
+    with pytest.raises(ValueError):
+        db.check_params(data_req)
 
 
-def test_fields(dbnomics) -> None:
+def test_integration_get_data(db) -> None:
     """
-    Test fields property.
+    Test integration of get data method.
     """
-    db = dbnomics
-    assert db.fields["macro"] == ["actual"], "Fields for macro cat are incorrect."
-
-
-def test_get_data(dbnomics) -> None:
-    """
-    Test get data method.
-    """
-    db = dbnomics
     data_req = DataRequest(
         tickers=[
             "US_GDP_Sh_PPP",

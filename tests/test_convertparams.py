@@ -24,18 +24,12 @@ def datarequest():
 )
 def test_convert_tickers(dr_tickers, cv_tickers) -> None:
     """
-    Test tickers parameter conversion to CryptoCompare, CCXT and Alpha Vantage-daily formats.
+    Test tickers parameter conversion to CryptoCompare and CCXT formats.
     """
     data_req = DataRequest(tickers=dr_tickers)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cc_params["tickers"] == cv_tickers, "Tickers parameter conversion failed."
-    cc_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
-    assert cc_params["tickers"] == cv_tickers, "Tickers parameter conversion failed."
-    cc_params = ConvertParams(
-        data_source="av-daily", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_ccxt()
     assert cc_params["tickers"] == cv_tickers, "Tickers parameter conversion failed."
 
 
@@ -48,9 +42,7 @@ def test_convert_tg_tickers(dr_tickers, tg_tickers) -> None:
     Test tickers parameter conversion to Tiingo format.
     """
     data_req = DataRequest(tickers=dr_tickers)
-    tg_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    tg_params = ConvertParams(data_req=data_req).to_tiingo()
     assert tg_params["tickers"] == tg_tickers, "Tickers parameter conversion failed."
 
 
@@ -62,9 +54,7 @@ def test_convert_tg_fx_tickers(dr_tickers, tg_tickers) -> None:
     Test fx tickers parameter conversion to Tiingo format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    tg_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    tg_params = ConvertParams(data_req=data_req).to_tiingo()
     assert tg_params["tickers"] == tg_tickers, "Tickers parameter conversion failed."
 
 
@@ -76,9 +66,7 @@ def test_convert_ip_fx_tickers(dr_tickers, ip_tickers) -> None:
     Test fx tickers parameter conversion to InvestPy format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
 
 
@@ -94,9 +82,7 @@ def test_convert_ip_eqty_tickers(dr_tickers, ip_tickers) -> None:
     Test eqty tickers parameter conversion to InvestPy format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="eqty")
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
 
 
@@ -116,9 +102,7 @@ def test_convert_ip_macro_tickers(dr_tickers, ip_tickers) -> None:
     Test macro tickers parameter conversion to InvestPy format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="macro")
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
 
 
@@ -137,9 +121,7 @@ def test_convert_db_tickers(dr_tickers, db_tickers) -> None:
     Test tickers parameter conversion to DBnomics format.
     """
     data_req = DataRequest(tickers=dr_tickers)
-    db_params = ConvertParams(
-        data_source="dbnomics", data_req=data_req
-    ).convert_to_source()
+    db_params = ConvertParams(data_req=data_req).to_dbnomics()
     assert db_params["tickers"] == db_tickers, "Tickers parameter conversion failed."
 
 
@@ -158,26 +140,8 @@ def test_convert_fred_tickers(dr_tickers, fred_tickers) -> None:
     Test tickers parameter conversion to Fred format.
     """
     data_req = DataRequest(tickers=dr_tickers)
-    fred_params = ConvertParams(
-        data_source="fred", data_req=data_req
-    ).convert_to_source()
-    assert (
-        fred_params["tickers"] == fred_tickers
-    ), "Tickers parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_tickers, av_tickers", [("eur", ["eur"]), (["gbp", "cad"], ["gbp", "cad"])]
-)
-def test_convert_av_fx_tickers(dr_tickers, av_tickers) -> None:
-    """
-    Test fx tickers parameter conversion to Alpha Vantage fx format.
-    """
-    data_req = DataRequest(tickers=dr_tickers)
-    av_params = ConvertParams(
-        data_source="av-forex-daily", data_req=data_req
-    ).convert_to_source()
-    assert av_params["tickers"] == av_tickers, "Tickers parameter conversion failed."
+    fred_params = ConvertParams(data_req=data_req).to_fred()
+    assert fred_params["tickers"] == fred_tickers, "Tickers parameter conversion failed."
 
 
 # fx mkts
@@ -190,26 +154,7 @@ def test_convert_tickers_to_ip_fx_mkts(dr_tickers, fx_mkts) -> None:
     Test tickers to markets parameter conversion for Coin Metrics format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    cm_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
-    assert (
-        cm_params["mkts"] == fx_mkts
-    ), "Tickers to markets parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_tickers, fx_mkts",
-    [(["cad", "eur", "jpy"], ["USD/CAD", "EUR/USD", "USD/JPY"]), ("mxn", ["USD/MXN"])],
-)
-def test_convert_tickers_to_av_fx_mkts(dr_tickers, fx_mkts) -> None:
-    """
-    Test tickers to markets parameter conversion for Coin Metrics format.
-    """
-    data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    cm_params = ConvertParams(
-        data_source="av-forex-daily", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_investpy()
     assert (
         cm_params["mkts"] == fx_mkts
     ), "Tickers to markets parameter conversion failed."
@@ -224,9 +169,7 @@ def test_convert_tickers_to_tg_fx_mkts(dr_tickers, fx_mkts) -> None:
     Test tickers to markets parameter conversion for Coin Metrics format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    cm_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_tiingo()
     assert (
         cm_params["mkts"] == fx_mkts
     ), "Tickers to markets parameter conversion failed."
@@ -242,9 +185,7 @@ def test_convert_tickers_to_cm_mkts(dr_tickers, cm_mkts) -> None:
     Test tickers to markets parameter conversion for Coin Metrics format.
     """
     data_req = DataRequest(tickers=dr_tickers)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert (
         cm_params["mkts"] == cm_mkts
     ), "Tickers to markets parameter conversion failed."
@@ -262,9 +203,7 @@ def test_convert_mkt_types_to_cm_mkts(dr_mkt_types, cm_mkts) -> None:
     Test market type to markets parameter conversion for Coin Metrics format.
     """
     data_req = DataRequest(mkt_type=dr_mkt_types)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert (
         cm_params["mkts"] == cm_mkts
     ), "Market type to markets parameter conversion failed."
@@ -284,9 +223,7 @@ def test_convert_exchange_to_cm_mkts(dr_exch, cm_mkts) -> None:
     Test exchange to markets parameter conversion for Coin Metrics format.
     """
     data_req = DataRequest(exch=dr_exch, mkt_type="perpetual_future")
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert (
         cm_params["mkts"] == cm_mkts
     ), "Exchange to markets parameter conversion failed."
@@ -306,7 +243,7 @@ def test_convert_exch_to_cx_mkts(dr_exch, cx_mkts) -> None:
     Test exchange to markets parameter conversion for CCXT format.
     """
     data_req = DataRequest(exch=dr_exch, mkt_type="perpetual_future")
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     assert (
         cx_params["mkts"] == cx_mkts
     ), "Exchange to markets parameter conversion failed."
@@ -321,7 +258,7 @@ def test_convert_mkt_types_to_cx_mkts(dr_mkt_types, cx_mkts) -> None:
     Test market type to markets parameter conversion for CCXT format.
     """
     data_req = DataRequest(mkt_type=dr_mkt_types, exch="ftx")
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     assert (
         cx_params["mkts"] == cx_mkts
     ), "Market type to markets parameter conversion failed."
@@ -343,9 +280,7 @@ def test_convert_cc_freq(dr_freq, cc_freq) -> None:
     Test frequency parameter conversion to CryptoCompare format.
     """
     data_req = DataRequest(freq=dr_freq)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cc_params["freq"] == cc_freq, "Frequency parameter conversion failed."
 
 
@@ -366,9 +301,7 @@ def test_convert_cm_freq(dr_freq, cm_freq) -> None:
     Test frequency parameter conversion to Coin Metrics format.
     """
     data_req = DataRequest(freq=dr_freq)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cm_params["freq"] == cm_freq, "Frequency parameter conversion failed."
 
 
@@ -376,13 +309,13 @@ def test_convert_cm_freq(dr_freq, cm_freq) -> None:
     "dr_freq, cx_freq",
     [
         ("tick", "tick"),
-        ("5min", "5m"),
+        ("5min", "1m"),
         ("d", "1d"),
-        ("w", "1w"),
-        ("m", "1M"),
-        ("3m", "3M"),
-        ("q", "1q"),
-        ("y", "1y"),
+        ("w", "1d"),
+        ("m", "1d"),
+        ("3m", "1d"),
+        ("q", "1d"),
+        ("y", "1d"),
     ],
 )
 def test_convert_cx_freq(dr_freq, cx_freq) -> None:
@@ -390,7 +323,7 @@ def test_convert_cx_freq(dr_freq, cx_freq) -> None:
     Test frequency parameter conversion to CCXT format.
     """
     data_req = DataRequest(freq=dr_freq)
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cx_params["freq"] == cx_freq, "Frequency parameter conversion failed."
 
 
@@ -409,9 +342,7 @@ def test_convert_gn_freq(dr_freq, gn_freq) -> None:
     Test frequency parameter conversion to Glassnode format.
     """
     data_req = DataRequest(freq=dr_freq)
-    gn_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    gn_params = ConvertParams(data_req=data_req).to_glassnode()
     assert gn_params["freq"] == gn_freq, "Frequency parameter conversion failed."
 
 
@@ -429,9 +360,7 @@ def test_convert_tg_freq(dr_freq, tg_freq) -> None:
     Test frequency parameter conversion to Tiingo format.
     """
     data_req = DataRequest(freq=dr_freq)
-    tg_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    tg_params = ConvertParams(data_req=data_req).to_tiingo()
     assert tg_params["freq"] == tg_freq, "Frequency parameter conversion failed."
 
 
@@ -447,9 +376,7 @@ def test_convert_ip_freq(dr_freq, ip_freq) -> None:
     Test frequency parameter conversion to InvestPy format (non-macro categories).
     """
     data_req = DataRequest(freq=dr_freq, cat="rates")
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["freq"] == ip_freq, "Frequency parameter conversion failed."
 
 
@@ -464,30 +391,18 @@ def test_convert_ip_freq(dr_freq, ip_freq) -> None:
 )
 def test_convert_quote_ccy(dr_ccy, cv_ccy) -> None:
     """
-    Test quote currency parameter conversion to CryptoCompare, Glassnode, Alpha Vantage-fx and InvestPy formats.
+    Test quote currency parameter conversion to CryptoCompare, Glassnode and InvestPy formats.
     """
     data_req = DataRequest(quote_ccy=dr_ccy)
-    cv_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert (
         cv_params["quote_ccy"] == cv_ccy
     ), "Quote currency parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_glassnode()
     assert (
         cv_params["quote_ccy"] == cv_ccy
     ), "Quote currency parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="av-forex-daily", data_req=data_req
-    ).convert_to_source()
-    assert (
-        cv_params["quote_ccy"] == cv_ccy
-    ), "Quote currency parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_investpy()
     assert (
         cv_params["quote_ccy"] == cv_ccy
     ), "Quote currency parameter conversion failed."
@@ -506,9 +421,7 @@ def test_convert_cm_quote_ccy(dr_ccy, cm_ccy) -> None:
     Test quote currency parameter conversion to Coin Metrics format.
     """
     data_req = DataRequest(quote_ccy=dr_ccy)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert (
         cm_params["quote_ccy"] == cm_ccy
     ), "Quote currency parameter conversion failed."
@@ -527,7 +440,7 @@ def test_convert_cx_quote_ccy(dr_ccy, cx_ccy) -> None:
     Test quote currency parameter conversion to CCXT format.
     """
     data_req = DataRequest(quote_ccy=dr_ccy)
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     assert (
         cx_params["quote_ccy"] == cx_ccy
     ), "Quote currency parameter conversion failed."
@@ -546,9 +459,7 @@ def test_convert_tg_quote_ccy(dr_ccy, tg_ccy) -> None:
     Test quote currency parameter conversion to Tiingo format.
     """
     data_req = DataRequest(quote_ccy=dr_ccy)
-    tg_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    tg_params = ConvertParams(data_req=data_req).to_tiingo()
     assert (
         tg_params["quote_ccy"] == tg_ccy
     ), "Quote currency parameter conversion failed."
@@ -567,9 +478,7 @@ def test_convert_cc_exchange(dr_exch, cc_exch) -> None:
     Test exchange parameter conversion to CryptoCompare format.
     """
     data_req = DataRequest(exch=dr_exch)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cc_params["exch"] == cc_exch, "Exchange parameter conversion failed."
 
 
@@ -585,9 +494,7 @@ def test_convert_cm_exchange(dr_exch, cm_exch) -> None:
     Test exchange parameter conversion to Coin Metrics format.
     """
     data_req = DataRequest(exch=dr_exch)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cm_params["exch"] == cm_exch, "Exchange parameter conversion failed."
 
 
@@ -607,7 +514,7 @@ def test_convert_cx_exchange(dr_exch, cx_exch) -> None:
     Test exchange parameter conversion to CCXT format.
     """
     data_req = DataRequest(exch=dr_exch, mkt_type="perpetual_future")
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     assert cx_params["exch"] == cx_exch, "Exchange parameter conversion failed."
 
 
@@ -622,9 +529,7 @@ def test_convert_tg_exchange(dr_exch, tg_exch) -> None:
     Test exchange parameter conversion to Tiingo format.
     """
     data_req = DataRequest(exch=dr_exch, cat="eqty", freq="5min")
-    tg_params = ConvertParams(
-        data_source="tiingo", data_req=data_req
-    ).convert_to_source()
+    tg_params = ConvertParams(data_req=data_req).to_tiingo()
     assert tg_params["exch"] == tg_exch, "Exchange parameter conversion failed."
 
 
@@ -641,9 +546,7 @@ def test_convert_tickers_to_ctys(dr_tickers, ip_ctys) -> None:
     Test tickers to countries parameter conversion in InvestPy format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="macro")
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert (
         ip_params["ctys"] == ip_ctys
     ), "Tickers to countries parameter conversion failed."
@@ -664,9 +567,7 @@ def test_convert_cc_start_date(dr_sd, cc_sd) -> None:
     Test start date parameter conversion to CryptoCompare format.
     """
     data_req = DataRequest(start_date=dr_sd)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cc_params["start_date"] == cc_sd, "Start date parameter conversion failed."
 
 
@@ -684,7 +585,7 @@ def test_convert_cx_start_date(dr_sd, cx_sd) -> None:
     Test start date parameter conversion to CCXT format.
     """
     data_req = DataRequest(start_date=dr_sd)
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     assert cx_params["start_date"] == cx_sd, "Start date parameter conversion failed."
 
 
@@ -702,16 +603,14 @@ def test_convert_gn_start_date(dr_sd, gn_sd) -> None:
     Test start date parameter conversion to Glassnode format.
     """
     data_req = DataRequest(start_date=dr_sd)
-    gn_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    gn_params = ConvertParams(data_req=data_req).to_glassnode()
     assert gn_params["start_date"] == gn_sd, "Start date parameter conversion failed."
 
 
 @pytest.mark.parametrize(
     "dr_sd, ip_sd",
     [
-        (None, "01/01/1960"),
+        (None, "01/01/1970"),
         ("2015-01-01", "01/01/2015"),
         (datetime(2015, 1, 1), "01/01/2015"),
         (pd.Timestamp("2015-01-01 00:00:00"), "01/01/2015"),
@@ -722,9 +621,7 @@ def test_convert_ip_start_date(dr_sd, ip_sd) -> None:
     Test start date parameter conversion to InvestPy format.
     """
     data_req = DataRequest(start_date=dr_sd)
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["start_date"] == ip_sd, "Start date parameter conversion failed."
 
 
@@ -739,22 +636,12 @@ def test_convert_ip_start_date(dr_sd, ip_sd) -> None:
 )
 def test_convert_start_date(dr_sd, cv_sd) -> None:
     """
-    Test start date parameter conversion to Fred, Alpha Vantage-daily, Alpha Vantage-forex and Yahoo formats.
+    Test start date parameter conversion to Fred and Yahoo formats.
     """
     data_req = DataRequest(start_date=dr_sd)
-    cv_params = ConvertParams(data_source="fred", data_req=data_req).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_fred()
     assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="av-daily", data_req=data_req
-    ).convert_to_source()
-    assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="av-forex-daily", data_req=data_req
-    ).convert_to_source()
-    assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="yahoo", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_yahoo()
     assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
 
 
@@ -773,9 +660,7 @@ def test_convert_cc_end_date(dr_ed, cc_ed) -> None:
     Test end date parameter conversion to CryptoCompare format.
     """
     data_req = DataRequest(end_date=dr_ed)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     if dr_ed is None:
         assert (
             pd.to_datetime(cc_params["end_date"], unit="s").date()
@@ -799,7 +684,7 @@ def test_convert_cx_end_date(dr_ed, cx_ed) -> None:
     Test end date parameter conversion to CCXT format.
     """
     data_req = DataRequest(end_date=dr_ed)
-    cx_params = ConvertParams(data_source="ccxt", data_req=data_req).convert_to_source()
+    cx_params = ConvertParams(data_req=data_req).to_ccxt()
     if dr_ed is None:
         assert (
             pd.to_datetime(cx_params["end_date"], unit="ms").date()
@@ -823,9 +708,7 @@ def test_convert_gn_end_date(dr_ed, gn_ed) -> None:
     Test end date parameter conversion to Glassnode format.
     """
     data_req = DataRequest(end_date=dr_ed)
-    gn_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    gn_params = ConvertParams(data_req=data_req).to_glassnode()
     assert gn_params["end_date"] == gn_ed, "End date parameter conversion failed."
 
 
@@ -843,9 +726,7 @@ def test_convert_ip_end_date(dr_ed, ip_ed) -> None:
     Test end date parameter conversion to InvestPy format.
     """
     data_req = DataRequest(end_date=dr_ed)
-    ip_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    ip_params = ConvertParams(data_req=data_req).to_investpy()
     assert ip_params["end_date"] == ip_ed, "End date parameter conversion failed."
 
 
@@ -860,30 +741,18 @@ def test_convert_ip_end_date(dr_ed, ip_ed) -> None:
 )
 def test_convert_end_date(dr_ed, cv_ed) -> None:
     """
-    Test end date parameter conversion to Tiingo, Fred, Alpha Vantage-daily and Yahoo formats.
+    Test end date parameter conversion to Tiingo, Fred and Yahoo formats.
     """
     data_req = DataRequest(end_date=dr_ed)
     if dr_ed is None:
-        cv_params = ConvertParams(
-            data_source="tiingo", data_req=data_req
-        ).convert_to_source()
+        cv_params = ConvertParams(data_req=data_req).to_tiingo()
         assert cv_params["end_date"].date() == datetime.utcnow().date()
     else:
-        cv_params = ConvertParams(
-            data_source="tiingo", data_req=data_req
-        ).convert_to_source()
+        cv_params = ConvertParams(data_req=data_req).to_tiingo()
         assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
-        cv_params = ConvertParams(
-            data_source="fred", data_req=data_req
-        ).convert_to_source()
+        cv_params = ConvertParams(data_req=data_req).to_fred()
         assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
-        cv_params = ConvertParams(
-            data_source="av-daily", data_req=data_req
-        ).convert_to_source()
-        assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
-        cv_params = ConvertParams(
-            data_source="yahoo", data_req=data_req
-        ).convert_to_source()
+        cv_params = ConvertParams(data_req=data_req).to_yahoo()
         assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
 
 
@@ -903,13 +772,9 @@ def test_convert_fields(dr_fields, cv_fields) -> None:
     Test fields parameter conversion to InvestPy and Yahoo formats.
     """
     data_req = DataRequest(fields=dr_fields)
-    cv_params = ConvertParams(
-        data_source="investpy", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_investpy()
     assert cv_params["fields"] == cv_fields, "Fields parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="yahoo", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_yahoo()
     assert cv_params["fields"] == cv_fields, "Fields parameter conversion failed."
 
 
@@ -930,9 +795,7 @@ def test_convert_cc_fields(dr_fields, cc_fields) -> None:
     Test fields parameter conversion to CryptoCompare format.
     """
     data_req = DataRequest(fields=dr_fields)
-    cc_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cc_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cc_params["fields"] == cc_fields, "Fields parameter conversion failed."
 
 
@@ -953,9 +816,7 @@ def test_convert_cm_fields(dr_fields, cm_fields) -> None:
     Test fields parameter conversion to Coin Metrics format.
     """
     data_req = DataRequest(fields=dr_fields)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cm_params["fields"] == cm_fields, "Fields parameter conversion failed."
 
 
@@ -971,17 +832,11 @@ def test_convert_utc_tz(dr_tz, cv_tz) -> None:
     Test timezone parameter conversion to Coin Metrics, CryptoCompare adn Glassnode formats.
     """
     data_req = DataRequest(tz=dr_tz)
-    cv_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cv_params["tz"] == cv_tz, "Timezone parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="cryptocompare", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_cryptocompare()
     assert cv_params["tz"] == cv_tz, "Timezone parameter conversion failed."
-    cv_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    cv_params = ConvertParams(data_req=data_req).to_glassnode()
     assert cv_params["tz"] == cv_tz, "Timezone parameter conversion failed."
 
 
@@ -993,20 +848,10 @@ def test_convert_utc_tz(dr_tz, cv_tz) -> None:
 )
 def test_convert_am_tz(dr_tz, am_tz) -> None:
     """
-    Test timezone parameter conversion to Fred, Alpha Vantage-daily and Alpha Vantage-forex formats.
+    Test timezone parameter conversion to Fred.
     """
     data_req = DataRequest(tz=dr_tz)
-    am_params = ConvertParams(data_source="fred", data_req=data_req).convert_to_source()
-    assert am_params["tz"] == am_tz, "Timezone parameter conversion failed."
-    data_req = DataRequest(tz=dr_tz)
-    am_params = ConvertParams(
-        data_source="av-daily", data_req=data_req
-    ).convert_to_source()
-    assert am_params["tz"] == am_tz, "Timezone parameter conversion failed."
-    data_req = DataRequest(tz=dr_tz)
-    am_params = ConvertParams(
-        data_source="av-forex-daily", data_req=data_req
-    ).convert_to_source()
+    am_params = ConvertParams(data_req=data_req).to_fred()
     assert am_params["tz"] == am_tz, "Timezone parameter conversion failed."
 
 
@@ -1023,9 +868,7 @@ def test_convert_cm_inst(dr_inst, cm_inst) -> None:
     Test institution parameter conversion to Coin Metrics format.
     """
     data_req = DataRequest(inst=dr_inst)
-    cm_params = ConvertParams(
-        data_source="coinmetrics", data_req=data_req
-    ).convert_to_source()
+    cm_params = ConvertParams(data_req=data_req).to_coinmetrics()
     assert cm_params["inst"] == cm_inst, "Institution parameter conversion failed."
 
 
@@ -1041,9 +884,7 @@ def test_convert_gn_inst(dr_inst, gn_inst) -> None:
     Test institution parameter conversion to Glassnode format.
     """
     data_req = DataRequest(inst=dr_inst)
-    gn_params = ConvertParams(
-        data_source="glassnode", data_req=data_req
-    ).convert_to_source()
+    gn_params = ConvertParams(data_req=data_req).to_glassnode()
     assert gn_params["inst"] == gn_inst, "Institution parameter conversion failed."
 
 

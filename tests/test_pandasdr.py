@@ -8,97 +8,74 @@ from cryptodatapy.util.datacredentials import DataCredentials
 
 
 @pytest.fixture
-def pandasdr():
+def pdr():
     return PandasDataReader()
 
 
-def test_categories(pandasdr) -> None:
-    """
-    Test categories property.
-    """
-    pdr = pandasdr
-    assert pdr.categories == [
-        "fx",
-        "rates",
-        "eqty",
-        "credit",
-        "macro",
-    ], "Incorrect categories."
+@pytest.fixture
+def fred_data_resp():
+    df = pd.read_csv('tests/data/fred_df.csv', index_col='DATE')
+    df.index = pd.to_datetime(df.index)
+    return df
 
 
-def test_categories_error(pandasdr) -> None:
+def test_wrangle_fred_data_resp(pdr, fred_data_resp) -> None:
     """
-    Test categories errors.
+    Tests wrangling of Fred data response.
     """
-    pdr = pandasdr
+    data_req = DataRequest(data_source='fred', tickers=['US_CB_MB', 'US_UE_Rate'], cat='macro')
+    df = pdr.wrangle_data_resp(data_req, fred_data_resp)
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
+    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
+    assert set(df.index.droplevel(0).unique()) == {'US_CB_MB', 'US_UE_Rate'}, "Columns are missing or incorrect."
+    assert list(df.columns) == ['actual'], "Missing columns."  # fields
+    assert isinstance(df.actual.iloc[-1], np.float64), "Actual should be a numpy float."  # dtypes
+
+
+@pytest.fixture
+def yahoo_data_resp():
+    df = pd.read_csv('tests/data/yahoo_df.csv', header=[0, 1], index_col=0)
+    return df
+
+
+def test_wrangle_yahoo_data_resp(pdr, yahoo_data_resp) -> None:
+    """
+    Tests wrangling of Yahoo data response.
+    """
+    data_req = DataRequest(data_source='yahoo', tickers=['spy', 'tlt', 'gld'])
+    df = pdr.wrangle_data_resp(data_req, yahoo_data_resp)
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
+    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
+    assert set(df.index.droplevel(0).unique()) == {'GLD', 'SPY', 'TLT'}, "Columns are missing or incorrect."
+    assert set(df.columns) == {'close', 'close_adj', 'high', 'low', 'open', 'volume'}, "Missing columns."  # fields
+    assert isinstance(df.close.iloc[-1], np.float64), "Actual should be a numpy float."  # dtypes
+
+
+def test_check_params(pdr) -> None:
+    """
+    Test parameter values before calling API.
+    """
+    data_req = DataRequest()
     with pytest.raises(ValueError):
-        pdr.categories = ["real_estate", "art"]
-
-
-def test_fields(pandasdr) -> None:
-    """
-    Test fields property.
-    """
-    pdr = pandasdr
-    assert pdr.fields == {
-        "fx": ["open", "high", "low", "close", "volume"],
-        "rates": ["open", "high", "low", "close", "volume"],
-        "eqty": ["open", "high", "low", "close", "volume"],
-        "credit": ["open", "high", "low", "close", "volume"],
-        "macro": ["actual"],
-    }, "Fields are incorrect."
-
-
-def test_fields_error(pandasdr) -> None:
-    """
-    Test categories errors.
-    """
-    pdr = pandasdr
+        pdr.check_params(data_req)
+    data_req = DataRequest(data_source='yahoo', cat='crypto')
     with pytest.raises(ValueError):
-        pdr.get_fields_info(data_type="on-chain")
+        pdr.check_params(data_req)
+    data_req = DataRequest(data_source='fred', cat='rates', freq='1h')
+    with pytest.raises(ValueError):
+        pdr.check_params(data_req)
+    data_req = DataRequest(data_source='yahoo', cat='eqty', fields='trades')
+    with pytest.raises(ValueError):
+        pdr.check_params(data_req)
 
 
-def test_frequencies(pandasdr) -> None:
+def test_integration_get_data_fred(pdr) -> None:
     """
-    Test frequencies property
+    Test integration of get data method.
     """
-    pdr = pandasdr
-    assert pdr.frequencies == {
-        "crypto": ["d", "w", "m", "q", "y"],
-        "fx": ["d", "w", "m", "q", "y"],
-        "rates": ["d", "w", "m", "q", "y"],
-        "eqty": ["d", "w", "m", "q", "y"],
-        "credit": ["d", "w", "m", "q", "y"],
-        "macro": ["d", "w", "m", "q", "y"],
-    }, "Incorrect data frequencies."
-
-
-def test_api_key(pandasdr) -> None:
-    """
-    Test api key property
-    """
-    pdr = pandasdr
-    data_cred = DataCredentials()
-    assert pdr.api_key == {
-        "fred": None,
-        "yahoo": None,
-        "av-daily": data_cred.av_api_key,
-        "av-forex-daily": data_cred.av_api_key,
-    }
-
-
-def test_get_data_av_fx(pandasdr) -> None:
-    """
-    Test get data method.
-    """
-    pdr = pandasdr
-    data_req = DataRequest(
-        data_source="av-forex-daily",
-        tickers=["eur", "gbp", "jpy"],
-        start_date="1990-01-01",
-        fields=["close"],
-        cat="fx",
-    )
+    data_req = DataRequest(data_source='fred', cat='macro', tickers=['US_UE_Rate', 'US_CB_MB'], fields='actual')
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -107,39 +84,22 @@ def test_get_data_av_fx(pandasdr) -> None:
     assert isinstance(
         df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {
-        "EURUSD",
-        "GBPUSD",
-        "USDJPY",
-    }, "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ["close"], "Fields are missing from dataframe."  # fields
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[0][0] > pd.Timedelta(
-        days=3780
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=5
-    ), "End date is more than 5 days ago."  # end date
+    assert set(df.index.droplevel(0).unique()) == {'US_CB_MB', 'US_UE_Rate'}, \
+        "Tickers are missing from dataframe."  # tickers
+    assert list(df.columns) == [
+        "actual"
+    ], "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp('1948-01-01 00:00:00'), "Wrong start date."  # start date
     assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
+        df.actual.dropna().iloc[-1], np.float64
     ), "Actual is not a numpy float."  # dtypes
 
 
-def test_get_data_fred(pandasdr) -> None:
+def test_integration_get_data_yahoo(pdr) -> None:
     """
-    Test get data method for fred.
+    Test integration of get data method.
     """
-    pdr = pandasdr
-    data_req = DataRequest(
-        data_source="fred",
-        tickers=[
-            "US_Credit_BAA_Spread",
-            "US_BE_Infl_10Y",
-            "US_Eqty_Vol_Idx",
-            "EM_Eqty_Vol_Idx",
-        ],
-        fields="close",
-        cat="eqty",
-    )
+    data_req = DataRequest(data_source='yahoo', cat='eqty', tickers=['spy', 'tlt', 'gld'], fields=['close', 'volume'])
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -148,59 +108,12 @@ def test_get_data_fred(pandasdr) -> None:
     assert isinstance(
         df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {
-        "EM_Eqty_Vol_Idx",
-        "US_BE_Infl_10Y",
-        "US_Credit_BAA_Spread",
-        "US_Eqty_Vol_Idx",
-    }, "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ["close"], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "1986-01-02 00:00:00"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=5
-    ), "End date is more than 5 days ago."  # end date
-    assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
-    ), "Actual is not a numpy float."  # dtypes
-
-
-def test_get_data_yahoo(pandasdr) -> None:
-    """
-    Test get data method for yahoo.
-    """
-    pdr = pandasdr
-    data_req = DataRequest(
-        data_source="yahoo",
-        tickers=["AAPL", "SPY", "TLT", "QQQ"],
-        fields=["close"],
-        cat="eqty",
-    )
-    df = pdr.get_data(data_req)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {
-        "AAPL",
-        "QQQ",
-        "SPY",
-        "TLT",
-    }, "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ["close"], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "1980-12-12 00:00:00"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=5
-    ), "End date is more than 5 days ago."  # end date
-    assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
-    ), "Actual is not a numpy float."  # dtypes
+    assert set(df.index.droplevel(0).unique()) == {'SPY', 'TLT', 'GLD'}, \
+        "Tickers are missing from dataframe."  # tickers
+    assert set(df.columns) == {'close', 'volume'}, "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp('1993-01-29 00:00:00'), "Wrong start date."  # start date
+    assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
+    assert isinstance(df.volume.dropna().iloc[-1], np.int64), "Volume is not a numpy int."  # dtypes
 
 
 if __name__ == "__main__":

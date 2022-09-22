@@ -2,43 +2,35 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cryptodatapy.extract.datarequest import DataRequest
-from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.transform.clean import CleanData
-from cryptodatapy.transform.filter import Filter
-from cryptodatapy.transform.impute import Impute
-from cryptodatapy.transform.od import OutlierDetection
 
+
+# get data for testing
+@pytest.fixture
+def raw_oc_data():
+    return pd.read_csv('tests/data/cm_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 @pytest.fixture
-def ohlcv_df():
-    cx = CCXT()
-    ohlcv_df = cx.get_data(
-        DataRequest(
-            tickers=["BTC", "ETH", "ADA"],
-            fields=["open", "high", "low", "close", "volume"],
-        )
-    )
-    return ohlcv_df
+def raw_ohlcv_data():
+    return pd.read_csv('tests/data/cm_raw_ohlcv_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 
-def test_clean_data_integration_filter_outliers(ohlcv_df) -> None:
+def test_clean_data_integration_filter_outliers(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - filter outliers.
     """
     # clean data - filter outliers
-    df = CleanData(ohlcv_df).filter_outliers().get(attr="df")
+    df = CleanData(raw_ohlcv_data).filter_outliers().get(attr="df")
     # assert statements
-    assert df.shape == ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
     assert isinstance(
         df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
-    print(df.isnull().sum(), ohlcv_df.isnull().sum())
     assert all(
-        df.isnull().sum() >= ohlcv_df.isnull().sum()
+        df.isnull().sum() >= raw_ohlcv_data.isnull().sum()
     ), "No outliers were filtered in dataframe."  # filtered
     assert not any(
         (df.describe().loc["max"] == np.inf) & (df.describe().loc["min"] == -np.inf)
@@ -48,14 +40,14 @@ def test_clean_data_integration_filter_outliers(ohlcv_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_clean_data_integration_repair_outliers(ohlcv_df) -> None:
+def test_clean_data_integration_repair_outliers(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - repair outliers.
     """
     # clean data - repair outliers
-    df = CleanData(ohlcv_df).filter_outliers().repair_outliers().get(attr="df")
+    df = CleanData(raw_ohlcv_data).filter_outliers().repair_outliers().get(attr="df")
     # assert statements
-    assert df.shape == ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -73,14 +65,14 @@ def test_clean_data_integration_repair_outliers(ohlcv_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_clean_data_integration_filter_avg_trading_val(ohlcv_df) -> None:
+def test_clean_data_integration_filter_avg_trading_val(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - filter average trading value.
     """
     # clean data - filter avg trading val
-    df = CleanData(ohlcv_df).filter_outliers().filter_avg_trading_val().get(attr="df")
+    df = CleanData(raw_ohlcv_data).filter_outliers().filter_avg_trading_val().get(attr="df")
     # assert statements
-    assert df.shape == ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -98,13 +90,13 @@ def test_clean_data_integration_filter_avg_trading_val(ohlcv_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_clean_data_integration_filter_missing_vals_gaps(ohlcv_df) -> None:
+def test_clean_data_integration_filter_missing_vals_gaps(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - filter missing values gaps.
     """
     # clean data - filter outliers
     df = (
-        CleanData(ohlcv_df)
+        CleanData(raw_ohlcv_data)
         .filter_outliers()
         .repair_outliers()
         .filter_avg_trading_val()
@@ -112,7 +104,7 @@ def test_clean_data_integration_filter_missing_vals_gaps(ohlcv_df) -> None:
         .get(attr="df")
     )
     # assert statements
-    assert df.shape == ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -132,13 +124,13 @@ def test_clean_data_integration_filter_missing_vals_gaps(ohlcv_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_clean_data_integration_filter_min_obs(ohlcv_df) -> None:
+def test_clean_data_integration_filter_min_obs(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - filter minimum observations.
     """
     # clean data - filter outliers
     df = (
-        CleanData(ohlcv_df)
+        CleanData(raw_ohlcv_data)
         .filter_outliers()
         .repair_outliers()
         .filter_avg_trading_val()
@@ -147,7 +139,7 @@ def test_clean_data_integration_filter_min_obs(ohlcv_df) -> None:
         .get(attr="df")
     )
     # assert statements
-    assert df.shape != ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape != raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -165,13 +157,13 @@ def test_clean_data_integration_filter_min_obs(ohlcv_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_clean_data_integration_filter_tickers(ohlcv_df) -> None:
+def test_clean_data_integration_filter_tickers(raw_ohlcv_data) -> None:
     """
     Test clean data pipeline - filter tickers.
     """
     # clean data - filter outliers
     df = (
-        CleanData(ohlcv_df)
+        CleanData(raw_ohlcv_data)
         .filter_outliers()
         .repair_outliers()
         .filter_avg_trading_val()
@@ -181,7 +173,7 @@ def test_clean_data_integration_filter_tickers(ohlcv_df) -> None:
         .get(attr="df")
     )
     # assert statements
-    assert df.shape != ohlcv_df.shape, "Filtered dataframe changed shape."  # shape
+    assert df.shape != raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex

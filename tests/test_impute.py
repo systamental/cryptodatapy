@@ -2,34 +2,30 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
-from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.transform.filter import Filter
 from cryptodatapy.transform.impute import Impute
 from cryptodatapy.transform.od import OutlierDetection
 
 # get data for testing
-cc = CryptoCompare()
-oc_df = cc.get_data(
-    DataRequest(tickers=["BTC", "ETH", "ADA"], fields=["close", "add_act", "tx_count"])
-)
-
+@pytest.fixture
+def raw_oc_data():
+    return pd.read_csv('tests/data/cm_raw_oc_data.csv', index_col=[0, 1], parse_dates=['date'])
 
 @pytest.fixture
-def oc_filt_df():
-    outliers_dict = OutlierDetection(oc_df).stl()
-    filt_df = Filter(oc_df).outliers(outliers_dict)
+def oc_filt_df(raw_oc_data):
+    outliers_dict = OutlierDetection(raw_oc_data).stl(thresh_val=10)
+    filt_df = Filter(raw_oc_data).outliers(outliers_dict)
     return filt_df
 
 
-def test_impute_fwd_fill(oc_filt_df) -> None:
+def test_impute_fwd_fill(oc_filt_df, raw_oc_data) -> None:
     """
     Test filter average trading value below threshold.
     """
     # impute
     imp_df = Impute(oc_filt_df).fwd_fill()
     # assert statements
-    assert imp_df.shape == oc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert imp_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         imp_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -48,14 +44,14 @@ def test_impute_fwd_fill(oc_filt_df) -> None:
     ), "Imputed close is not a numpy float."  # dtypes
 
 
-def test_impute_interpolate(oc_filt_df) -> None:
+def test_impute_interpolate(oc_filt_df, raw_oc_data) -> None:
     """
     Test filter average trading value below threshold.
     """
     # impute
     imp_df = Impute(oc_filt_df).interpolate()
     # assert statements
-    assert imp_df.shape == oc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert imp_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         imp_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -74,14 +70,14 @@ def test_impute_interpolate(oc_filt_df) -> None:
     ), "Imputed close is not a numpy float."  # dtypes
 
 
-def test_impute_fcst(oc_filt_df) -> None:
+def test_impute_fcst(oc_filt_df, raw_oc_data) -> None:
     """
     Test filter average trading value below threshold.
     """
     # impute
     imp_df = Impute(oc_filt_df).interpolate()
     # assert statements
-    assert imp_df.shape == oc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert imp_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         imp_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex

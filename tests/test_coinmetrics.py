@@ -2,205 +2,149 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+import json
 import pytest
 
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.transform.wrangle import WrangleInfo, WrangleData
 
 
 @pytest.fixture
-def datarequest():
+def data_req():
     return DataRequest()
 
 
 @pytest.fixture
-def coinmetrics():
+def cm():
     return CoinMetrics()
 
 
-def test_categories(coinmetrics) -> None:
+def test_integration_get_fields_info(cm):
     """
-    Test categories property.
+    Test integration of get_fields_info and get_inst_info for all fields info.
     """
-    cm = coinmetrics
-    assert cm.categories == ["crypto"], "Category should be 'crypto'."
+    fields_list = cm.get_fields_info(as_list=True)
+    assert "AdrActCnt" in fields_list, "Fields list is missing 'AdrActCnt'."
+    assert "price_close" in fields_list, "Fields list is missing 'price_close'."
+    assert 'btc_net_asset_value' in fields_list, "Fields list is missing 'btc_net_asset_value'."
 
 
-def test_categories_error(coinmetrics) -> None:
+def test_integration_get_onchain_tickers_list(cm) -> None:
     """
-    Test categories errors.
+    Test integration of ConvertParams and get_fields_info to get assets with available fields method
     """
-    cm = coinmetrics
-    with pytest.raises(ValueError):
-        cm.categories = ["real_estate", "art"]
-
-
-def test_exchanges(coinmetrics) -> None:
-    """
-    Test exchanges property.
-    """
-    cm = coinmetrics
-    assert "binance" in cm.exchanges, "Exchanges list is missing 'binance'."
-
-
-def test_get_exchanges_info(coinmetrics) -> None:
-    """
-    Test get exchanges info method.
-    """
-    cm = coinmetrics
-    assert (
-        cm.get_exchanges_info().loc["binance", "min_time"]
-        == "2017-07-14T04:00:00.510000000Z"
-    ), "Exchanges info is missing 'Binance'."
-
-
-def test_assets(coinmetrics) -> None:
-    """
-    Test assets property.
-    """
-    cm = coinmetrics
-    assert "btc" in cm.assets, "Assets list is missing 'BTC'."
-
-
-def test_get_assets_info(coinmetrics) -> None:
-    """
-    Test get assets info method.
-    """
-    cm = coinmetrics
-    assert (
-        cm.get_assets_info().loc["btc", "full_name"] == "Bitcoin"
-    ), "Asset info is missing 'Bitcoin'."
-
-
-def test_indexes(coinmetrics) -> None:
-    """
-    Test indexes property.
-    """
-    cm = coinmetrics
-    assert "CMBI10" in cm.indexes, "Index list is missing 'CMBI10'."
-
-
-def test_get_indexes_info(coinmetrics) -> None:
-    """
-    Test get indexes info method.
-    """
-    cm = coinmetrics
-    assert (
-        cm.get_indexes_info().loc["CMBI10", "full_name"] == "CMBI 10 Index"
-    ), "Index info is missing 'CMBI10'."
-
-
-def test_markets(coinmetrics) -> None:
-    """
-    Test markets info method.
-    """
-    cm = coinmetrics
-    assert (
-        "binance-btc-usdt-spot" in cm.markets
-    ), "Markets list is missing 'binance-btc-usdt-spot'."
-
-
-def test_market_types(coinmetrics) -> None:
-    """
-    Test market types.
-    """
-    cm = coinmetrics
-    assert cm.market_types == [
-        "spot",
-        "perpetual_future",
-        "future",
-        "option",
-    ], "Some market types are missing'."
-
-
-def test_market_types_error(coinmetrics) -> None:
-    """
-    Test market types errors.
-    """
-    cm = coinmetrics
-    with pytest.raises(ValueError):
-        cm.market_types = ["swaps"]
-
-
-def test_fields_close(coinmetrics) -> None:
-    """
-    Test fields property.
-    """
-    cm = coinmetrics
-    assert "price_close" in cm.fields, "Fields list is missing 'price_close'."
-
-
-def test_fields_active_addresses(coinmetrics) -> None:
-    """
-    Test fields property.
-    """
-    cm = coinmetrics
-    assert "AdrActCnt" in cm.fields, "Fields list is missing 'AdrActCnt'."
-
-
-def test_frequencies(coinmetrics) -> None:
-    """
-    Test frequencies property.
-    """
-    cm = coinmetrics
-    assert "d" in cm.frequencies, "Frequencies list is missing 'd'."
-
-
-def test_frequencies_error(coinmetrics) -> None:
-    """
-    Test frequencies error.
-    """
-    cm = coinmetrics
-    with pytest.raises(TypeError):
-        cm.frequencies = 5
-
-
-def test_get_avail_fields_info(coinmetrics) -> None:
-    """
-    Test get assets with available fields method.
-    """
-    cm = coinmetrics
+    onchain_tickers = ['busd', 'steth_lido', 'dcr', 'xem', 'bch', 'uma', 'swrv', 'gno', 'doge', 'renbtc', 'algo']
     data_req = DataRequest(fields=["add_act", "tx_count"])
-    assets_list = cm.get_avail_assets_info(data_req)
+    assets_list = cm.get_onchain_tickers_list(data_req)
     assert len(assets_list) != 0, "Assets list was returned empty."  # non empty
     assert isinstance(assets_list, list), "Should be a list."  # list
-    assert "eth" in assets_list, "Tickers are missing from assets list."  # tickers
+    assert all([ticker in assets_list for ticker in onchain_tickers]), \
+        "Tickers are missing from assets list."  # tickers
 
 
-def test_get_indexes(coinmetrics) -> None:
+def test_req_data(cm) -> None:
     """
-    Test get indexes data method.
+    Test data request to CoinMetrics client.
     """
-    cm = coinmetrics
-    data_req = DataRequest(tickers=["cmbi10"])
-    df = cm.get_indexes(data_req)
+    df = cm.req_data(data_type='get_market_candles', markets=['binance-btc-usdt-spot', 'binance-eth-usdt-spot'])
     assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == [
-        "CMBI10"
-    ], "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ["close"], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "2017-01-04"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=3
-    ), "End date is more than 72h ago."  # end date
-    assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
-    ), "Close is not a numpy float."  # dtypes
+    assert list(df.market.unique()) == ['binance-btc-usdt-spot', 'binance-eth-usdt-spot'], \
+        "Tickers are missing from dataframe."  # tickers
+    assert list(df.columns) == ['market', 'time', 'price_open', 'price_close', 'price_high', 'price_low', 'vwap',
+                                'volume', 'candle_usd_volume', 'candle_trades_count'], \
+        "Fields are missing from dataframe."  # fields
+    assert pd.Timestamp.utcnow() - df.time.iloc[-1] < pd.Timedelta(days=3), "End date is more than 72h ago."  # end date
 
 
-def test_get_institutions(coinmetrics) -> None:
+@pytest.fixture
+def cm_req_data_mkt_candles():
+    return pd.read_csv('tests/data/cm_ohlcv_df.csv')
+
+
+def test_wrangle_data_resp(data_req, cm_req_data_mkt_candles):
     """
-    Test get institutions data method.
+    Test wrangling of data response.
     """
-    cm = coinmetrics
+    # wrangle data resp
+    df = WrangleData(data_req, cm_req_data_mkt_candles).coinmetrics()
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
+    assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
+    assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."  # tickers
+    assert list(df.columns) == ["open", "high", "low", "close", "volume", "vwap"], \
+        "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp("2017-08-17 00:00:00"), "Wrong start date."  # start date
+    assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtype
+
+
+def test_integration_tidy_data(data_req, cm) -> None:
+    """
+    Test integration of req_data and wrangle_data_resp into tidy data format.
+    """
+    df = cm.req_data(data_type='get_market_candles', markets=['binance-btc-usdt-spot', 'binance-eth-usdt-spot'])
+    df = WrangleData(data_req, df).coinmetrics()
+    assert not df.empty, "Dataframe was returned empty."  # non empty
+    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
+    assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
+    assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."  # tickers
+    assert list(df.columns) == ["open", "high", "low", "close", "volume", "vwap"], \
+        "Fields are missing from dataframe."  # fields
+    assert df.index[0][0] == pd.Timestamp("2017-08-17 00:00:00"), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(days=3),\
+        "End date is more than 72h ago."  # end date
+    assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtype
+
+
+def test_filter_tickers(cm) -> None:
+    """
+    Test ticker filtering to avoid calling API when requested tickers are not available.
+    """
+    data_req = DataRequest(tickers=['btc', 'eth', 'cmbi10', 'cmbi10m'])
+    tickers = cm.filter_tickers(data_req, data_type='indexes')
+    assert tickers == ['cmbi10', 'cmbi10m'], "Indexes tickers were not filtered."
+    data_req = DataRequest(tickers=['btc', 'eth', 'cmbi10', 'cmbi10m'])
+    tickers = cm.filter_tickers(data_req, data_type='market_candles')
+    assert tickers == ['binance-btc-usdt-spot', 'binance-eth-usdt-spot'], "Market tickers were not filtered."
+    data_req = DataRequest(tickers=['btc', 'eth', 'cmbi10', 'cmbi10m'])
+    tickers = cm.filter_tickers(data_req, data_type='asset_metrics')
+    assert tickers == ['btc', 'eth'], "Asset tickers were not filtered."
+
+
+def test_filter_fields(cm) -> None:
+    """
+    Test fields filtering to avoid calling API when requested fields are not available.
+    """
+    data_req = DataRequest(fields=['close', 'add_act', 'tx_count', 'issuance'])
+    fields = cm.filter_fields(data_req, data_type='asset_metrics')
+    assert fields == ['AdrActCnt', 'TxCnt', 'IssTotNtv'], "Fields were not properly filtered."
+    data_req = DataRequest(source_fields=['lpt_shares_outstanding', 'zec_net_asset_value', 'tx_count', 'issuance'])
+    fields = cm.filter_fields(data_req, data_type='institutions')
+    assert fields == ['lpt_shares_outstanding', 'zec_net_asset_value'], "Fields were not properly filtered."
+
+
+def test_check_freq_params(cm) -> None:
+    """
+    Test frequency check when requested frequency is not available.
+    """
+    data_req = DataRequest(freq='5min')
+    with pytest.raises(ValueError):
+        cm.check_params(data_req, data_type='indexes')
+
+
+def test_check_mkt_type_params(cm) -> None:
+    """
+    Test market type check when requested market type is not available.
+    """
+    data_req = DataRequest(mkt_type='spot')
+    with pytest.raises(ValueError):
+        cm.check_params(data_req, data_type='funding_rates')
+
+
+def test_integration_get_institutions(cm) -> None:
+    """
+    Test integration of get institutions method.
+    """
     data_req = DataRequest(inst="grayscale", source_fields=["btc_shares_outstanding"])
     df = cm.get_institutions(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -227,78 +171,10 @@ def test_get_institutions(coinmetrics) -> None:
     ), "Shares outstanding is not a numpy int."  # dtypes
 
 
-def test_get_ohlcv(coinmetrics, datarequest) -> None:
+def test_integration_get_open_interest(cm) -> None:
     """
-    Test get OHLCV data method.
+    Test integration of get open interest method.
     """
-    cm = coinmetrics
-    data_req = datarequest
-    df = cm.get_ohlcv(data_req)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == [
-        "BTC"
-    ], "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == [
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-        "vwap",
-    ], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "2017-08-17 00:00:00"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=3
-    ), "End date is more than 72h ago."  # end date
-    assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
-    ), "Close is not a numpy float."  # dtype
-
-
-def test_get_onchain(coinmetrics) -> None:
-    """
-    Test get on-chain data method.
-    """
-    cm = coinmetrics
-    data_req = DataRequest(fields="add_act")
-    df = cm.get_onchain(data_req)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert list(df.index.droplevel(0).unique()) == [
-        "BTC"
-    ], "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == [
-        "add_act"
-    ], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "2009-01-09"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=3
-    ), "End date is more than 72h ago."  # end date
-    assert isinstance(
-        df.add_act.dropna().iloc[-1], np.int64
-    ), "Active addresses is not a numpy int."  # dtype
-
-
-def test_get_open_interest(coinmetrics) -> None:
-    """
-    Test get open interest data method.
-    """
-    cm = coinmetrics
     data_req = DataRequest(mkt_type="perpetual_future")
     df = cm.get_open_interest(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -323,11 +199,10 @@ def test_get_open_interest(coinmetrics) -> None:
     ), "Open interest is not a numpy float."  # dtype
 
 
-def test_get_funding_rates(coinmetrics) -> None:
+def test_integration_get_funding_rates(cm) -> None:
     """
-    Test get funding rates data method.
+    Test integration of get funding rates method.
     """
-    cm = coinmetrics
     data_req = DataRequest(mkt_type="perpetual_future")
     df = cm.get_funding_rates(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -349,11 +224,10 @@ def test_get_funding_rates(coinmetrics) -> None:
     assert isinstance(df.funding_rate.dropna().iloc[-1], np.float64)  # dtypes
 
 
-def test_get_trades(coinmetrics) -> None:
+def test_integration_get_trades(cm) -> None:
     """
-    Test get trades data method.
+    Test integration of get trades method.
     """
-    cm = coinmetrics
     data_req = DataRequest(
         freq="tick", start_date=datetime.utcnow() - pd.Timedelta(seconds=30)
     )
@@ -379,11 +253,10 @@ def test_get_trades(coinmetrics) -> None:
     assert isinstance(df.trade_price.dropna().iloc[-1], np.float64)  # dtypes
 
 
-def test_get_quotes(coinmetrics) -> None:
+def test_integration_get_quotes(cm) -> None:
     """
-    Test get quotes data method.
+    Test integration of get quotes method.
     """
-    cm = coinmetrics
     data_req = DataRequest(
         freq="tick", start_date=datetime.utcnow() - pd.Timedelta(seconds=30)
     )
@@ -410,11 +283,10 @@ def test_get_quotes(coinmetrics) -> None:
     assert isinstance(df.ask.dropna().iloc[-1], np.float64)  # dtypes
 
 
-def test_get_data_integration(coinmetrics) -> None:
+def test_integration_get_data(cm) -> None:
     """
-    Test get data methods integration.
+    Test integration of get data method.
     """
-    cm = coinmetrics
     data_req = DataRequest(tickers=["btc", "eth"], fields=["close", "add_act"])
     df = cm.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty

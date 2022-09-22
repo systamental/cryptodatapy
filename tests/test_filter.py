@@ -4,42 +4,29 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
-from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.transform.filter import Filter
 from cryptodatapy.transform.od import OutlierDetection
 
 # get data for testing
-cc = CryptoCompare()
-raw_data = cc.get_data(
-    DataRequest(tickers=["BTC", "ETH", "ADA"], fields=["close", "add_act", "tx_count"])
-)
-raw_ohlc = cc.get_data(
-    DataRequest(
-        tickers=["BTC", "ETH", "ADA"], fields=["open", "high", "low", "close", "volume"]
-    )
-)
-
+@pytest.fixture
+def raw_oc_data():
+    return pd.read_csv('tests/data/cc_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 @pytest.fixture
-def raw_df():
-    return raw_data
+def raw_ohlcv_data():
+    return pd.read_csv('tests/data/cc_raw_ohlcv_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 
-@pytest.fixture
-def ohlc_df():
-    return raw_ohlc
 
-
-def test_filter_atr(ohlc_df) -> None:
+def test_filter_atr(raw_ohlcv_data) -> None:
     """
     Test filter ATR method.
     """
     # outlier detection
-    outliers_dict = OutlierDetection(ohlc_df).atr()
+    outliers_dict = OutlierDetection(raw_ohlcv_data).atr()
     filt_df = outliers_dict["filt_vals"]
     # assert statements
-    assert filt_df.shape == ohlc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -47,7 +34,7 @@ def test_filter_atr(ohlc_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.loc[:, :"close"].notna().sum() / ohlc_df.loc[:, :"close"].notna().sum()
+        filt_df.loc[:, :"close"].notna().sum() / raw_ohlcv_data.loc[:, :"close"].notna().sum()
         > 0.95
     ), "Some series have more than 5% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
@@ -59,15 +46,15 @@ def test_filter_atr(ohlc_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_filter_iqr(raw_df) -> None:
+def test_filter_iqr(raw_oc_data) -> None:
     """
     Test filter IQR method.
     """
     # outlier detection
-    outliers_dict = OutlierDetection(raw_df).iqr()
+    outliers_dict = OutlierDetection(raw_oc_data).iqr()
     filt_df = outliers_dict["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -75,7 +62,7 @@ def test_filter_iqr(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.90
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.90
     ), "Some series have more than 10% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -92,15 +79,15 @@ def test_filter_iqr(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_mad(raw_df) -> None:
+def test_filter_mad(raw_oc_data) -> None:
     """
     Test filter MAD method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).mad()
+    df = OutlierDetection(raw_oc_data).mad()
     filt_df = df["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -108,7 +95,7 @@ def test_filter_mad(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.80
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.80
     ), "Some series have more than 20% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -125,15 +112,15 @@ def test_filter_mad(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_zscore(raw_df) -> None:
+def test_filter_zscore(raw_oc_data) -> None:
     """
     Test filter z-score method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).z_score(thresh_val=2)
+    df = OutlierDetection(raw_oc_data).z_score(thresh_val=2)
     filt_df = df["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -141,7 +128,7 @@ def test_filter_zscore(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.9
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.9
     ), "Some series have more than 10% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -158,15 +145,15 @@ def test_filter_zscore(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_ewma(raw_df) -> None:
+def test_filter_ewma(raw_oc_data) -> None:
     """
     Test filter exponential weighted moving average method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).ewma(thresh_val=1.5)
+    df = OutlierDetection(raw_oc_data).ewma(thresh_val=1.5)
     filt_df, outliers_df = df["filt_vals"], df["outliers"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -174,7 +161,7 @@ def test_filter_ewma(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.9
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.9
     ), "Some series have more than 10% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -191,15 +178,15 @@ def test_filter_ewma(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_seasonal_decomp(raw_df) -> None:
+def test_filter_seasonal_decomp(raw_oc_data) -> None:
     """
     Test filter seasonal decomposition method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).seasonal_decomp(thresh_val=10)
+    df = OutlierDetection(raw_oc_data).seasonal_decomp(thresh_val=10)
     filt_df = df["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -207,7 +194,7 @@ def test_filter_seasonal_decomp(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.7
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.7
     ), "Some series have more than 30% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -224,15 +211,15 @@ def test_filter_seasonal_decomp(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_stl(raw_df) -> None:
+def test_filter_stl(raw_oc_data) -> None:
     """
     Test filter seasonal decomposition method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).stl(thresh_val=10)
+    df = OutlierDetection(raw_oc_data).stl(thresh_val=10)
     filt_df = df["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -240,7 +227,7 @@ def test_filter_stl(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.7
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.7
     ), "Some series have more than 30% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -257,15 +244,15 @@ def test_filter_stl(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_prophet(raw_df) -> None:
+def test_filter_prophet(raw_oc_data) -> None:
     """
     Test filter prophet method.
     """
     # outlier detection
-    df = OutlierDetection(raw_df).prophet()
+    df = OutlierDetection(raw_oc_data).prophet()
     filt_df = df["filt_vals"]
     # assert statements
-    assert filt_df.shape == raw_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_oc_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -273,7 +260,7 @@ def test_filter_prophet(raw_df) -> None:
         filt_df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
     assert all(
-        filt_df.notna().sum() / raw_df.notna().sum() > 0.8
+        filt_df.notna().sum() / raw_oc_data.notna().sum() > 0.8
     ), "Some series have more than 20% of values filtered as outliers in dataframe."  # % filtered
     assert not any(
         (filt_df.describe().loc["max"] == np.inf)
@@ -290,14 +277,14 @@ def test_filter_prophet(raw_df) -> None:
     ), "Filtered transaction count is not a numpy int."  # dtypes
 
 
-def test_filter_avg_trading_vals(ohlc_df) -> None:
+def test_filter_avg_trading_vals(raw_ohlcv_data) -> None:
     """
     Test filter average trading value below threshold.
     """
     # outlier detection
-    filt_df = Filter(ohlc_df).avg_trading_val(thresh_val=10000000, window_size=30)
+    filt_df = Filter(raw_ohlcv_data).avg_trading_val(thresh_val=10000000, window_size=30)
     # assert statements
-    assert filt_df.shape == ohlc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -316,15 +303,15 @@ def test_filter_avg_trading_vals(ohlc_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_filter_missing_vals_gaps(ohlc_df) -> None:
+def test_filter_missing_vals_gaps(raw_ohlcv_data) -> None:
     """
     Test filter missing values gap.
     """
     # outlier detection
-    gaps_df = Filter(ohlc_df).avg_trading_val(thresh_val=10000000, window_size=30)
+    gaps_df = Filter(raw_ohlcv_data).avg_trading_val(thresh_val=10000000, window_size=30)
     filt_df = Filter(gaps_df).missing_vals_gaps(gap_window=30)
     # assert statements
-    assert filt_df.shape == ohlc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape == raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -345,16 +332,16 @@ def test_filter_missing_vals_gaps(ohlc_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_filter_min_nobs(ohlc_df) -> None:
+def test_filter_min_nobs(raw_ohlcv_data) -> None:
     """
     Test filter minimum number of observations.
     """
     # create short series
     start_date = datetime.utcnow() - pd.Timedelta(days=50)
-    ohlc_df.loc[pd.IndexSlice[:start_date, "BTC"], :] = np.nan
-    filt_df = Filter(ohlc_df).min_nobs()
+    raw_ohlcv_data.loc[pd.IndexSlice[:start_date, "BTC"], :] = np.nan
+    filt_df = Filter(raw_ohlcv_data).min_nobs()
     # assert statements
-    assert filt_df.shape != ohlc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape != raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex
@@ -373,15 +360,15 @@ def test_filter_min_nobs(ohlc_df) -> None:
     ), "Filtered close is not a numpy float."  # dtypes
 
 
-def test_filter_tickers(ohlc_df) -> None:
+def test_filter_tickers(raw_ohlcv_data) -> None:
     """
     Test filter tickers from dataframe.
     """
     # tickers list
     tickers_list = ["BTC"]
-    filt_df = Filter(ohlc_df).tickers(tickers_list=tickers_list)
+    filt_df = Filter(raw_ohlcv_data).tickers(tickers_list=tickers_list)
     # assert statements
-    assert filt_df.shape != ohlc_df.shape, "Filtered dataframe changed shape."  # shape
+    assert filt_df.shape != raw_ohlcv_data.shape, "Filtered dataframe changed shape."  # shape
     assert isinstance(
         filt_df.index, pd.MultiIndex
     ), "Dataframe should be multiIndex."  # multiindex

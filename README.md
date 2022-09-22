@@ -5,8 +5,8 @@
 <br/>
 
 **CryptoDataPy** is a python library which makes it easy to build high quality data pipelines 
-for the analysis of digital assets. By providing access to over 100,000 time series for thousands of 
-cryptoassets, it facilitates the pre-processing of a wide range of data from various sources.
+for the analysis of digital assets. By providing easy access to over 100,000 time series for thousands of  assets, 
+it facilitates the pre-processing of a wide range of data from different sources.
 
 Cryptoassets generate a huge amount of market, on-chain and off-chain data. 
 But unlike legacy financial markets, this data is often fragmented, 
@@ -17,10 +17,10 @@ and cleaning data, and more time analyzing it.
 
 Our data includes:
 
-- **Market data:** market prices of varying granularity (e.g. tick, trade and bar data, aka OHLC),
+- **Market:** market prices of varying granularity (e.g. tick, trade and bar data, aka OHLC),
 for spot, futures and options markets, as well as funding rates for the analysis of 
 cryptoasset returns.
-- **On-chain data:** network health and usage data, circulating supply, asset holder positions and 
+- **On-chain:** network health and usage data, circulating supply, asset holder positions and 
 cost-basis, for the analysis of underlying crypto network fundamentals.
 - **Off-chain:** news, social media, developer activity, web traffic and search for project interest and 
 sentiment, as well as traditional financial market and macroeconomic data for broader financial and 
@@ -32,9 +32,9 @@ The library's intuitive interface facilitates each step of the ETL/ETL (extract-
 - **Transform**: 
   - Wrangling data into a pandas DataFrame in a structured and user-friendly format, 
   a.k.a [tidy data](https://www.jstatsoft.org/article/view/v059i10). 
-  - Detecting, scrubbing and repairing 'dirty data', to improve the accuracy and reliability
+  - Detecting, scrubbing and repairing 'bad' data (e.g. outliers, missing values, 0s, etc.) to improve the accuracy and reliability
 of machine learning/predictive models.
-- **Load**: Storing clean and ready-for-analysis data and metadata for easy access and retrieval.
+- **Load**: Storing clean and ready-for-analysis data and metadata for easy access.
 
 ## Installation
 
@@ -89,17 +89,20 @@ data_req = DataRequest(data_source='coinmetrics',
 GetData(data_req).get_series()
 ```
 
-More detailed code examples and interactive tutorials are provided in cryptodatapy/docs/ 
+For more detailed code examples and interactive tutorials see our [documention]().
 
 ## Supported Data Sources
 
 - [CryptoCompare](https://min-api.cryptocompare.com/documentation)
-- [Glassnode]()
+- [CCXT](https://docs.ccxt.com/en/latest/)
+- [Glassnode](https://docs.glassnode.com/)
 - [Coin Metrics](https://docs.coinmetrics.io/api/v4/)
-- Glassnode (v0.1.1)
-- [investPy](https://investpy.readthedocs.io/)
-- Tiingo (v0.1.1)
-- CoinGecko (v0.1.1)
+- [Tiingo](https://api.tiingo.com/documentation/general/overview)
+- [DBnomics](https://db.nomics.world/docs/)
+- [investpy](https://investpy.readthedocs.io/)
+- [FRED](https://pandas-datareader.readthedocs.io/en/latest/)
+- [Yahoo Finance](https://pandas-datareader.readthedocs.io/en/latest/readers/index.html)
+
 
 ## Contributing
 

@@ -3,6 +3,8 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
+from cryptodatapy.extract.datarequest import DataRequest
+
 
 class Library(ABC):
     """
@@ -383,7 +385,7 @@ class Library(ABC):
         # to be implemented by subclasses
 
     @abstractmethod
-    def wrangle_data_resp(self, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(self, data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

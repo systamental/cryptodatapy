@@ -20,31 +20,29 @@ class PandasDataReader(Library):
     """
 
     def __init__(
-        self,
-        categories: List[str] = ["fx", "rates", "eqty", "credit", "macro"],
-        exchanges: Optional[List[str]] = None,
-        indexes: Optional[Dict[str, List[str]]] = None,
-        assets: Optional[Dict[str, List[str]]] = None,
-        markets: Optional[Dict[str, List[str]]] = None,
-        market_types: List[str] = ["spot"],
-        fields: Optional[Dict[str, List[str]]] = None,
-        frequencies: Dict[str, List[str]] = {
-            "crypto": ["d", "w", "m", "q", "y"],
-            "fx": ["d", "w", "m", "q", "y"],
-            "rates": ["d", "w", "m", "q", "y"],
-            "eqty": ["d", "w", "m", "q", "y"],
-            "credit": ["d", "w", "m", "q", "y"],
-            "macro": ["d", "w", "m", "q", "y"],
-        },
-        base_url: Optional[str] = None,
-        api_key: dict = {
-            "fred": None,
-            "yahoo": None,
-            "av-daily": data_cred.av_api_key,
-            "av-forex-daily": data_cred.av_api_key,
-        },
-        max_obs_per_call: Optional[int] = None,
-        rate_limit: Optional[Any] = None,
+            self,
+            categories: List[str] = ["fx", "rates", "eqty", "credit", "macro"],
+            exchanges: Optional[List[str]] = None,
+            indexes: Optional[Dict[str, List[str]]] = None,
+            assets: Optional[Dict[str, List[str]]] = None,
+            markets: Optional[Dict[str, List[str]]] = None,
+            market_types: List[str] = ["spot"],
+            fields: Optional[Dict[str, List[str]]] = None,
+            frequencies: Dict[str, List[str]] = {
+                "crypto": ["d", "w", "m", "q", "y"],
+                "fx": ["d", "w", "m", "q", "y"],
+                "rates": ["d", "w", "m", "q", "y"],
+                "eqty": ["d", "w", "m", "q", "y"],
+                "credit": ["d", "w", "m", "q", "y"],
+                "macro": ["d", "w", "m", "q", "y"],
+            },
+            base_url: Optional[str] = None,
+            api_key: dict = {
+                "fred": None,
+                "yahoo": None
+            },
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
@@ -148,7 +146,7 @@ class PandasDataReader(Library):
 
     @staticmethod
     def get_fields_info(
-        data_type: Optional[str] = "market", cat: Optional[str] = None
+            data_type: Optional[str] = "market", cat: Optional[str] = None
     ) -> Dict[str, List[str]]:
         """
         Get fields info.
@@ -196,138 +194,75 @@ class PandasDataReader(Library):
         """
         print(f"See specific data vendor for rate limits: {data_cred.pdr_vendors_url}")
 
-    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+    def fred(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Get market (eqty, fx, rates, cmdty) and/or off-chain (macro) data.
+        Request data from Fred with PandasDataReader.
 
         Parameters
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
+        ----------
+
 
         Returns
         -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market or macro series
-            for selected fields (cols), in tidy format.
+        df: pd.DataFrame
+            Dataframe with index and ticker values (cols).
+
         """
-        if data_req.data_source is None:
-            raise ValueError(
-                "Data source cannot be None. Select a data source for the data request."
+        # convert data request parameters to Fred format
+        fred_data_req = ConvertParams(data_req).to_fred()
+
+        try:
+            df = web.DataReader(
+                fred_data_req["tickers"],
+                'fred',
+                fred_data_req["start_date"],
+                fred_data_req["end_date"],
+                api_key=self.api_key['fred'],
             )
+        except Exception as e:
+            logging.warning(e)
+            logging.warning(f"Failed to get data for: {fred_data_req['tickers']}.")
 
-        # convert data request parameters to InvestPy format
-        pdr_data_req = ConvertParams(
-            data_req, data_source=data_req.data_source
-        ).convert_to_source()
+        else:
 
-        # check cat
-        if data_req.cat not in self.categories:
-            raise ValueError(
-                f"Invalid category. Valid categories are: {self.categories}."
+            return df
+
+    def yahoo(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Request data from Yahoo Finance with PandasDataReader.
+
+        Parameters
+        ----------
+
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with index and ticker values (cols).
+
+        """
+        # convert data request parameters to Fred format
+        yahoo_data_req = ConvertParams(data_req).to_yahoo()
+
+        try:
+            df = web.DataReader(
+                yahoo_data_req["tickers"],
+                'yahoo',
+                yahoo_data_req["start_date"],
+                yahoo_data_req["end_date"],
+                api_key=self.api_key['yahoo'],
             )
-        # check freq
-        if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(
-                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
-            )
-        # check fields
-        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError(f"Invalid fields. Valid data fields are: {self.fields}.")
+        except Exception as e:
+            logging.warning(e)
+            logging.warning(f"Failed to get data for: {yahoo_data_req['tickers']}.")
 
-        # emtpy df
-        df0, df1 = pd.DataFrame(), pd.DataFrame()
+        else:
 
-        # get fred data
-        if data_req.data_source == "fred" or data_req.data_source == "yahoo":
-
-            try:
-                df0 = web.DataReader(
-                    pdr_data_req["tickers"],
-                    data_req.data_source,
-                    pdr_data_req["start_date"],
-                    pdr_data_req["end_date"],
-                    api_key=self.api_key[data_req.data_source],
-                )
-            except Exception as e:
-                logging.warning(e)
-                logging.warning(f"Failed to get data for: {pdr_data_req['tickers']}.")
-            else:
-                # wrangle data resp
-                df1 = self.wrangle_data_resp(data_req, df0)
-
-        # get alpha vantage data
-        elif data_req.data_source == "av-daily":
-
-            # get data from dbnomics, loop through tickers
-            for pdr_ticker, dr_ticker in zip(pdr_data_req["tickers"], data_req.tickers):
-
-                try:
-                    df0 = web.DataReader(
-                        pdr_ticker,
-                        data_req.data_source,
-                        pdr_data_req["start_date"],
-                        pdr_data_req["end_date"],
-                        api_key=self.api_key[data_req.data_source],
-                    )
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning(f"Failed to get data for: {dr_ticker}.")
-
-                else:
-                    # wrangle data resp
-                    df0 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    if data_req.source_tickers is None:
-                        df0["ticker"] = dr_ticker
-                    else:
-                        df0["ticker"] = pdr_ticker
-                    df0.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df1 = pd.concat([df1, df0])
-
-        # get alpha vantage data
-        elif data_req.data_source == "av-forex-daily":
-
-            # get data from dbnomics, loop through tickers
-            for pdr_ticker, dr_ticker in zip(pdr_data_req["mkts"], data_req.tickers):
-
-                try:
-                    df0 = web.DataReader(
-                        pdr_ticker,
-                        data_req.data_source,
-                        pdr_data_req["start_date"],
-                        pdr_data_req["end_date"],
-                        api_key=self.api_key[data_req.data_source],
-                    )
-                except Exception as e:
-                    logging.warning(e)
-                    logging.warning(f"Failed to get data for: {dr_ticker}.")
-
-                else:
-                    # wrangle data resp
-                    df0 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df0["ticker"] = pdr_ticker.replace("/", "")
-                    df0.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df1 = pd.concat([df1, df0])
-
-        # check if df empty
-        if df1.empty:
-            raise Exception(
-                "No data returned. Check data request parameters and try again."
-            )
-
-        # filter df for desired fields and typecast
-        fields = [field for field in data_req.fields if field in df1.columns]
-        df = df1.loc[:, fields].copy()
-
-        return df.sort_index()
+            return df
 
     @staticmethod
     def wrangle_data_resp(
-        data_req: DataRequest, data_resp: pd.DataFrame
-    ) -> pd.DataFrame:
+            data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -345,8 +280,86 @@ class PandasDataReader(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(
-            data_req, data_resp, data_source=data_req.data_source
-        ).tidy_data()
+        df = getattr(WrangleData(data_req, data_resp), data_req.data_source)()
 
         return df
+
+    def get_tidy_data(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Gets data from FRED and wrangles the data response into tidy data format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            Dataframe with DatetimeIndex (level 0), tickers (level 1) and actual values (cols),
+            in tidy data format.
+        """
+        # data req
+        df = getattr(self, data_req.data_source)(data_req)
+        # wrangle data resp
+        df = self.wrangle_data_resp(data_req, df)
+
+        return df
+
+    def check_params(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Checks the data request parameters before requesting data to reduce API calls
+        and improve efficiency.
+
+        """
+        # check data source
+        if data_req.data_source != 'fred' and data_req.data_source != 'yahoo':
+            raise ValueError(
+                "Select a Pandas-datareader supported data source for the data request."
+            )
+
+        # check cat
+        if data_req.cat not in self.categories:
+            raise ValueError(
+                f"Select a valid category. Valid categories are: {self.categories}."
+            )
+        # check freq
+        if data_req.freq not in self.frequencies[data_req.cat]:
+            raise ValueError(
+                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
+            )
+        # check fields
+        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
+            raise ValueError(f"Invalid fields. Valid data fields are: {self.fields}.")
+
+    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Get data.
+
+        Parameters
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols),
+            in tidy format.
+        """
+        # check params
+        self.check_params(data_req)
+
+        # get tidy data
+        df = self.get_tidy_data(data_req)
+
+        # check if df empty
+        if df.empty:
+            raise Exception(
+                "No data returned. Check data request parameters and try again."
+            )
+
+        # filter df for desired fields and typecast
+        fields = [field for field in data_req.fields if field in df.columns]
+        df = df.loc[:, fields].copy()
+
+        return df.sort_index()

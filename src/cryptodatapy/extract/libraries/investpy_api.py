@@ -9,7 +9,7 @@ import pandas as pd
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.library import Library
 from cryptodatapy.transform.convertparams import ConvertParams
-from cryptodatapy.transform.wrangle import WrangleData
+from cryptodatapy.transform.wrangle import WrangleData, WrangleInfo
 from cryptodatapy.util.datacredentials import DataCredentials
 
 # data credentials
@@ -22,47 +22,47 @@ class InvestPy(Library):
     """
 
     def __init__(
-        self,
-        categories: List[str] = ["fx", "rates", "eqty", "cmdty", "macro"],
-        exchanges: Optional[List[str]] = None,
-        indexes: Optional[Dict[str, List[str]]] = None,
-        assets: Optional[Dict[str, List[str]]] = None,
-        markets: Optional[Dict[str, List[str]]] = None,
-        market_types: List[str] = ["spot", "future"],
-        fields: Optional[Dict[str, List[str]]] = None,
-        frequencies: Dict[str, List[str]] = {
-            "fx": ["d", "w", "m", "q", "y"],
-            "rates": ["d", "w", "m", "q", "y"],
-            "eqty": ["d", "w", "m", "q", "y"],
-            "cmdty": ["d", "w", "m", "q", "y"],
-            "macro": [
-                "1min",
-                "5min",
-                "10min",
-                "15min",
-                "30min",
-                "1h",
-                "2h",
-                "4h",
-                "8h",
-                "d",
-                "w",
-                "m",
-                "q",
-                "y",
-            ],
-        },
-        base_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        max_obs_per_call: Optional[int] = None,
-        rate_limit: Optional[Any] = None,
+            self,
+            categories: List[str] = ["fx", "rates", "eqty", "cmdty", "macro"],
+            exchanges: Optional[List[str]] = None,
+            indexes: Optional[Dict[str, List[str]]] = None,
+            assets: Optional[Dict[str, List[str]]] = None,
+            markets: Optional[Dict[str, List[str]]] = None,
+            market_types: List[str] = ["spot", "future"],
+            fields: Optional[Dict[str, List[str]]] = None,
+            frequencies: Dict[str, List[str]] = {
+                "fx": ["d", "w", "m", "q", "y"],
+                "rates": ["d", "w", "m", "q", "y"],
+                "eqty": ["d", "w", "m", "q", "y"],
+                "cmdty": ["d", "w", "m", "q", "y"],
+                "macro": [
+                    "1min",
+                    "5min",
+                    "10min",
+                    "15min",
+                    "30min",
+                    "1h",
+                    "2h",
+                    "4h",
+                    "8h",
+                    "d",
+                    "w",
+                    "m",
+                    "q",
+                    "y",
+                ],
+            },
+            base_url: Optional[str] = None,
+            api_key: Optional[str] = None,
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[Any] = None,
     ):
         """
         Constructor
 
         Parameters
         ----------
-        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'cmdty', 'credit', 'macro', 'alt'}
             List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
         exchanges: list, optional, default None
             List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
@@ -110,7 +110,7 @@ class InvestPy(Library):
             rate_limit,
         )
 
-        self.indexes = self.get_indexes_info(cat=None, as_dict=True)
+        self.indexes = self.get_indexes_info(as_list=True)
         self.assets = self.get_assets_info(cat=None, as_dict=True)
         self.fields = self.get_fields_info()
 
@@ -122,77 +122,160 @@ class InvestPy(Library):
         return None
 
     @staticmethod
-    def get_indexes_info(
-        cat: Optional[str] = None, as_dict: bool = False
-    ) -> Union[Dict[str, List[str]], pd.DataFrame]:
+    def req_meta(data_type: str) -> Any:
+        """
+        Request metadata.
+
+        Parameters
+        ----------
+        data_type: str, {'indexes', 'fx', 'rates', 'etfs', 'eqty', 'cmdty'}
+            Type of data to request metadata for.
+
+        Returns
+        -------
+        meta: Any
+         Object with metadata.
+        """
+        data_types = {'indexes': 'indices', 'fx': 'currency_crosses', 'rates': 'bonds', 'etfs': 'etfs',
+                      'eqty': 'stocks', 'cmdty': 'commodities'}
+        try:
+            meta = getattr(getattr(investpy, data_types[data_type]), 'get_' + data_types[data_type])()
+
+        except AssertionError as e:
+            logging.warning(e)
+            logging.warning(f"Failed to get metadata for {data_type}.")
+
+        else:
+            return meta
+
+    def get_indexes_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
         """
         Get available indexes info.
 
         Parameters
         ----------
-        cat: str, {'eqty', 'cmdty', 'rates'}, optional, default None
-            Asset class.
-        as_dict: bool, default False
-            Returns available indexes as dictionary, with cat-indexes key-values pairs.
+        as_list: bool, default False
+            Returns available indexes as list.
 
         Returns
         -------
-        indexes: dictionary or pd.DataFrame
-            Dictionary or dataframe with info on available indexes, by category.
+        indexes: list or pd.DataFrame
+            List or dataframe with info on available indexes.
         """
-        try:
-            indexes = investpy.indices.get_indices()
+        # req data
+        indexes = self.req_meta(data_type='indexes')
+        # wrangle data resp
+        indexes = WrangleInfo(indexes).ip_meta_resp(data_type='indexes', as_list=as_list)
 
-        except Exception as e:
-            logging.warning(e)
-            logging.warning(f"Failed to get indexes info.")
+        return indexes
 
-        else:
-            # wrangle data resp
-            indexes.rename(columns={"symbol": "ticker"}, inplace=True)
-            # set index and sort
-            indexes.set_index("ticker", inplace=True)
-            indexes.sort_index(inplace=True)
+    def get_fx_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get fx info.
 
-            # categories
-            cats = {"cmdty": "commodities", "rates": "bonds", "eqty": ""}
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns available fx pairs as list.
 
-            # indexes dict
-            if as_dict:
-                idx_dict = {}
-                for k in cats.keys():
-                    if k == "eqty":
-                        idx_dict[k] = indexes[
-                            (indexes["class"] != "commodities")
-                            & (indexes["class"] != "bonds")
-                        ].index.to_list()
-                    else:
-                        idx_dict[k] = indexes[
-                            indexes["class"] == cats[k]
-                        ].index.to_list()
+        Returns
+        -------
+        fx: list or pd.DataFrame
+            List or dataframe with info on available fx pairs.
+        """
+        # req data
+        fx = self.req_meta(data_type='fx')
+        # wrangle data resp
+        fx = WrangleInfo(fx).ip_meta_resp(data_type='fx', as_list=as_list)
 
-                # filter by cat
-                if cat is not None:
-                    indexes = idx_dict[cat]
-                else:
-                    indexes = idx_dict
+        return fx
 
-            else:
-                # filter df by cat
-                if cat is not None:
-                    if cat == "eqty":
-                        indexes = indexes[
-                            (indexes["class"] != "commodities")
-                            & (indexes["class"] != "bonds")
-                        ]
-                    else:
-                        indexes = indexes[indexes["class"] == cats[cat]]
+    def get_rates_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get rates info.
 
-            return indexes
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns available rates as list.
 
-    def get_assets_info(
-        self, cat: Optional[str] = None, as_dict: bool = False
-    ) -> Union[Dict[str, List[str]], pd.DataFrame]:
+        Returns
+        -------
+        rates: list or pd.DataFrame
+            List or dataframe with info on available rates.
+        """
+        # req data
+        rates = self.req_meta(data_type='rates')
+        # wrangle data resp
+        rates = WrangleInfo(rates).ip_meta_resp(data_type='rates', as_list=as_list)
+
+        return rates
+
+    def get_etfs_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get etfs info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns available etfs as list.
+
+        Returns
+        -------
+        etfs: list or pd.DataFrame
+            List or dataframe with info on available etfs.
+        """
+        # req data
+        etfs = self.req_meta(data_type='etfs')
+        # wrangle data resp
+        etfs = WrangleInfo(etfs).ip_meta_resp(data_type='etfs', as_list=as_list)
+
+        return etfs
+
+    def get_eqty_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get equities/stocks info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns available equities as list.
+
+        Returns
+        -------
+        eqty: list or pd.DataFrame
+            List or dataframe with info on available equities.
+        """
+        # req data
+        eqty = self.req_meta(data_type='eqty')
+        # wrangle data resp
+        eqty = WrangleInfo(eqty).ip_meta_resp(data_type='eqty', as_list=as_list)
+
+        return eqty
+
+    def get_cmdty_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
+        """
+        Get commodities info.
+
+        Parameters
+        ----------
+        as_list: bool, default False
+            Returns available commodities as list.
+
+        Returns
+        -------
+        cmdty: list or pd.DataFrame
+            List or dataframe with info on available commodities.
+        """
+        # req data
+        cmdty = self.req_meta(data_type='cmdty')
+        # wrangle data resp
+        cmdty = WrangleInfo(cmdty).ip_meta_resp(data_type='cmdty', as_list=as_list)
+
+        return cmdty
+
+    def get_assets_info(self, cat: Optional[str] = None, as_dict: bool = False) -> \
+            Union[Dict[str, List[str]], pd.DataFrame]:
         """
         Get assets info.
 
@@ -209,90 +292,29 @@ class InvestPy(Library):
             Dictionary or dataframe with info on available assets, by category.
         """
         # store asset info in dict
-        assets_info = {}
-        # fx
-        if cat == "fx" or cat is None:
-            try:
-                fx = investpy.currency_crosses.get_currency_crosses(
-                    base=None, second=None
-                )
-            except Exception as e:
-                logging.warning(e)
-                logging.warning(f"Failed to get {cat} info.")
-            else:
-                fx.rename(columns={"name": "ticker"}, inplace=True)
-                assets_info["fx"] = fx.set_index("ticker")
+        assets_info = {'fx': self.get_fx_info()}
+
         # rates
-        if cat == "rates" or cat is None:
-            try:
-                bonds = investpy.bonds.get_bonds()
-                etfs = investpy.etfs.get_etfs()
-                idx = investpy.indices.get_indices()
-            except Exception as e:
-                logging.warning(e)
-                logging.warning(f"Failed to get {cat} info.")
-            else:
-                bonds["symbol"] = bonds.name
-                etfs = etfs[etfs["asset_class"] == "bond"].loc[
-                    :, ["country", "name", "full_name", "symbol"]
-                ]
-                idx = idx[idx["class"] == "bonds"].loc[
-                    :, ["country", "name", "full_name", "symbol"]
-                ]
-                rates = (
-                    pd.concat([bonds, idx, etfs])
-                    .rename(columns={"symbol": "ticker"})
-                    .copy()
-                )
-                assets_info["rates"] = rates.set_index("ticker")
+        rates = self.get_rates_info()
+        idx = self.get_indexes_info()
+        etfs = self.get_etfs_info()
+        assets_info['rates'] = pd.concat([rates,
+                                          idx[idx['class'] == 'bonds'],
+                                          etfs[etfs.asset_class == 'bond']]).loc[:, :'currency']
+
         # cmdty
-        if cat == "cmdty" or cat is None:
-            try:
-                fut = investpy.commodities.get_commodities()
-                etfs = investpy.etfs.get_etfs()
-                idx = investpy.indices.get_indices()
-            except Exception as e:
-                logging.warning(e)
-                logging.warning(f"Failed to get {cat} info.")
-            else:
-                fut["symbol"] = fut.name
-                fut = fut.loc[:, ["country", "name", "full_name", "currency", "symbol"]]
-                etfs = etfs[etfs["asset_class"] == "commodity"].loc[
-                    :, ["country", "name", "full_name", "symbol", "currency"]
-                ]
-                idx = idx[idx["class"] == "commodities"].loc[
-                    :, ["country", "name", "full_name", "symbol", "currency"]
-                ]
-                cmdty = (
-                    pd.concat([fut, idx, etfs])
-                    .rename(columns={"symbol": "ticker"})
-                    .copy()
-                )
-                assets_info["cmdty"] = cmdty.set_index("ticker")
+        cmdty = self.get_cmdty_info()
+        assets_info['cmdty'] = pd.concat([cmdty,
+                                          idx[idx['class'] == 'commodities'],
+                                          etfs[etfs.asset_class == 'commodity']]).loc[:, : 'currency'].drop(
+            columns='title')
         # eqty
-        if cat == "eqty" or cat is None:
-            try:
-                stocks = investpy.stocks.get_stocks()
-                etfs = investpy.etfs.get_etfs()
-                idx = investpy.indices.get_indices()
-            except Exception as e:
-                logging.warning(e)
-            else:
-                stocks = stocks.loc[
-                    :, ["country", "name", "full_name", "symbol", "currency"]
-                ]
-                etfs = etfs[etfs["asset_class"] == "equity"].loc[
-                    :, ["country", "name", "full_name", "symbol", "currency"]
-                ]
-                idx = idx[
-                    (idx["class"] != "commodities") & (idx["class"] != "bonds")
-                ].loc[:, ["country", "name", "full_name", "symbol", "currency"]]
-                eqty = (
-                    pd.concat([idx, etfs, stocks])
-                    .rename(columns={"symbol": "ticker"})
-                    .copy()
-                )
-                assets_info["eqty"] = eqty.set_index("ticker")
+        eqty = self.get_eqty_info()
+
+        assets_info['eqty'] = pd.concat([eqty,
+                                         idx[(idx['class'] != 'bonds') & (idx['class'] != 'commodities')],
+                                         etfs[etfs.asset_class == 'equity']]).loc[:, : 'currency'].drop(columns='isin')
+
         # macro
         if cat == "macro":
             raise ValueError(f"Asset info not available for macro data.")
@@ -355,7 +377,7 @@ class InvestPy(Library):
             "cmdty": cmdty_fields_list,
             "macro": macro_fields_list,
         }
-        # fields obj
+        # fields info cat
         if cat is not None:
             fields = fields[cat]
 
@@ -368,590 +390,89 @@ class InvestPy(Library):
         """
         return None
 
-    def get_indexes(self, data_req: DataRequest) -> pd.DataFrame:
+    @staticmethod
+    def req_data(data_type: str, **kwargs) -> pd.DataFrame:
         """
-        Get indexes data.
+        Sends data request to Python client.
+
+        Parameters
+        ----------
+        data_type: str, {'indexes', 'fx', 'rates', 'etfs', 'eqty', 'cmdty'}
+            Data type to retrieve.
+
+        Other Parameters
+        ----------------
+        ticker: list
+            List of tickers
+        country: str
+            Name of country.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with datetime, ticker/identifier, and field/col values.
+        """
+        data_types = {'indexes': ['indices', 'index'],
+                      'fx': ['currency_crosses', 'currency_cross'],
+                      'rates': ['bonds', 'bond'],
+                      'etfs': ['etfs', 'etf'],
+                      'eqty': ['stocks', 'stock'],
+                      'cmdty': ['commodities', 'commodity']}
+        try:
+            df = getattr(getattr(investpy, data_types[data_type][0]),
+                         'get_' + data_types[data_type][1] + '_historical_data')(**kwargs)
+            assert not df.empty
+
+        except Exception as e:
+            logging.warning(f"Failed to {data_type} data.")
+            logging.warning(e)
+
+        else:
+
+            return df
+
+    @staticmethod
+    def get_econ_calendar(data_req: DataRequest, cty: str, start_date: str = None) -> pd.DataFrame:
+        """
+        Get economic calendar from start date.
 
         Parameters
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        cty: str
+            Country to retrieve econ calendar for.
+        start_date: str
+            Start date for calendar, in InvestPy 'DD/MM/YYYY' format.
 
         Returns
         -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and index OHLCV values data (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # get indexes
-        idx_df = self.get_indexes_info()
-        # empty df to add data
-        df = pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    if (
-                        idx_df.loc[idx_df.name == ip_ticker].shape[0] > 1
-                    ):  # get country name
-                        cty = "united states"
-                        df0 = investpy.indices.get_index_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    elif idx_df.loc[idx_df.name == ip_ticker].shape[0] == 1:
-                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]["country"]
-                        df0 = investpy.indices.get_index_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    else:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(ip_data_req["pause"])
-                    if attempts == ip_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to pull {dr_ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = dr_ticker
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
-
-    def get_etfs(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get ETFs data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and ETF OHLCV values (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # get etfs
-        etfs_df = investpy.etfs.get_etfs()
-        # empty df to add data
-        df = pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    if (
-                        etfs_df.loc[etfs_df.name == ip_ticker].shape[0] > 1
-                    ):  # get country name
-                        cty = "united states"
-                        df0 = investpy.etfs.get_etf_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    elif etfs_df.loc[etfs_df.name == ip_ticker].shape[0] == 1:
-                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]["country"]
-                        df0 = investpy.etfs.get_etf_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    else:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(ip_data_req["pause"])
-                    if attempts == ip_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to pull {dr_ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = dr_ticker
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
-
-    def get_stocks(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get stocks data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and stocks OHLCV values (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # get stocks
-        stocks_df = investpy.stocks.get_stocks()
-        # empty df to add data
-        df = pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    if (
-                        stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] > 1
-                    ):  # get country name
-                        cty = "united states"
-                        df0 = investpy.stocks.get_stock_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    elif stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] == 1:
-                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0][
-                            "country"
-                        ]
-                        df0 = investpy.stocks.get_stock_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    else:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(ip_data_req["pause"])
-                    if attempts == ip_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to pull {dr_ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = dr_ticker
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
-
-    def get_eqty(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get equities OHLCV data, for either indexes, ETFs or stocks.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and equities OHLCV values (cols).
-        """
-
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # get tickers
-        idx_df = self.get_indexes_info()
-        etfs_df = investpy.etfs.get_etfs()
-        stocks_df = investpy.stocks.get_stocks()
-        # empty df to add data
-        df = pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    if idx_df.loc[idx_df.name == ip_ticker].shape[0] == 1:
-                        cty = idx_df.loc[idx_df.name == ip_ticker].iloc[0]["country"]
-                        df0 = investpy.indices.get_index_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    elif etfs_df.loc[etfs_df.name == ip_ticker].shape[0] == 1:
-                        cty = etfs_df.loc[etfs_df.name == ip_ticker].iloc[0]["country"]
-                        df0 = investpy.etfs.get_etf_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    elif stocks_df.loc[stocks_df.symbol == ip_ticker].shape[0] == 1:
-                        cty = stocks_df.loc[stocks_df.symbol == ip_ticker].iloc[0][
-                            "country"
-                        ]
-                        df0 = investpy.stocks.get_stock_historical_data(
-                            ip_ticker,
-                            cty,
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    else:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(ip_data_req["pause"])
-                    if attempts == ip_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to pull {dr_ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = dr_ticker
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
-
-    def get_fx(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get FX data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and FX OHLC values (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # empty df to add data
-        df = pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["mkts"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    df0 = investpy.currency_crosses.get_currency_cross_historical_data(
-                        ip_ticker,
-                        from_date=ip_data_req["start_date"],
-                        to_date=ip_data_req["end_date"],
-                    )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-
-                except Exception as e:
-                    logging.warning(e)
-                    attempts += 1
-                    sleep(ip_data_req["pause"])
-                    if attempts == ip_data_req["trials"]:
-                        logging.warning(
-                            f"Failed to pull {dr_ticker} after many attempts."
-                        )
-                        break
-
-                else:
-                    # wrangle data resp
-                    df1 = self.wrangle_data_resp(data_req, df0)
-                    # add ticker to index
-                    df1["ticker"] = ip_ticker.replace("/", "")
-                    df1.set_index(["ticker"], append=True, inplace=True)
-                    # stack ticker dfs
-                    df = pd.concat([df, df1])
-                    break
-
-        return df
-
-    def get_rates(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get rates data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and rates OHLC values (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # empty df to add data
-        df0, df = pd.DataFrame(), pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                try:  # try get request
-                    df0 = investpy.bonds.get_bond_historical_data(
-                        ip_ticker,
-                        from_date=ip_data_req["start_date"],
-                        to_date=ip_data_req["end_date"],
-                    )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-                    break
-
-                except Exception as e:
-                    logging.info(e)
-                    logging.info(f"Failed to pull {dr_ticker}.")
-                    sleep(ip_data_req["pause"])
-
-                    try:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                        assert not df0.empty
-                        sleep(ip_data_req["pause"])
-                        break
-
-                    except Exception as e:
-                        logging.warning(e)
-                        attempts += 1
-                        sleep(ip_data_req["pause"])
-                        if attempts == ip_data_req["trials"]:
-                            logging.warning(
-                                f"Failed to pull data for {dr_ticker} after many attempts."
-                            )
-                            break
-
-            if not df0.empty:
-                # wrangle data resp
-                df1 = self.wrangle_data_resp(data_req, df0)
-                # add ticker to index
-                df1["ticker"] = dr_ticker
-                df1.set_index(["ticker"], append=True, inplace=True)
-                # stack ticker dfs
-                df = pd.concat([df, df1])
-
-        return df
-
-    def get_cmdty(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get cmdty data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and commodities OHLCV values (cols).
-        """
-        # convert data request parameters to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
-        # empty dfs
-        df0, df = pd.DataFrame(), pd.DataFrame()
-
-        # loop through tickers
-        for ip_ticker, dr_ticker in zip(ip_data_req["tickers"], data_req.tickers):
-
-            # set number of attempts and bool for while loop
-            attempts = 0
-            # run a while loop to pull ohlcv prices in case the attempt fails
-            while attempts < ip_data_req["trials"]:
-
-                df0 = None
-
-                try:  # try get request
-                    df0 = investpy.commodities.get_commodity_historical_data(
-                        ip_ticker,
-                        from_date=ip_data_req["start_date"],
-                        to_date=ip_data_req["end_date"],
-                    )
-                    assert not df0.empty
-                    sleep(ip_data_req["pause"])
-                    break
-
-                except Exception as e:
-                    logging.info(e)
-                    logging.info(f"Failed to pull {dr_ticker}.")
-                    sleep(ip_data_req["pause"])
-
-                    try:
-                        search_res = investpy.search_quotes(text=ip_ticker)[0]
-                        df0 = search_res.retrieve_historical_data(
-                            from_date=ip_data_req["start_date"],
-                            to_date=ip_data_req["end_date"],
-                        )
-                        assert not df0.empty
-                        sleep(ip_data_req["pause"])
-                        break
-
-                    except Exception as e:
-                        logging.warning(e)
-                        attempts += 1
-                        sleep(ip_data_req["pause"])
-                        if attempts == 3:
-                            logging.warning(
-                                f"Failed to pull data for {dr_ticker} after many attempts."
-                            )
-                            break
-
-            if not df0.empty:
-                # wrangle data resp
-                df1 = self.wrangle_data_resp(data_req, df0)
-                # add ticker to index
-                df1["ticker"] = dr_ticker
-                df1.set_index(["ticker"], append=True, inplace=True)
-                # stack ticker dfs
-                df = pd.concat([df, df1])
-
-        return df
-
-    def get_macro_series(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Get macro/econ release data.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-
-        Returns
-        -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and macro series/data release (cols).
+        df: pd.DataFrame
+            Dataframe with econ calendar data.
         """
         # convert data req params to InvestPy format
-        ip_data_req = ConvertParams(
-            data_req, data_source="investpy"
-        ).convert_to_source()
+        ip_data_req = ConvertParams(data_req).to_investpy()
+        # set start date
+        if start_date is None:
+            start_date = ip_data_req["start_date"]
+        # cty must be list
+        if isinstance(cty, str):
+            cty = [cty]
 
-        econ_df = pd.DataFrame()
         # set number of attempts and bool for while loop
         attempts = 0
         # run a while loop to pull ohlcv prices in case the attempt fails
         while attempts < ip_data_req["trials"]:
 
-            try:  # try get request
+            try:
                 # get data calendar
-                econ_df = investpy.news.economic_calendar(
-                    countries=ip_data_req["ctys"],
+                df = investpy.news.economic_calendar(
+                    countries=cty,
                     time_zone="GMT",
-                    from_date=ip_data_req["start_date"],
+                    from_date=start_date,
                     to_date=ip_data_req["end_date"],
                 )
-                assert not econ_df.empty
-                break
+                assert not df.empty
 
             except Exception as e:
                 logging.warning(e)
@@ -961,31 +482,135 @@ class InvestPy(Library):
                     raise Exception(
                         "Failed to get economic data release calendar after many attempts."
                     )
+            else:
+
+                return df
+
+    def get_updated_econ_calendar(self, data_req: DataRequest, cty: str) -> pd.DataFrame:
+        """
+        Get updated economic calendar from most recent date in csv file.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        cty: str
+            Country to retrieve econ calendar for.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with updated econ calendar data.
+        """
+        ctys_dict = {'united states': 'us', 'euro zone': 'ez', 'china': 'cn', 'india': 'in', 'japan': 'jp',
+                     'germany': 'de', 'russia': 'ru', 'indonesia': 'id', 'brazil': 'br', 'united kingdom': 'gb',
+                     'france': 'fr', 'turkey': 'tr', 'italy': 'it', 'mexico': 'mx', 'south korea': 'kr',
+                     'canada': 'ca'}
+
+        # get econ calendar
+        with resources.path('cryptodatapy.datasets', ctys_dict[cty] + '_econ_calendar.csv') as f:
+            fields_dict_path = f
+        # get fields and data resp
+        ec_df = pd.read_csv(fields_dict_path, index_col=0)
+
+        # convert data req params to InvestPy format
+        start_date = ec_df.dropna().iloc[-1].date  # most recent date
+
+        # get econ calendar if not updated
+        if start_date != pd.Timestamp.utcnow().strftime("%d/%m/%Y"):
+            up_df = self.get_econ_calendar(data_req, cty, start_date)
+            # concat dfs
+            ec_df = pd.concat([ec_df, up_df])
+
+        return ec_df
+
+    def get_all_ctys_eco_cals(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Get updated economic calendar for all requested countries.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with updated econ calendars for all countries.
+        """
+        # convert data req params to InvestPy format
+        ip_data_req = ConvertParams(data_req).to_investpy()
+        # remove dup ctys
+        ctys = list(set(ip_data_req['ctys']))
+        # ctys df
+        df = pd.DataFrame()
+
+        for cty in ctys:
+            df0 = self.get_updated_econ_calendar(data_req, cty)
+            df = pd.concat([df, df0])
+
+        return df
+
+    def get_macro(self, data_req: DataRequest, econ_cal: pd.DataFrame) -> pd.DataFrame:
+        """
+        Gets and wrangles macro/econ release series from econ calendar.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        econ_cal: pd.DataFrame
+            Dataframe with econ calendar data response.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and values for fields (cols).
+        """
+        # convert data req params to InvestPy format
+        ip_data_req = ConvertParams(data_req).to_investpy()
 
         # emtpy df
         df = pd.DataFrame()
 
         # loop through tickers, countries
-        if not econ_df.empty:
-            for dr_ticker, ip_ticker, cty in zip(
-                data_req.tickers, ip_data_req["tickers"], ip_data_req["ctys"]
-            ):
-                # filter data calendar for ticker, country
-                df0 = econ_df[
-                    (econ_df.event.str.startswith(ip_ticker))
-                    & (econ_df.zone.str.match(cty.lower()))
-                ].copy()
-                # wrangle data resp
-                df1 = self.wrangle_data_resp(data_req, df0)
-                # add ticker to index
-                df1["ticker"] = dr_ticker
-                df1.set_index(["ticker"], append=True, inplace=True)
-                # stack ticker dfs
-                df = pd.concat([df, df1])
-        else:
-            raise Exception("Economic data release calendar was not returned.")
+        for dr_ticker, ip_ticker, cty in zip(data_req.tickers, ip_data_req["tickers"], ip_data_req["ctys"]):
+            # filter data calendar for ticker, country
+            df0 = econ_cal[
+                (econ_cal.event.str.startswith(ip_ticker))
+                & (econ_cal.zone.str.match(cty.lower()))].copy()
+
+            # wrangle data resp
+            df1 = self.wrangle_data_resp(data_req, df0)
+            # add ticker to index
+            df1["ticker"] = dr_ticker
+            df1.set_index(["ticker"], append=True, inplace=True)
+            # stack ticker dfs
+            df = pd.concat([df, df1])
 
         return df
+
+    def check_params(self, data_req: DataRequest) -> None:
+        """
+        Checks the parameters of the data request before requesting data to reduce API calls
+        and improve efficiency.
+
+        """
+        # check cat
+        if data_req.cat not in self.categories:
+            raise ValueError(
+                f"Invalid category. Valid categories are: {self.categories}."
+            )
+
+        # check freq
+        if data_req.freq not in self.frequencies[data_req.cat]:
+            raise ValueError(
+                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
+            )
+
+        # check fields
+        if not all(field in self.fields[data_req.cat] for field in data_req.fields):
+            raise ValueError(f"Invalid fields. Valid fields are: {self.fields}.")
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -1001,40 +626,15 @@ class InvestPy(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market or macro series
             for selected fields (cols), in tidy format.
         """
-        # check cat
-        if data_req.cat not in self.categories:
-            raise ValueError(
-                f"Invalid category. Valid categories are: {self.categories}."
-            )
-
-        # check freq
-        if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(
-                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
-            )
-
-        # check fields
-        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError(f"Invalid fields. Valid fields are: {self.fields}.")
+        # econ cal
+        econ_cal = self.get_all_ctys_eco_cals(data_req)
 
         df = pd.DataFrame()
 
-        try:  # get data
-            # fx
-            if data_req.cat == "fx":
-                df = self.get_fx(data_req)
-            # rates
-            elif data_req.cat == "rates":
-                df = self.get_rates(data_req)
-            # cmdty
-            elif data_req.cat == "cmdty":
-                df = self.get_cmdty(data_req)
-            # eqty
-            elif data_req.cat == "eqty":
-                df = self.get_eqty(data_req)
-            # macro
-            elif data_req.cat == "macro":
-                df = self.get_macro_series(data_req)
+        # get data
+        try:
+            if data_req.cat == "macro":
+                df = self.get_macro(data_req, econ_cal)
 
         except Exception as e:
             logging.warning(e)
@@ -1051,7 +651,7 @@ class InvestPy(Library):
 
     @staticmethod
     def wrangle_data_resp(
-        data_req: DataRequest, data_resp: pd.DataFrame
+            data_req: DataRequest, data_resp: pd.DataFrame
     ) -> pd.DataFrame:
         """
         Wrangle data response.
@@ -1070,6 +670,6 @@ class InvestPy(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source="investpy").tidy_data()
+        df = WrangleData(data_req, data_resp).investpy()
 
         return df

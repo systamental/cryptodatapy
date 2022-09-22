@@ -19,19 +19,19 @@ class DBnomics(Library):
     """
 
     def __init__(
-        self,
-        categories: List[str] = ["macro"],
-        exchanges: Optional[List[str]] = None,
-        indexes: Optional[List[str]] = None,
-        assets: Optional[List[str]] = None,
-        markets: Optional[List[str]] = None,
-        market_types: Optional[List[str]] = None,
-        fields: Optional[Dict[str, List[str]]] = None,
-        frequencies: Dict[str, List[str]] = {"macro": ["d", "w", "m", "q", "y"]},
-        base_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        max_obs_per_call: Optional[int] = None,
-        rate_limit: Optional[str] = None,
+            self,
+            categories: List[str] = ["macro"],
+            exchanges: Optional[List[str]] = None,
+            indexes: Optional[List[str]] = None,
+            assets: Optional[List[str]] = None,
+            markets: Optional[List[str]] = None,
+            market_types: Optional[List[str]] = None,
+            fields: Optional[Dict[str, List[str]]] = None,
+            frequencies: Dict[str, List[str]] = {"macro": ["d", "w", "m", "q", "y"]},
+            base_url: Optional[str] = None,
+            api_key: Optional[str] = None,
+            max_obs_per_call: Optional[int] = None,
+            rate_limit: Optional[str] = None,
     ):
         """
         Constructor
@@ -157,25 +157,76 @@ class DBnomics(Library):
         """
         return None
 
-    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+    @staticmethod
+    def get_series(ticker: str) -> pd.DataFrame:
         """
-        Get data macro data.
+        Gets series from DBnomics python client.
+
+        Parameters
+        ----------
+        ticker: str
+            Ticker symbol/identifier of time series.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with DatetimeIndex and actual values (col) for requested series.
+
+        """
+        return dbnomics.fetch_series(ticker)
+
+    @staticmethod
+    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+        """
+        Wrangle data response.
 
         Parameters
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
+        data_resp: pd.DataFrame
+            Data response from client.
 
         Returns
         -------
-        df: pd.DataFrame - MultiIndex
-            DataFrame with DatetimeIndex (level 0), ticker (level 1) and values macro or off-chain fields (cols).
+        df: pd.DataFrame
+            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for macro time series
+            for selected fields (cols), in tidy format.
         """
-        # convert data request parameters to InvestPy format
-        dbn_data_req = ConvertParams(
-            data_req, data_source="dbnomics"
-        ).convert_to_source()
+        # wrangle data resp
+        df = WrangleData(data_req, data_resp).dbnomics()
 
+        return df
+
+    def get_tidy_data(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+        """
+        Submits data request to Python client and wrangles the data response into tidy data format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Data request parameters in CryptoDataPy format.
+        ticker: str
+            Tickery symbol/identifier for time series.
+
+        Returns
+        -------
+        df: pd.DataFrame
+            Dataframe with DatetimeIndex and field values (col) wrangled into tidy data format.
+        """
+        # get entire data history
+        df = self.get_series(ticker)
+        # wrangle df
+        df = self.wrangle_data_resp(data_req, df)
+
+        return df
+
+    def check_params(self, data_req: DataRequest) -> None:
+        """
+        Checks the parameters of the data request before requesting data to reduce API calls
+        and improve efficiency.
+
+        """
         # check cat
         if data_req.cat not in self.categories:
             raise ValueError(
@@ -194,27 +245,45 @@ class DBnomics(Library):
                 "Invalid fields. See fields property for available fields."
             )
 
+    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Get data macro data.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        df: pd.DataFrame - MultiIndex
+            DataFrame with DatetimeIndex (level 0), ticker (level 1) and values macro or off-chain fields (cols).
+        """
+        # convert data req params to DBnomics format
+        db_data_req = ConvertParams(data_req).to_dbnomics()
+
+        # check params
+        self.check_params(data_req)
+
         # emtpy df
         df = pd.DataFrame()
 
         # get data from dbnomics
-        for dbn_ticker, dr_ticker in zip(dbn_data_req["tickers"], data_req.tickers):
-            # loop through tickers
-            df0 = dbnomics.fetch_series(dbn_ticker)
-            # wrangle data resp
-            if not df0.empty:
-                # wrangle data resp
-                df1 = self.wrangle_data_resp(data_req, df0)
-                # add ticker to index
-                if data_req.source_tickers is None:
-                    df1["ticker"] = dr_ticker
-                else:
-                    df1["ticker"] = dbn_ticker
-                df1.set_index(["ticker"], append=True, inplace=True)
-                # stack ticker dfs
-                df = pd.concat([df, df1])
+        for db_ticker, dr_ticker in zip(db_data_req["tickers"], data_req.tickers):
 
-                # check if df empty
+            # loop through tickers
+            df0 = self.get_tidy_data(data_req, db_ticker)
+
+            # add ticker to index
+            if data_req.source_tickers is None:
+                df0["ticker"] = dr_ticker
+            else:
+                df0["ticker"] = db_ticker
+            df0.set_index(["ticker"], append=True, inplace=True)
+            # stack ticker dfs
+            df = pd.concat([df, df0])
+
+        # check if df empty
         if df.empty:
             raise Exception(
                 "No data returned. Check data request parameters and try again."
@@ -225,28 +294,3 @@ class DBnomics(Library):
         df = df.loc[:, fields]
 
         return df.sort_index()
-
-    @staticmethod
-    def wrangle_data_resp(
-        data_req: DataRequest, data_resp: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        Wrangle data response.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response from GET request.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for macro data series
-            for selected fields (cols), in tidy format.
-        """
-        # wrangle data resp
-        df = WrangleData(data_req, data_resp, data_source="dbnomics").tidy_data()
-
-        return df

@@ -899,7 +899,7 @@ class CoinMetrics(DataVendor):
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
         # check if fields available
-        if not all(i in self.fields for i in cm_data_req["fields"]):
+        if not all([field in self.fields for field in cm_data_req["fields"]]):
             raise ValueError(
                 "Some selected fields are not available. Check available fields with"
                 " fields property and try again."
@@ -913,22 +913,22 @@ class CoinMetrics(DataVendor):
         df = pd.DataFrame()
 
         # get indexes data
-        if any(ticker.upper() in self.indexes for ticker in cm_data_req["tickers"]) and any(
-                field in ohlcv_list for field in cm_data_req["fields"]
+        if any([ticker.upper() in self.indexes for ticker in cm_data_req["tickers"]]) and any(
+                [field in ohlcv_list for field in cm_data_req["fields"]]
         ):
             df0 = self.get_indexes(data_req)
             df = pd.concat([df, df0])
 
         # get OHLCV data
-        if any(ticker in self.assets for ticker in cm_data_req["tickers"]) and any(
-                field in ohlcv_list for field in cm_data_req["fields"]
+        if any([ticker in self.assets for ticker in cm_data_req["tickers"]]) and any(
+                [field in ohlcv_list for field in cm_data_req["fields"]]
         ):
             df1 = self.get_ohlcv(data_req)
             df = pd.concat([df, df1])
 
         # get on-chain data
-        if any(ticker in self.assets for ticker in cm_data_req["tickers"]) and any(
-                field in oc_list for field in cm_data_req["fields"]
+        if any([ticker in self.assets for ticker in cm_data_req["tickers"]]) and any(
+                [field in oc_list for field in cm_data_req["fields"]]
         ):
             df2 = self.get_onchain(data_req)
             df = pd.concat([df, df2], axis=1)

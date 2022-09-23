@@ -1,7 +1,5 @@
 from typing import Optional, Union
 
-import matplotlib as plt
-import numpy as np
 import pandas as pd
 
 from cryptodatapy.transform.filter import Filter

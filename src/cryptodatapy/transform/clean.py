@@ -177,7 +177,7 @@ class CleanData:
             rep_df = getattr(Impute(self.df), imp_method)(**kwargs)
         # add repaired % to summary
         rep_vals = rep_df.unstack().notna().sum() - self.df.unstack().notna().sum()
-        self.summary.loc["%_repaired", self.df.unstack().columns] = (
+        self.summary.loc["%_imputed", self.df.unstack().columns] = (
             rep_vals / self.df.unstack().shape[0]
         ) * 100
         # repaired df

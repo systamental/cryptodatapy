@@ -1832,16 +1832,6 @@ docs = ["sphinx", "sphinx-rtd-theme"]
 dotnet = ["sphinxcontrib-dotnetdomain"]
 go = ["sphinxcontrib-golangdomain"]
 
-[[package]]
-name = "sphinx-rtd-dark-mode"
-version = "1.2.4"
-description = "Dark mode for the Sphinx Read the Docs theme."
-category = "dev"
-optional = false
-python-versions = ">=3.4"
-
-[package.dependencies]
-sphinx-rtd-theme = "*"
 
 [[package]]
 name = "sphinx-rtd-theme"

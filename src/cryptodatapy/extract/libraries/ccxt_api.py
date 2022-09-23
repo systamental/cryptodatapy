@@ -748,12 +748,12 @@ class CCXT(Library):
 
         # get OHLCV data
         ohlcv_list = ["open", "high", "low", "close", "volume"]
-        if any(field in ohlcv_list for field in data_req.fields):
+        if any([field in ohlcv_list for field in data_req.fields]):
             df0 = self.get_ohlcv(data_req)
             df = pd.concat([df, df0])
 
         # get funding rate data
-        if any(field == "funding_rate" for field in data_req.fields):
+        if any([field == "funding_rate" for field in data_req.fields]):
             df1 = self.get_funding_rates(data_req)
             df = pd.concat([df, df1], axis=1)
 

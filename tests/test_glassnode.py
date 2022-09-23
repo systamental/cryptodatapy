@@ -89,8 +89,6 @@ def test_wrangle_data_resp(data_req, gn, gn_req_data) -> None:
     assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
     assert list(df.columns) == ["add_tot"], "Column name is incorrect."  # fields
     assert df.index[0] == pd.Timestamp('2009-01-03 00:00:00'), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1] < pd.Timedelta(days=3), \
-        "End date is more than 72h ago."  # end date
     assert isinstance(df.add_tot.iloc[-1], np.int64), "Total addresses should be a numpy int."  # dtypes
 
 

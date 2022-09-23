@@ -78,7 +78,7 @@ class CryptoCompare(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if api_key is None:
-            raise TypeError("Set your api key. Alternatively, setting your api key in environment variables as"
+            raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'CRYPTOCOMPARE_API_KEY', will allow DataCredentials to automatically load it.")
         self.exchanges = self.get_exchanges_info(as_list=True)
         self.indexes = self.get_indexes_info(as_list=True)
@@ -761,6 +761,7 @@ class CryptoCompare(DataVendor):
         if not all([ticker in tickers_list for ticker in cc_data_req['tickers']]):
             raise ValueError("Some assets are not available. "
                              "Check assets and indexes attributes to see all available asset and indexes.")
+
         if len(cc_data_req['fields']) == 0:
             raise ValueError("Some fields are not available. "
                              "Check fields attribute to see all available fields.")

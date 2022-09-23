@@ -78,8 +78,8 @@ class CryptoCompare(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if api_key is None:
-            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses "
-                            "keyring to store your api key in DataCredentials.")
+            raise TypeError("Set your api key. Alternatively, setting your api key in environment variables as"
+                            "'CRYPTOCOMPARE_API_KEY', will allow DataCredentials to automatically load it.")
         self.exchanges = self.get_exchanges_info(as_list=True)
         self.indexes = self.get_indexes_info(as_list=True)
         self.assets = self.get_assets_info(as_list=True)
@@ -624,8 +624,8 @@ class CryptoCompare(DataVendor):
         market_fields = self.get_fields_info(data_type='market')
 
         # check if tickers and fields are correct
-        if any(ticker in self.indexes for ticker in cc_data_req['tickers']) and \
-                any(field in market_fields for field in cc_data_req['fields']):
+        if any([ticker in self.indexes for ticker in cc_data_req['tickers']]) and \
+                any([field in market_fields for field in cc_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='indexes')
 
@@ -656,8 +656,8 @@ class CryptoCompare(DataVendor):
         market_fields = self.get_fields_info(data_type='market')
 
         # check if tickers and fields are correct
-        if any(ticker in self.assets for ticker in cc_data_req['tickers']) and \
-                any(field in market_fields for field in cc_data_req['fields']):
+        if any([ticker in self.assets for ticker in cc_data_req['tickers']]) and \
+                any([field in market_fields for field in cc_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='ohlcv')
 
@@ -694,8 +694,8 @@ class CryptoCompare(DataVendor):
         onchain_fields = self.get_fields_info(data_type='on-chain')
 
         # check if tickers and fields are correct
-        if any(ticker in self.assets for ticker in cc_data_req['tickers']) and \
-                any(field in onchain_fields for field in cc_data_req['fields']):
+        if any([ticker in self.assets for ticker in cc_data_req['tickers']]) and \
+                any([field in onchain_fields for field in cc_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='on-chain')
 
@@ -732,8 +732,8 @@ class CryptoCompare(DataVendor):
         social_fields = self.get_fields_info(data_type='off-chain')
 
         # check if tickers and fields are correct
-        if any(ticker in self.assets for ticker in cc_data_req['tickers']) and \
-                any(field in social_fields for field in cc_data_req['fields']):
+        if any([ticker in self.assets for ticker in cc_data_req['tickers']]) and \
+                any([field in social_fields for field in cc_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='social')
 

@@ -9,7 +9,7 @@ from cryptodatapy.extract.getdata import GetData
 @pytest.fixture
 def data_req_ccxt():
     data_req = DataRequest(
-        data_source="ccxt", start_date="2018-01-01", tickers=["btc", "eth", "ada"]
+        source="ccxt", start_date="2018-01-01", tickers=["btc", "eth", "ada"]
     )
     return data_req
 
@@ -17,7 +17,7 @@ def data_req_ccxt():
 @pytest.fixture
 def data_req_cm():
     data_req = DataRequest(
-        data_source="coinmetrics",
+        source="coinmetrics",
         start_date="2000-01-01",
         tickers=["btc", "eth", "ada"],
         fields=["close", "add_act", "issuance"],
@@ -28,7 +28,7 @@ def data_req_cm():
 @pytest.fixture
 def data_req_cc():
     data_req = DataRequest(
-        data_source="cryptocompare",
+        source="cryptocompare",
         tickers=["btc", "eth", "ada"],
         fields=["add_act", "sm_followers", "tx_count"],
     )
@@ -38,7 +38,7 @@ def data_req_cc():
 @pytest.fixture
 def data_req_db():
     data_req = DataRequest(
-        data_source="dbnomics",
+        source="dbnomics",
         tickers=[
             "US_GDP_Sh_PPP",
             "EZ_GDP_Sh_PPP",
@@ -55,7 +55,7 @@ def data_req_db():
 @pytest.fixture
 def data_req_gn():
     data_req = DataRequest(
-        data_source="glassnode",
+        source="glassnode",
         tickers=["btc", "eth"],
         freq="d",
         fields=["close", "add_act", "tx_count"],
@@ -64,19 +64,9 @@ def data_req_gn():
 
 
 @pytest.fixture
-def data_req_ip():
-    data_req = DataRequest(
-        data_source="investpy",
-        tickers=["US_Eqty_Idx", "US_Eqty_MSCI", "SPY", "US_Rates_Long_ETF", "TLT"],
-        cat="eqty",
-    )
-    return data_req
-
-
-@pytest.fixture
 def data_req_pdr():
     data_req = DataRequest(
-        data_source="fred",
+        source="fred",
         tickers=[
             "US_Credit_BAA_Spread",
             "US_BE_Infl_10Y",
@@ -92,16 +82,16 @@ def data_req_pdr():
 @pytest.fixture
 def data_req_tg():
     data_req = DataRequest(
-        data_source="tiingo",
+        source="tiingo",
         tickers=["meta", "aapl", "amzn", "nflx", "goog"],
         cat="eqty",
     )
     return data_req
 
 
-def test_get_meta_integration_ccxt(data_req_ccxt) -> None:
+def test_integration_get_meta_ccxt(data_req_ccxt) -> None:
     """
-    Test get metadata for CCXT
+    Test integration of get metadata for CCXT
     """
     meta = GetData(data_req_ccxt).get_meta(method="get_exchanges_info", exch="ftx")
     assert not meta.empty, "Dataframe was returned empty."  # non empty
@@ -112,9 +102,9 @@ def test_get_meta_integration_ccxt(data_req_ccxt) -> None:
     assert isinstance(meta, pd.DataFrame), "Metadata should be a dataframe."  # type
 
 
-def test_get_data_integration_ccxt(data_req_ccxt) -> None:
+def test_integration_get_data_ccxt(data_req_ccxt) -> None:
     """
-    Test get data method for CCXT
+    Test integration of get data method for CCXT
     """
 
     df = GetData(data_req_ccxt).get_series()
@@ -142,9 +132,9 @@ def test_get_data_integration_ccxt(data_req_ccxt) -> None:
     ), "Close is not a numpy float."  # dtypes
 
 
-def test_get_meta_integration_cm(data_req_cm) -> None:
+def test_integration_get_meta_cm(data_req_cm) -> None:
     """
-    Test get metadata for CoinMetrics
+    Test integration of get metadata for CoinMetrics
     """
     meta = GetData(data_req_cm).get_meta(method="get_assets_info")
     assert not meta.empty, "Dataframe was returned empty."  # non empty
@@ -155,17 +145,23 @@ def test_get_meta_integration_cm(data_req_cm) -> None:
     assert (
         meta.loc["eth", "metrics"][0]["frequencies"][0]["frequency"] == "1d"
     ), "ETH metrics are incorrect."  # metrics
-    meta = GetData(data_req_cm).get_meta(
-        method="get_avail_assets_info", data_req=data_req_cm
+    data_req = DataRequest(
+        source="coinmetrics",
+        start_date="2000-01-01",
+        tickers=["btc", "eth", "ada"],
+        fields=["add_act", "issuance"],
+    )
+    meta = GetData(data_req).get_meta(
+        method="get_onchain_tickers_list", data_req=data_req
     )
     assert len(meta) != 0, "List was returned empty."  # non empty list
     assert isinstance(meta, list), "Metadata is wrong type"  # type
     assert "btc" in meta, "Bitcoin is not in asset list."  # asset ist
 
 
-def test_get_data_integration_cm(data_req_cm) -> None:
+def test_integration_get_data_cm(data_req_cm) -> None:
     """
-    Test get data method for CoinMetrics
+    Test integration of get data method for CoinMetrics
     """
     df = GetData(data_req_cm).get_series()
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -202,9 +198,9 @@ def test_get_data_integration_cm(data_req_cm) -> None:
     ), "Transaction counts are not a numpy int."  # dtypes
 
 
-def test_get_meta_integration_cc(data_req_cc) -> None:
+def test_integration_get_meta_cc(data_req_cc) -> None:
     """
-    Test get metadata for CryptoCompare
+    Test integration of get metadata for CryptoCompare
     """
     meta = GetData(data_req_cc).get_meta(method="get_news_sources")
     assert not meta.empty, "Dataframe was returned empty."  # non empty
@@ -217,9 +213,9 @@ def test_get_meta_integration_cc(data_req_cc) -> None:
     ), "Cryptocompare is missing from sources."  # sources
 
 
-def test_get_data_integration_cc(data_req_cc) -> None:
+def test_integration_get_data_cc(data_req_cc) -> None:
     """
-    Test get data method for CryptoCompare
+    Test integration of get data method for CryptoCompare
     """
     df = GetData(data_req_cc).get_series()
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -256,9 +252,9 @@ def test_get_data_integration_cc(data_req_cc) -> None:
     ), "Transaction counts are not a numpy int."  # dtypes
 
 
-def test_get_meta_integration_db(data_req_db) -> None:
+def test_integration_get_meta_db(data_req_db) -> None:
     """
-    Test get metadata for DBnomics
+    Test integration of get metadata for DBnomics
     """
     meta = GetData(data_req_db).get_meta(method="get_assets_info")
     assert meta is None, "Metadata is not None"
@@ -267,9 +263,9 @@ def test_get_meta_integration_db(data_req_db) -> None:
     assert meta["macro"] == ["actual"], "Fields for macro cat are incorrect."
 
 
-def test_get_data_integration_db(data_req_db) -> None:
+def test_integration_get_data_db(data_req_db) -> None:
     """
-    Test get data method for DBnomics
+    Test integration of get data method for DBnomics
     """
     df = GetData(data_req_db).get_series()
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -300,9 +296,9 @@ def test_get_data_integration_db(data_req_db) -> None:
     ), "Actual is not a numpy float."  # dtypes
 
 
-def test_get_meta_integration_gn(data_req_gn) -> None:
+def test_integration_get_meta_gn(data_req_gn) -> None:
     """
-    Test get metadata for Glassnode
+    Test integration of get metadata for Glassnode
     """
     meta = GetData(data_req_gn).get_meta(method="get_assets_info")
     assert meta.loc["BTC", "name"] == "Bitcoin", "Bitcoin is not in assets info."
@@ -311,9 +307,9 @@ def test_get_meta_integration_gn(data_req_gn) -> None:
     assert "addresses/count" in meta, "Addresses missing from metadata."
 
 
-def test_get_data_integration_gn(data_req_gn) -> None:
+def test_integration_get_data_gn(data_req_gn) -> None:
     """
-    Test get data method for Glassnode
+    Test integration of get data method for Glassnode
     """
     df = GetData(data_req_gn).get_series()
     assert not df.empty, "Dataframe was returned empty."  # non empty
@@ -349,58 +345,10 @@ def test_get_data_integration_gn(data_req_gn) -> None:
     ), "Transactions count is not a numpy int."  # dtypes
 
 
-def test_get_meta_integration_ip(data_req_ip) -> None:
-    """
-    Test get metadata for InvestPy
-    """
-    meta = GetData(data_req_ip).get_meta(method="get_assets_info", cat="cmdty")
-    assert meta.loc["Gold", "full_name"] == "Gold Futures", "Gold is not in asset info."
-    meta = GetData(data_req_ip).get_meta(attr="fields")
-    assert isinstance(meta, dict), "Metadata is not a dictionary."
-    assert meta["cmdty"] == [
-        "date",
-        "open",
-        "high",
-        "low",
-        "close",
-        "volume",
-    ], "Fields are incorrect."
 
-
-def test_get_data_integration_ip(data_req_ip) -> None:
+def test_integration_get_meta_pdr(data_req_pdr) -> None:
     """
-    Test get data method for InvestPy
-    """
-    df = GetData(data_req_ip).get_series()
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {
-        "SPY",
-        "TLT",
-        "US_Eqty_Idx",
-        "US_Eqty_MSCI",
-        "US_Rates_Long_ETF",
-    }, "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == ["close"], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "1979-12-26 00:00:00"
-    ), "Wrong start date."  # start date
-    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=4
-    ), "End date is more than 4 days ago."  # end date
-    assert isinstance(
-        df.close.dropna().iloc[-1], np.float64
-    ), "Close is not a numpy float."  # dtypes
-
-
-def test_get_meta_integration_pdr(data_req_pdr) -> None:
-    """
-    Test get metadata for Pandas-datareader
+    Test integration of get metadata for Pandas-datareader
     """
     meta = GetData(data_req_pdr).get_meta(method="get_assets_info")
     assert meta is None, "Metadata is not None."
@@ -415,7 +363,7 @@ def test_get_meta_integration_pdr(data_req_pdr) -> None:
     ], "Fields are incorrect."
 
 
-def test_get_data_integration_pdr(data_req_pdr) -> None:
+def test_integration_get_data_pdr(data_req_pdr) -> None:
     """
     Test get data method for Pandas-datareader
     """
@@ -445,9 +393,9 @@ def test_get_data_integration_pdr(data_req_pdr) -> None:
     ), "Close is not a numpy float."  # dtypes
 
 
-def test_get_meta_integration_tg(data_req_tg) -> None:
+def test_integration_get_meta_tg(data_req_tg) -> None:
     """
-    Test get metadata for Tiingo
+    Test integration of get metadata for Tiingo
     """
     meta = GetData(data_req_tg).get_meta(method="get_assets_info")
     assert meta["eqty"].loc["SPY", "exchange"] == "NYSE ARCA", "SPY not in asset info."
@@ -467,9 +415,9 @@ def test_get_meta_integration_tg(data_req_tg) -> None:
     ], "Fields are incorrect."
 
 
-def test_get_data_integration_tg(data_req_tg) -> None:
+def test_integration_get_data_tg(data_req_tg) -> None:
     """
-    Test get data method for Tiingo
+    Test integration of get data method for Tiingo
     """
     df = GetData(data_req_tg).get_series()
     assert not df.empty, "Dataframe was returned empty."  # non empty

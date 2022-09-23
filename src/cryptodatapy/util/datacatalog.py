@@ -27,7 +27,6 @@ class DataCatalog:
             "coinmetrics": "https://docs.coinmetrics.io/info/markets",
             "glassnode": "https://glassnode.com/",
             "tiingo": "https://api.tiingo.com/products/crypto-api",
-            "alpha vantage": "https://www.alphavantage.co/documentation/",
             "yahoo finance": "https://finance.yahoo.com/",
             "investpy": "https://investpy.readthedocs.io/",
             "dbnomics": "https://db.nomics.world/providers",

@@ -23,7 +23,7 @@ def test_wrangle_fred_data_resp(pdr, fred_data_resp) -> None:
     """
     Tests wrangling of Fred data response.
     """
-    data_req = DataRequest(data_source='fred', tickers=['US_CB_MB', 'US_UE_Rate'], cat='macro')
+    data_req = DataRequest(source='fred', tickers=['US_CB_MB', 'US_UE_Rate'], cat='macro')
     df = pdr.wrangle_data_resp(data_req, fred_data_resp)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
@@ -43,7 +43,7 @@ def test_wrangle_yahoo_data_resp(pdr, yahoo_data_resp) -> None:
     """
     Tests wrangling of Yahoo data response.
     """
-    data_req = DataRequest(data_source='yahoo', tickers=['spy', 'tlt', 'gld'])
+    data_req = DataRequest(source='yahoo', tickers=['spy', 'tlt', 'gld'])
     df = pdr.wrangle_data_resp(data_req, yahoo_data_resp)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
@@ -60,13 +60,13 @@ def test_check_params(pdr) -> None:
     data_req = DataRequest()
     with pytest.raises(ValueError):
         pdr.check_params(data_req)
-    data_req = DataRequest(data_source='yahoo', cat='crypto')
+    data_req = DataRequest(source='yahoo', cat='crypto')
     with pytest.raises(ValueError):
         pdr.check_params(data_req)
-    data_req = DataRequest(data_source='fred', cat='rates', freq='1h')
+    data_req = DataRequest(source='fred', cat='rates', freq='1h')
     with pytest.raises(ValueError):
         pdr.check_params(data_req)
-    data_req = DataRequest(data_source='yahoo', cat='eqty', fields='trades')
+    data_req = DataRequest(source='yahoo', cat='eqty', fields='trades')
     with pytest.raises(ValueError):
         pdr.check_params(data_req)
 
@@ -75,7 +75,7 @@ def test_integration_get_data_fred(pdr) -> None:
     """
     Test integration of get data method.
     """
-    data_req = DataRequest(data_source='fred', cat='macro', tickers=['US_UE_Rate', 'US_CB_MB'], fields='actual')
+    data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_CB_MB'], fields='actual')
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -99,7 +99,7 @@ def test_integration_get_data_yahoo(pdr) -> None:
     """
     Test integration of get data method.
     """
-    data_req = DataRequest(data_source='yahoo', cat='eqty', tickers=['spy', 'tlt', 'gld'], fields=['close', 'volume'])
+    data_req = DataRequest(source='yahoo', cat='eqty', tickers=['spy', 'tlt', 'gld'], fields=['close', 'volume'])
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(

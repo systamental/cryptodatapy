@@ -121,7 +121,7 @@ class DataCatalog:
 
     @staticmethod
     def search_tickers(
-        by_col: str = Optional[None], keyword: Optional[str] = None
+        by_col: Optional[str] = None, keyword: Optional[str] = None
     ) -> pd.DataFrame():
         """
         Searches for tickers metadata.
@@ -144,9 +144,9 @@ class DataCatalog:
         tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
         if by_col is None or keyword is None:
-            raise ValueError("Provide column name and keyword to search for.")
+            raise ValueError("Provide values to search for 'by_col' and 'keyword' parameters.")
         else:
-            tickers_df = tickers_df[tickers_df[by_col].str.contains(keyword)]
+            tickers_df = tickers_df[tickers_df[by_col].str.contains(keyword, na=False)]
 
         return tickers_df
 
@@ -227,9 +227,9 @@ class DataCatalog:
         fields_df = pd.read_csv(fields_path, index_col=0, encoding="latin1")
 
         if by_col is None or keyword is None:
-            raise ValueError("Provide column name and keyword to search for.")
+            raise ValueError("Provide values to search for 'by_col' and 'keyword' parameters.")
         else:
-            fields_df = fields_df[fields_df[by_col].str.contains(keyword)]
+            fields_df = fields_df[fields_df[by_col].str.contains(keyword, na=False)]
 
         return fields_df
 

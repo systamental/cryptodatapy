@@ -609,7 +609,7 @@ class InvestPy(Library):
             )
 
         # check fields
-        if not all(field in self.fields[data_req.cat] for field in data_req.fields):
+        if not all([field in self.fields[data_req.cat] for field in data_req.fields]):
             raise ValueError(f"Invalid fields. Valid fields are: {self.fields}.")
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:

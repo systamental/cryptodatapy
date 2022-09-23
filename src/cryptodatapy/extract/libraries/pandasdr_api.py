@@ -280,7 +280,7 @@ class PandasDataReader(Library):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = getattr(WrangleData(data_req, data_resp), data_req.data_source)()
+        df = getattr(WrangleData(data_req, data_resp), data_req.source)()
 
         return df
 
@@ -300,20 +300,20 @@ class PandasDataReader(Library):
             in tidy data format.
         """
         # data req
-        df = getattr(self, data_req.data_source)(data_req)
+        df = getattr(self, data_req.source)(data_req)
         # wrangle data resp
         df = self.wrangle_data_resp(data_req, df)
 
         return df
 
-    def check_params(self, data_req: DataRequest) -> pd.DataFrame:
+    def check_params(self, data_req: DataRequest) -> None:
         """
         Checks the data request parameters before requesting data to reduce API calls
         and improve efficiency.
 
         """
         # check data source
-        if data_req.data_source != 'fred' and data_req.data_source != 'yahoo':
+        if data_req.source != 'fred' and data_req.source != 'yahoo':
             raise ValueError(
                 "Select a Pandas-datareader supported data source for the data request."
             )

@@ -76,8 +76,8 @@ class Glassnode(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if api_key is None:
-            raise TypeError("Set your api key. Alternatively, you can use the function set_credential which uses "
-                            "keyring to store your api key in DataCredentials.")
+            raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
+                            "'GLASSNODE_API_KEY', will allow DataCredentials to automatically load it.")
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info(data_type=None, as_list=True)
         self.rate_limit = self.get_rate_limit_info()
@@ -315,13 +315,13 @@ class Glassnode(DataVendor):
 
         # check tickers
         tickers = self.assets
-        if not all(ticker.upper() in tickers for ticker in gn_data_req['tickers']):
+        if not all([ticker.upper() in tickers for ticker in gn_data_req['tickers']]):
             raise ValueError(f"Some of the selected assets are not available."
                              " See assets attribute for a list of available assets.")
 
         # check fields
         fields = self.fields
-        if not all(i in fields for i in gn_data_req['fields']):
+        if not all([field in fields for field in gn_data_req['fields']]):
             raise ValueError(f"Some of the selected fields are not available."
                              " See fields attribue for a list of available fields.")
 

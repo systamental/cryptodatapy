@@ -1,4 +1,3 @@
-import pandas as pd
 import json
 
 
@@ -11,6 +10,7 @@ from cryptodatapy.extract.data_vendors import Glassnode
 from cryptodatapy.extract.libraries import InvestPy
 from cryptodatapy.extract.libraries import PandasDataReader
 from cryptodatapy.extract.data_vendors import Tiingo
+
 
 def cc_req_meta(info_type: str, filename: str) -> None:
     """
@@ -145,6 +145,7 @@ def cm_get_test_data() -> None:
     df = cm.get_data(data_req)
     df.to_csv('data/cm_raw_ohlcv_df.csv')
 
+
 def db_get_series() -> None:
     """
     Get get series from DBnomics.
@@ -152,6 +153,7 @@ def db_get_series() -> None:
     db = DBnomics()
     df = db.get_series('BIS/total_credit/Q.US.C.A.M.770.A')
     df.to_csv('data/db_series_df.csv')
+
 
 def fred_data() -> None:
     """
@@ -161,6 +163,7 @@ def fred_data() -> None:
     data_req = DataRequest(tickers=['US_CB_MB', 'US_UE_Rate'])
     df = pdr.fred(data_req)
     df.to_csv('data/fred_df.csv')
+
 
 def yahoo_data() -> None:
     """
@@ -182,15 +185,6 @@ def gn_req_assets() -> None:
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
 
-def gn_req_fields() -> None:
-    """
-    Submits get request for fields info to Glassnode and returns data response, in JSON format.
-    """
-    gn = Glassnode()
-    data_resp = gn.req_fields()
-    filepath = 'data/' + 'gn_fields_req.json'
-    with open(filepath, 'w') as json_file:
-        json.dump(data_resp, json_file)
 
 def gn_req_fields() -> None:
     """
@@ -201,6 +195,7 @@ def gn_req_fields() -> None:
     filepath = 'data/' + 'gn_fields_req.json'
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
+
 
 def gn_req_data() -> None:
     """
@@ -213,6 +208,7 @@ def gn_req_data() -> None:
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
 
+
 def ip_econ_cal() -> None:
     """
     Retrieves econ calendar from InvestPy
@@ -222,6 +218,7 @@ def ip_econ_cal() -> None:
                            fields=['actual', 'expected', 'surprise'])
     econ_cal = ip.get_all_ctys_eco_cals(data_req)
     econ_cal.to_csv('data/ip_econ_cal.csv')
+
 
 def tg_req_crypto() -> None:
     """
@@ -280,13 +277,3 @@ def tg_req_fx_data() -> None:
     filepath = 'data/' + 'tg_fx_data_req.json'
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
-
-
-
-
-
-
-
-
-
-

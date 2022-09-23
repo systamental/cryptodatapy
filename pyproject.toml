@@ -32,6 +32,7 @@ sphinx-autoapi = ">=1.8.4"
 sphinx-rtd-theme = ">=1.0.0"
 black = "^22.8.0"
 isort = "^5.10.1"
+sphinx-rtd-dark-mode = "^1.2.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

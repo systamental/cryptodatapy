@@ -1833,6 +1833,17 @@ dotnet = ["sphinxcontrib-dotnetdomain"]
 go = ["sphinxcontrib-golangdomain"]
 
 [[package]]
+name = "sphinx-rtd-dark-mode"
+version = "1.2.4"
+description = "Dark mode for the Sphinx Read the Docs theme."
+category = "dev"
+optional = false
+python-versions = ">=3.4"
+
+[package.dependencies]
+sphinx-rtd-theme = "*"
+
+[[package]]
 name = "sphinx-rtd-theme"
 version = "1.0.0"
 description = "Read the Docs theme for Sphinx"
@@ -2270,7 +2281,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<4.0"
-content-hash = "d2bbca1ded9cf221d91117ed5c1218fee588827a789a50d3c769f7fb0bcd6118"
+content-hash = "08bf771924123c4608214e3a043bbaca391027ecd2d7cdeee3ce53143a590006"
 
 [metadata.files]
 aiodns = []
@@ -2743,6 +2754,7 @@ soupsieve = [
 ]
 sphinx = []
 sphinx-autoapi = []
+sphinx-rtd-dark-mode = []
 sphinx-rtd-theme = [
     {file = "sphinx_rtd_theme-1.0.0-py2.py3-none-any.whl", hash = "sha256:4d35a56f4508cfee4c4fb604373ede6feae2a306731d533f409ef5c3496fdbd8"},
     {file = "sphinx_rtd_theme-1.0.0.tar.gz", hash = "sha256:eec6d497e4c2195fa0e8b2016b337532b8a699a68bcb22a512870e16925c6a5c"},

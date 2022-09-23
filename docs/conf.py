@@ -20,6 +20,7 @@ extensions = [
     "autoapi.extension",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
+    "sphinx_rtd_dark_mode",
 ]
 autodock_mock_imports = ['pandas']
 autoapi_dirs = ["../src"]

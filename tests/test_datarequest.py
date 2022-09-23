@@ -1,5 +1,3 @@
-# import pandas as pd
-# from datetime import datetime, timedelta
 import pytest
 
 from cryptodatapy.extract.datarequest import DataRequest
@@ -10,13 +8,13 @@ def datarequest():
     return DataRequest()
 
 
-def test_data_source_error(datarequest) -> None:
+def test_source_error(datarequest) -> None:
     """
     Test data source for data request.
     """
     dr = datarequest
     with pytest.raises(ValueError):
-        dr.data_source = ["wrong source type"]
+        dr.source = ["wrong source type"]
 
 
 def test_tickers_error(datarequest) -> None:

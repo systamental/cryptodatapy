@@ -240,7 +240,7 @@ class DBnomics(Library):
             )
 
         # check fields
-        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
+        if not any([field in self.fields[data_req.cat] for field in data_req.fields]):
             raise ValueError(
                 "Invalid fields. See fields property for available fields."
             )

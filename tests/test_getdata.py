@@ -344,8 +344,6 @@ def test_integration_get_data_gn(data_req_gn) -> None:
         df.tx_count.dropna().iloc[-1], np.int64
     ), "Transactions count is not a numpy int."  # dtypes
 
-
-
 def test_integration_get_meta_pdr(data_req_pdr) -> None:
     """
     Test integration of get metadata for Pandas-datareader

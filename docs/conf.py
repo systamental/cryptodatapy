@@ -21,6 +21,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
+autodock_mock_imports = ['pandas']
 autoapi_dirs = ["../src"]
 
 # List of patterns, relative to source directory, that match files and
@@ -34,7 +35,4 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # a list of builtin themes.
 #
 # html_theme = "sphinx_rtd_theme"
-html_theme_options = {
-    "rightsidebar": "true",
-    "relbarbgcolor": "black"
-}
+html_theme = 'nature'

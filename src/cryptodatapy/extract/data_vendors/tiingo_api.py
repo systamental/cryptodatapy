@@ -103,10 +103,8 @@ class Tiingo(DataVendor):
         )
 
         if api_key is None:
-            raise TypeError(
-                "Set your api key. Alternatively, you can use the function set_credential which uses "
-                "keyring to store your api key in DataCredentials."
-            )
+            raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
+                            "'TIINGO_API_KEY', will allow DataCredentials to automatically load it.")
         self.exchanges = self.get_exchanges_info()
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info()
@@ -611,8 +609,8 @@ class Tiingo(DataVendor):
         tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        if any(ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']) and \
-                any(field in self.fields['eqty'] for field in tg_data_req['fields']):
+        if any([ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']]) and \
+                any([field in self.fields['eqty'] for field in tg_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='eqty')
 
@@ -644,8 +642,8 @@ class Tiingo(DataVendor):
             raise ValueError("Data frequency must be intraday for IEX. Change freq parameter and try again.")
 
         # check tickers
-        if any(ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']) and \
-                any(field in self.fields['eqty'] for field in tg_data_req['fields']):
+        if any([ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']]) and \
+                any([field in self.fields['eqty'] for field in tg_data_req['fields']]):
             try:
                 df = self.get_all_tickers(data_req, data_type='iex')
 
@@ -673,8 +671,8 @@ class Tiingo(DataVendor):
         tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        if any(ticker in self.assets['crypto'] for ticker in tg_data_req['mkts']) and \
-                any(field in self.fields['crypto'] for field in tg_data_req['fields']):
+        if any([ticker in self.assets['crypto'] for ticker in tg_data_req['mkts']]) and \
+                any([field in self.fields['crypto'] for field in tg_data_req['fields']]):
 
             try:
                 df = self.get_all_tickers(data_req, data_type='crypto')
@@ -703,7 +701,7 @@ class Tiingo(DataVendor):
         tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        if any(field in self.fields['fx'] for field in tg_data_req['fields']):
+        if any([field in self.fields['fx'] for field in tg_data_req['fields']]):
 
             try:
                 df = self.get_all_tickers(data_req, data_type='fx')
@@ -729,14 +727,14 @@ class Tiingo(DataVendor):
             )
 
         # check assets
-        if not any(ticker.upper() in self.assets[data_req.cat] for ticker in tg_data_req['tickers']) and \
+        if not any([ticker.upper() in self.assets[data_req.cat] for ticker in tg_data_req['tickers']]) and \
                 data_req.cat != 'fx':
             raise ValueError(
                 f"Selected tickers are not available. Use assets attribute to see available tickers."
             )
 
             # check fields
-        if not any(field in self.fields[data_req.cat] for field in tg_data_req['fields']):
+        if not any([field in self.fields[data_req.cat] for field in tg_data_req['fields']]):
             raise ValueError(
                 f"Selected fields are not available. Use fields attribute to see available fields."
             )

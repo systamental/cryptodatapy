@@ -76,7 +76,7 @@ from cryptodatapy.extract.getdata import GetData
 GetData(data_req).get_series()
 ```
 
-With same data request parameters, can you retrieve the same data from another source:
+With the same data request parameters, you can retrieve the same data from a different source:
 
 ```python
 # modify data source parameter
@@ -89,7 +89,8 @@ data_req = DataRequest(data_source='coinmetrics',
 GetData(data_req).get_series()
 ```
 
-For more detailed code examples and interactive tutorials see our [documention]().
+For more detailed code examples and interactive tutorials 
+see our [documention](https://cryptodatapy.readthedocs.io/en/latest/example.html).
 
 ## Supported Data Sources
 
@@ -100,9 +101,7 @@ For more detailed code examples and interactive tutorials see our [documention](
 - [Tiingo](https://api.tiingo.com/documentation/general/overview)
 - [DBnomics](https://db.nomics.world/docs/)
 - [investpy](https://investpy.readthedocs.io/)
-- [FRED](https://pandas-datareader.readthedocs.io/en/latest/)
-- [Yahoo Finance](https://pandas-datareader.readthedocs.io/en/latest/readers/index.html)
-
+- [Pandas-datareader](https://pandas-datareader.readthedocs.io/en/latest/)
 
 ## Contributing
 

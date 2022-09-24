@@ -90,7 +90,7 @@ GetData(data_req).get_series()
 ```
 
 For more detailed code examples and interactive tutorials 
-see our [documention](https://cryptodatapy.readthedocs.io/en/latest/example.html).
+see our [documentation](https://cryptodatapy.readthedocs.io/en/latest/example.html).
 
 ## Supported Data Sources
 
@@ -106,7 +106,7 @@ see our [documention](https://cryptodatapy.readthedocs.io/en/latest/example.html
 ## Contributing
 
 Interested in contributing? Check out the contributing guidelines and 
-contact us at info@systamental.com. Please note that this project is 
+contact us at info@systamental.com. Please note that this project is s
 released with a Code of Conduct. By contributing to this project, you agree 
 to abide by its terms.
 

@@ -22,7 +22,11 @@ extensions = [
     "sphinx.ext.viewcode",
 ]
 
-autoapi_dirs = ["../src"]
+# autoapi_dirs = ["../src"]
+# autoapi_dirs = ["../src"]
+autoapi_dirs = ["../src/cryptodatapy/extract/datarequest.py"]
+autoapi_dirs = ["../src/cryptodatapy/extract/getdata.py"]
+autoapi_dirs = ["../src/cryptodatapy/transform/clean.py"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

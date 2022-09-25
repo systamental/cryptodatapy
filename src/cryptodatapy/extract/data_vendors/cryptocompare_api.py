@@ -78,20 +78,26 @@ class CryptoCompare(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if frequencies is None:
-            frequencies = ['1min', '1h', 'd']
+            self.frequencies = ['1min', '1h', 'd']
         if market_types is None:
-            market_types = ['spot']
+            self.market_types = ['spot']
         if categories is None:
-            categories = ['crypto']
+            self.categories = ['crypto']
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'CRYPTOCOMPARE_API_KEY', will allow DataCredentials to automatically load it.")
-        self.exchanges = self.get_exchanges_info(as_list=True)
-        self.indexes = self.get_indexes_info(as_list=True)
-        self.assets = self.get_assets_info(as_list=True)
-        self.markets = self.get_markets_info(as_list=True)
-        self.fields = self.get_fields_info(data_type=None)
-        self.rate_limit = self.get_rate_limit_info()
+        if exchanges is None:
+            self.exchanges = self.get_exchanges_info(as_list=True)
+        if indexes is None:
+            self.indexes = self.get_indexes_info(as_list=True)
+        if assets is None:
+            self.assets = self.get_assets_info(as_list=True)
+        if markets is None:
+            self.markets = self.get_markets_info(as_list=True)
+        if fields is None:
+            self.fields = self.get_fields_info(data_type=None)
+        if rate_limit is None:
+            self.rate_limit = self.get_rate_limit_info()
 
     def req_meta(self, info_type: str) -> Dict[str, Any]:
         """

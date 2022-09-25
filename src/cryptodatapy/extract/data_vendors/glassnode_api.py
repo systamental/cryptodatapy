@@ -73,16 +73,18 @@ class Glassnode(DataVendor):
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
         if frequencies is None:
-            frequencies = ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']
+            self.frequencies = ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']
         if market_types is None:
-            market_types = ['spot', 'perpetual_future', 'future', 'option']
+            self.market_types = ['spot', 'perpetual_future', 'future', 'option']
         if categories is None:
-            categories = ['crypto']
+            self.categories = ['crypto']
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'GLASSNODE_API_KEY', will allow DataCredentials to automatically load it.")
-        self.assets = self.get_assets_info(as_list=True)
-        self.fields = self.get_fields_info(data_type=None, as_list=True)
+        if assets is None:
+            self.assets = self.get_assets_info(as_list=True)
+        if fields is None:
+            self.fields = self.get_fields_info(data_type=None, as_list=True)
 
     def get_exchanges_info(self) -> None:
         """
@@ -311,19 +313,17 @@ class Glassnode(DataVendor):
         gn_data_req = ConvertParams(data_req).to_glassnode()
 
         # check tickers
-        tickers = self.assets
-        if not all([ticker.upper() in tickers for ticker in gn_data_req['tickers']]):
+        if not all([ticker.upper() in self.assets for ticker in gn_data_req['tickers']]):
             raise ValueError(f"Some of the selected assets are not available."
                              " See assets attribute for a list of available assets.")
 
         # check fields
-        fields = self.fields
-        if not all([field in fields for field in gn_data_req['fields']]):
+        if not all([field in self.fields for field in gn_data_req['fields']]):
             raise ValueError(f"Some of the selected fields are not available."
                              " See fields attribute for a list of available fields.")
 
         # check freq
-        if data_req.freq not in ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']:
+        if data_req.freq not in self.frequencies:
             raise ValueError(f"On-chain data is only available for {self.frequencies} frequencies."
                              f" Change data request frequency and try again.")
 

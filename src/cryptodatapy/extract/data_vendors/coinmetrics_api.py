@@ -85,7 +85,7 @@ class CoinMetrics(DataVendor):
         )
 
         if frequencies is None:
-            frequencies = [
+            self.frequencies = [
                 "tick",
                 "block",
                 "1s",
@@ -104,14 +104,19 @@ class CoinMetrics(DataVendor):
                 "q",
             ]
         if market_types is None:
-            market_types = ["spot", "perpetual_future", "future", "option"]
+            self.market_types = ["spot", "perpetual_future", "future", "option"]
         if categories is None:
-            categories = ["crypto"]
-        self._exchanges = self.get_exchanges_info(as_list=True)
-        self._indexes = self.get_indexes_info(as_list=True)
-        self._assets = self.get_assets_info(as_list=True)
-        self._markets = self.get_markets_info(as_list=True)
-        self._fields = self.get_fields_info(data_type=None, as_list=True)
+            self.categories = ["crypto"]
+        if exchanges is None:
+            self._exchanges = self.get_exchanges_info(as_list=True)
+        if indexes is None:
+            self._indexes = self.get_indexes_info(as_list=True)
+        if assets is None:
+            self._assets = self.get_assets_info(as_list=True)
+        if markets is None:
+            self._markets = self.get_markets_info(as_list=True)
+        if fields is None:
+            self._fields = self.get_fields_info(data_type=None, as_list=True)
 
     @staticmethod
     def req_meta(data_type: str) -> Dict[str, Any]:

@@ -88,7 +88,7 @@ class Tiingo(DataVendor):
         )
 
         if frequencies is None:
-            frequencies = [
+            self.frequencies = [
                 "1min",
                 "5min",
                 "10min",
@@ -105,15 +105,18 @@ class Tiingo(DataVendor):
                 "y",
             ]
         if market_types is None:
-            market_types = ["spot"]
+            self.market_types = ["spot"]
         if categories is None:
-            categories = ["crypto", "fx", "eqty"]
+            self.categories = ["crypto", "fx", "eqty"]
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'TIINGO_API_KEY', will allow DataCredentials to automatically load it.")
-        self.exchanges = self.get_exchanges_info()
-        self.assets = self.get_assets_info(as_list=True)
-        self.fields = self.get_fields_info()
+        if exchanges is None:
+            self.exchanges = self.get_exchanges_info()
+        if assets is None:
+            self.assets = self.get_assets_info(as_list=True)
+        if fields is None:
+            self.fields = self.get_fields_info()
 
     def get_exchanges_info(
             self, cat: Optional[str] = None
@@ -639,10 +642,6 @@ class Tiingo(DataVendor):
         # convert data request parameters to CryptoCompare format
         tg_data_req = ConvertParams(data_req).to_tiingo()
 
-        # check freq
-        if data_req.freq in ['d', 'w', 'm', 'q', 'y']:
-            raise ValueError("Data frequency must be intraday for IEX. Change freq parameter and try again.")
-
         # check tickers
         if any([ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']]) and \
                 any([field in self.fields['eqty'] for field in tg_data_req['fields']]):
@@ -768,14 +767,14 @@ class Tiingo(DataVendor):
             # get eqty intraday OHLCV data
             if (
                     data_req.cat == "eqty"
-                    and data_req.freq in ["1min", "5min", "10min", "15min", "30min", "1h", "2h", "4h", "8h"]
+                    and data_req.freq in self.frequencies[:self.frequencies.index('d')]
             ):
                 df = self.get_eqty_iex(data_req)
 
             # get eqty daily OHLCV data
             elif (
                     data_req.cat == "eqty"
-                    and data_req.freq in ["d", "w", "m", "q", "y"]
+                    and data_req.freq in self.frequencies[self.frequencies.index('d'):]
             ):
                 df = self.get_eqty(data_req)
 

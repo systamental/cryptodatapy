@@ -23,31 +23,14 @@ class CoinMetrics(DataVendor):
 
     def __init__(
             self,
-            categories: List[str] = ["crypto"],
+            categories=None,
             exchanges: Optional[List[str]] = None,
             indexes: Optional[List[str]] = None,
             assets: Optional[List[str]] = None,
             markets: Optional[List[str]] = None,
-            market_types: List[str] = ["spot", "perpetual_future", "future", "option"],
+            market_types=None,
             fields: Optional[List[str]] = None,
-            frequencies: List[str] = [
-                "tick",
-                "block",
-                "1s",
-                "1min",
-                "5min",
-                "10min",
-                "15min",
-                "30min",
-                "1h",
-                "2h",
-                "4h",
-                "8h",
-                "d",
-                "w",
-                "m",
-                "q",
-            ],
+            frequencies=None,
             base_url: Optional[str] = None,
             api_key: Optional[str] = None,
             max_obs_per_call: Optional[int] = None,
@@ -84,6 +67,7 @@ class CoinMetrics(DataVendor):
             api_limit stored in DataCredentials.
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
+
         """
         DataVendor.__init__(
             self,
@@ -101,6 +85,29 @@ class CoinMetrics(DataVendor):
             rate_limit,
         )
 
+        if frequencies is None:
+            frequencies = [
+                "tick",
+                "block",
+                "1s",
+                "1min",
+                "5min",
+                "10min",
+                "15min",
+                "30min",
+                "1h",
+                "2h",
+                "4h",
+                "8h",
+                "d",
+                "w",
+                "m",
+                "q",
+            ]
+        if market_types is None:
+            market_types = ["spot", "perpetual_future", "future", "option"]
+        if categories is None:
+            categories = ["crypto"]
         self._exchanges = self.get_exchanges_info(as_list=True)
         self._indexes = self.get_indexes_info(as_list=True)
         self._assets = self.get_assets_info(as_list=True)
@@ -121,7 +128,7 @@ class CoinMetrics(DataVendor):
         Returns
         -------
         meta: Any
-         Object with metadata.
+            Object with metadata.
         """
         try:
             meta = getattr(client, data_type)()
@@ -278,7 +285,7 @@ class CoinMetrics(DataVendor):
         # req data
         ohlcv_fields = ['price_open', 'price_close', 'price_high', 'price_low', 'vwap', 'volume', 'candle_usd_volume',
                         'candle_trades_count']  # get market fields
-        inst_fields = list(self.get_inst_info(as_dict=True).values())[0]  # inst fields
+        inst_fields = list(self.get_inst_info(as_dict=True).values)[0]  # inst fields
         onchain_fields = self.get_onchain_fields_info()  # get onchain fields
 
         # fields df
@@ -337,10 +344,10 @@ class CoinMetrics(DataVendor):
         else:
             raise Exception("No fields were found. Check available fields and try again.")
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
+
         """
         return None
 
@@ -414,6 +421,7 @@ class CoinMetrics(DataVendor):
         df = WrangleData(data_req, data_resp).coinmetrics()
 
         return df
+
     def get_tidy_data(self, data_req: DataRequest, data_type: str, **kwargs) -> pd.DataFrame:
         """
         Gets data and wrangles it into tidy data format.
@@ -517,7 +525,7 @@ class CoinMetrics(DataVendor):
 
         # check if fields inst
         if data_type == 'institutions':
-            fields, inst_list = ([], list(self.get_inst_info(as_dict=True).values())[0])
+            fields, inst_list = ([], list(self.get_inst_info(as_dict=True).values)[0])
             for field in cm_data_req["fields"]:
                 if field in inst_list:
                     fields.append(field)  # keep only inst fields
@@ -549,6 +557,7 @@ class CoinMetrics(DataVendor):
         data_type: str, {'indexes', 'institutions', 'market_candles', 'asset_metrics', 'open_interest', 'funding_rates',
                          'trades', quotes'}
             Data type to retrieve.
+
         """
         # convert params
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
@@ -943,4 +952,3 @@ class CoinMetrics(DataVendor):
         df = df.loc[:, fields]
 
         return df.sort_index()
-

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Optional, Union
 
 import pandas as pd
@@ -10,9 +11,10 @@ from cryptodatapy.transform.od import OutlierDetection
 class CleanData:
     """
     Cleans data to improve data quality.
+
     """
 
-    def __init__(self, df: pd.DataFrame) -> pd.DataFrame:
+    def __init__(self, df: pd.DataFrame):
         """
         Constructor
 
@@ -20,6 +22,7 @@ class CleanData:
         ----------
         df: pd.DataFrame
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and field (cols) values.
+
         """
         self.start_df = df.copy()  # keepy copy of raw dataframe
         self.df = df
@@ -40,7 +43,7 @@ class CleanData:
         excl_cols: Optional[Union[str, list]] = None,
         od_method: str = "z_score",
         **kwargs
-    ) -> pd.DataFrame:
+    ) -> CleanData:
         """
         Filters outliers.
 
@@ -109,12 +112,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
         --------
-        >>> CleanData(df).filter_outliers(od_method='z_score')
+        # >>> CleanData(df).filter_outliers(od_method='z_score')
+
         """
         # outlier detection
         od = getattr(OutlierDetection(self.df), od_method)(**kwargs)
@@ -134,7 +138,7 @@ class CleanData:
 
     def repair_outliers(
         self, imp_method: str = "interpolate", **kwargs
-    ) -> pd.DataFrame:
+    ) -> CleanData:
         """
         Repairs outliers using an imputation method.
 
@@ -161,12 +165,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(filt_df).repair_outliers(imp_method='fcst')
+        # --------
+        # >>> CleanData(filt_df).repair_outliers(imp_method='fcst')
+
         """
         # impute missing vals
         if imp_method == "fcst":
@@ -185,7 +190,7 @@ class CleanData:
 
     def filter_avg_trading_val(
         self, thresh_val: int = 10000000, window_size: int = 30, **kwargs
-    ) -> pd.DataFrame:
+    ) -> CleanData:
         """
         Filters values below a threshold of average trading value (price * volume/size in quote currency) over some
         lookback window, replacing them with NaNs.
@@ -206,12 +211,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(df).filter_avg_trading_val(thresh_val=10000000, window_size=7)
+        # --------
+        # >>> CleanData(df).filter_avg_trading_val(thresh_val=10000000, window_size=7)
+
         """
         # filter outliers
         filt_df = Filter(self.df).avg_trading_val(
@@ -227,7 +233,7 @@ class CleanData:
 
         return self
 
-    def filter_missing_vals_gaps(self, gap_window: int = 30, **kwargs) -> pd.DataFrame:
+    def filter_missing_vals_gaps(self, gap_window: int = 30, **kwargs) -> CleanData:
         """
         Filters values before a large gap of missing values, replacing them with NaNs.
 
@@ -245,12 +251,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(df).filter_missing_vals_gaps(gap_window=30)
+        # --------
+        # >>> CleanData(df).filter_missing_vals_gaps(gap_window=30)
+
         """
         # filter outliers
         filt_df = Filter(self.df).missing_vals_gaps(gap_window=gap_window, **kwargs)
@@ -266,7 +273,7 @@ class CleanData:
 
         return self
 
-    def filter_min_nobs(self, min_obs=100) -> pd.DataFrame:
+    def filter_min_nobs(self, min_obs=100) -> CleanData:
         """
         Removes tickers from dataframe if the ticker has less than a minimum number of observations.
 
@@ -277,12 +284,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(df).filter_min_nobs(min_obs=30)
+        # --------
+        # >>> CleanData(df).filter_min_nobs(min_obs=30)
+
         """
         # filter outliers
         filt_df = Filter(self.df).min_nobs(min_obs=min_obs)
@@ -303,7 +311,7 @@ class CleanData:
 
         return self
 
-    def filter_tickers(self, tickers_list) -> pd.DataFrame:
+    def filter_tickers(self, tickers_list) -> CleanData:
         """
         Removes specified tickers from dataframe.
 
@@ -315,12 +323,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(df).filter_tickers(tickers_list=stablecoin_list)
+        # --------
+        # >>> CleanData(df).filter_tickers(tickers_list=stablecoin_list)
+
         """
         # filter tickers
         filt_df = Filter(self.df).tickers(tickers_list)
@@ -356,7 +365,8 @@ class CleanData:
 
         Examples
         --------
-        >>> CleanData(df).filter_outliers().show_plot(plot_series=('ETH', 'add_act'), compare_series=True)
+        # >>> CleanData(df).filter_outliers().show_plot(plot_series=('ETH', 'add_act'), compare_series=True)
+
         """
         ax = (
             self.df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
@@ -401,12 +411,13 @@ class CleanData:
 
         Returns
         -------
-        CleanData: CleanData
+        CleanData
             CleanData object
 
         Examples
-        --------
-        >>> CleanData(df).filter_outliers().repair_outliers().get(attr='summary')
+        # --------
+        # >>> CleanData(df).filter_outliers().repair_outliers().get(attr='summary')
+
         """
         self.summary.loc["%_NaN_end", self.df.unstack().columns] = (
             self.df.unstack().isnull().sum() / self.df.unstack().shape[0]

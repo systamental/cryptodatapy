@@ -54,7 +54,7 @@ First specify which data you want with a `DataRequest`:
 from cryptodatapy.extract.datarequest import DataRequest
 # specify parameters for data request: tickers, fields, start date, end_date, etc.
 data_req = DataRequest(
-    data_source='glassnode',  # name of data source
+    source='glassnode',  # name of data source
     tickers=['btc', 'eth'], # list of asset tickers, in CryptoDataPy format, defaults to 'btc'
     fields=['close', 'add_act', 'hashrate'],  # list of fields, in CryptoDataPy, defaults to 'close'
     freq=None,  # data frequency, defaults to daily  
@@ -80,11 +80,12 @@ With the same data request parameters, you can retrieve the same data from a dif
 
 ```python
 # modify data source parameter
-data_req = DataRequest(data_source='coinmetrics', 
-                       tickers=['btc', 'eth'], 
-                       fields=['close', 'add_act', 'hashrate'], 
-                       freq='d',
-                      start_date='2016-01-01')
+data_req = DataRequest(
+  source='coinmetrics',           
+  tickers=['btc', 'eth'], 
+  fields=['close', 'add_act', 'hashrate'], 
+  req='d',
+  start_date='2016-01-01')
 # get data
 GetData(data_req).get_series()
 ```

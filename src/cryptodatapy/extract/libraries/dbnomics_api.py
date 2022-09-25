@@ -20,14 +20,14 @@ class DBnomics(Library):
 
     def __init__(
             self,
-            categories: List[str] = ["macro"],
+            categories=None,
             exchanges: Optional[List[str]] = None,
             indexes: Optional[List[str]] = None,
             assets: Optional[List[str]] = None,
             markets: Optional[List[str]] = None,
             market_types: Optional[List[str]] = None,
             fields: Optional[Dict[str, List[str]]] = None,
-            frequencies: Dict[str, List[str]] = {"macro": ["d", "w", "m", "q", "y"]},
+            frequencies=None,
             base_url: Optional[str] = None,
             api_key: Optional[str] = None,
             max_obs_per_call: Optional[int] = None,
@@ -81,7 +81,12 @@ class DBnomics(Library):
             rate_limit,
         )
 
-        self.fields = self.get_fields_info()
+        if frequencies is None:
+            self.frequencies = {"macro": ["d", "w", "m", "q", "y"]}
+        if categories is None:
+            self.categories = ["macro"]
+        if fields is None:
+            self.fields = self.get_fields_info()
 
     @staticmethod
     def get_vendors_info():
@@ -92,29 +97,25 @@ class DBnomics(Library):
             f"See providers page to find available vendors: {data_cred.dbnomics_vendors_url} "
         )
 
-    @staticmethod
-    def get_assets_info():
+    def get_assets_info(self) -> None:
         """
         Gets available assets info.
         """
         print(f"See search page for available assets: {data_cred.dbnomics_search_url} ")
 
-    @staticmethod
-    def get_indexes_info():
+    def get_indexes_info(self) -> None:
         """
         Gets available indexes info.
         """
         return None
 
-    @staticmethod
-    def get_markets_info():
+    def get_markets_info(self) -> None:
         """
         Gets market pairs info.
         """
         return None
 
-    @staticmethod
-    def get_fields_info(cat: Optional[str] = None) -> Dict[str, List[str]]:
+    def get_fields_info(self, cat: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Gets fields info.
 
@@ -143,15 +144,13 @@ class DBnomics(Library):
 
         return fields
 
-    @staticmethod
-    def get_exchanges_info():
+    def get_exchanges_info(self) -> None:
         """
         Gets exchanges info.
         """
         return None
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Gets rate limit info.
         """

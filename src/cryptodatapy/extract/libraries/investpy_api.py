@@ -23,35 +23,14 @@ class InvestPy(Library):
 
     def __init__(
             self,
-            categories: List[str] = ["fx", "rates", "eqty", "cmdty", "macro"],
+            categories=None,
             exchanges: Optional[List[str]] = None,
             indexes: Optional[Dict[str, List[str]]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types: List[str] = ["spot", "future"],
+            market_types=None,
             fields: Optional[Dict[str, List[str]]] = None,
-            frequencies: Dict[str, List[str]] = {
-                "fx": ["d", "w", "m", "q", "y"],
-                "rates": ["d", "w", "m", "q", "y"],
-                "eqty": ["d", "w", "m", "q", "y"],
-                "cmdty": ["d", "w", "m", "q", "y"],
-                "macro": [
-                    "1min",
-                    "5min",
-                    "10min",
-                    "15min",
-                    "30min",
-                    "1h",
-                    "2h",
-                    "4h",
-                    "8h",
-                    "d",
-                    "w",
-                    "m",
-                    "q",
-                    "y",
-                ],
-            },
+            frequencies=None,
             base_url: Optional[str] = None,
             api_key: Optional[str] = None,
             max_obs_per_call: Optional[int] = None,
@@ -110,12 +89,41 @@ class InvestPy(Library):
             rate_limit,
         )
 
-        self.indexes = self.get_indexes_info(as_list=True)
-        self.assets = self.get_assets_info(cat=None, as_dict=True)
-        self.fields = self.get_fields_info()
+        if frequencies is None:
+            self.frequencies = {
+                "fx": ["d", "w", "m", "q", "y"],
+                "rates": ["d", "w", "m", "q", "y"],
+                "eqty": ["d", "w", "m", "q", "y"],
+                "cmdty": ["d", "w", "m", "q", "y"],
+                "macro": [
+                    "1min",
+                    "5min",
+                    "10min",
+                    "15min",
+                    "30min",
+                    "1h",
+                    "2h",
+                    "4h",
+                    "8h",
+                    "d",
+                    "w",
+                    "m",
+                    "q",
+                    "y",
+                ],
+            }
+        if market_types is None:
+            self.market_types = ["spot", "future"]
+        if categories is None:
+            self.categories = ["fx", "rates", "eqty", "cmdty", "macro"]
+        if indexes is None:
+            self.indexes = self.get_indexes_info(as_list=True)
+        if assets is None:
+            self.assets = self.get_assets_info(cat=None, as_dict=True)
+        if fields is None:
+            self.fields = self.get_fields_info()
 
-    @staticmethod
-    def get_exchanges_info():
+    def get_exchanges_info(self) -> None:
         """
         Get exchanges info.
         """
@@ -338,15 +346,13 @@ class InvestPy(Library):
 
         return assets_info
 
-    @staticmethod
-    def get_markets_info():
+    def get_markets_info(self) -> None:
         """
         Get markets info.
         """
         return None
 
-    @staticmethod
-    def get_fields_info(cat: Optional[str] = None) -> Dict[str, List[str]]:
+    def get_fields_info(self, cat: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Get fields info.
 
@@ -383,8 +389,7 @@ class InvestPy(Library):
 
         return fields
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
         """

@@ -21,26 +21,16 @@ class PandasDataReader(Library):
 
     def __init__(
             self,
-            categories: List[str] = ["fx", "rates", "eqty", "credit", "macro"],
+            categories=None,
             exchanges: Optional[List[str]] = None,
             indexes: Optional[Dict[str, List[str]]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types: List[str] = ["spot"],
+            market_types=None,
             fields: Optional[Dict[str, List[str]]] = None,
-            frequencies: Dict[str, List[str]] = {
-                "crypto": ["d", "w", "m", "q", "y"],
-                "fx": ["d", "w", "m", "q", "y"],
-                "rates": ["d", "w", "m", "q", "y"],
-                "eqty": ["d", "w", "m", "q", "y"],
-                "credit": ["d", "w", "m", "q", "y"],
-                "macro": ["d", "w", "m", "q", "y"],
-            },
+            frequencies=None,
             base_url: Optional[str] = None,
-            api_key: dict = {
-                "fred": None,
-                "yahoo": None
-            },
+            api_key=None,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
     ):
@@ -97,7 +87,26 @@ class PandasDataReader(Library):
             rate_limit,
         )
 
-        self.fields = self.get_fields_info()
+        if api_key is None:
+            self.api_key = {
+                "fred": None,
+                "yahoo": None
+            }
+        if frequencies is None:
+            self.frequencies = {
+                "crypto": ["d", "w", "m", "q", "y"],
+                "fx": ["d", "w", "m", "q", "y"],
+                "rates": ["d", "w", "m", "q", "y"],
+                "eqty": ["d", "w", "m", "q", "y"],
+                "credit": ["d", "w", "m", "q", "y"],
+                "macro": ["d", "w", "m", "q", "y"],
+            }
+        if market_types is None:
+            self.market_types = ["spot"]
+        if categories is None:
+            self.categories = ["fx", "rates", "eqty", "credit", "macro"]
+        if fields is None:
+            self.fields = self.get_fields_info()
 
     @staticmethod
     def get_vendors_info():
@@ -108,8 +117,7 @@ class PandasDataReader(Library):
             f"See providers page to find available vendors: {data_cred.pdr_vendors_url} "
         )
 
-    @staticmethod
-    def get_exchanges_info():
+    def get_exchanges_info(self) -> None:
         """
         Get exchanges info.
         """
@@ -117,8 +125,7 @@ class PandasDataReader(Library):
             f"See specific data vendor for available exchanges: {data_cred.pdr_vendors_url}"
         )
 
-    @staticmethod
-    def get_indexes_info():
+    def get_indexes_info(self) -> None:
         """
         Get indexes info.
         """
@@ -126,8 +133,7 @@ class PandasDataReader(Library):
             f"See specific data vendor for available indexes: {data_cred.pdr_vendors_url}"
         )
 
-    @staticmethod
-    def get_assets_info():
+    def get_assets_info(self) -> None:
         """
         Get assets info.
         """
@@ -135,8 +141,7 @@ class PandasDataReader(Library):
             f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} "
         )
 
-    @staticmethod
-    def get_markets_info():
+    def get_markets_info(self) -> None:
         """
         Get markets info.
         """
@@ -187,8 +192,7 @@ class PandasDataReader(Library):
 
         return fields
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
         """

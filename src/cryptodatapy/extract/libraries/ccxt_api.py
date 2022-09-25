@@ -28,7 +28,7 @@ class CCXT(Library):
             indexes: Optional[List[str]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types: List[str] = ["spot", "future", "perpetual_future", "option"],
+            market_types=None,
             fields: Optional[List[str]] = None,
             frequencies: Optional[Dict[str, List[str]]] = None,
             base_url: Optional[str] = None,
@@ -86,12 +86,20 @@ class CCXT(Library):
             rate_limit,
         )
 
-        self.exchanges = self.get_exchanges_info(as_list=True)
-        self.assets = self.get_assets_info(as_list=True)
-        self.markets = self.get_markets_info(as_list=True)
-        self.fields = self.get_fields_info()
-        self.frequencies = self.get_frequencies_info()
-        self.rate_limit = self.get_rate_limit_info()
+        if market_types is None:
+            self.market_types = ["spot", "future", "perpetual_future", "option"]
+        if market_types is exchanges:
+            self.exchanges = self.get_exchanges_info(as_list=True)
+        if assets is None:
+            self.assets = self.get_assets_info(as_list=True)
+        if markets is None:
+            self.markets = self.get_markets_info(as_list=True)
+        if fields is None:
+            self.fields = self.get_fields_info()
+        if frequencies is None:
+            self.frequencies = self.get_frequencies_info()
+        if rate_limit is None:
+            self.rate_limit = self.get_rate_limit_info()
 
     @staticmethod
     def get_exchanges_info(
@@ -156,7 +164,7 @@ class CCXT(Library):
             # extract exch info
             for row in exch_df.iterrows():
                 try:
-                    exchange = getattr(ccxt, row[0])()
+                    exchange = getattr(ccxt, str(row[0]))()
                     exchange.load_markets()
                 except Exception:
                     exch_df.loc[row[0], :] = np.nan
@@ -172,8 +180,7 @@ class CCXT(Library):
 
         return exchanges
 
-    @staticmethod
-    def get_indexes_info():
+    def get_indexes_info(self) -> None:
         """
         Get indexes info.
         """
@@ -262,13 +269,15 @@ class CCXT(Library):
             markets = markets.index.to_list()
 
         return markets
-    @staticmethod
-    def get_fields_info() -> List[str]:
+
+    def get_fields_info(self, data_type: str = None) -> List[str]:
         """
         Get fields info.
 
         Parameters
         ----------
+        data_type: str, {'market', 'on-chain', 'off-chain'}, default None
+            Name of data type.
 
         Returns
         -------
@@ -401,7 +410,7 @@ class CCXT(Library):
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
         ticker: str
-            Ticker symbol.|
+            Ticker symbol.
 
         Returns
         -------
@@ -526,6 +535,7 @@ class CCXT(Library):
                 sleep(self.get_rate_limit_info(exch=cx_data_req['exch'])[cx_data_req['exch']] / 1000)
 
         return df
+
     @staticmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """

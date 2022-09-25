@@ -383,9 +383,9 @@ class DataVendor(ABC):
         Submits get data request to API.
         """
         # to be implemented by subclasses
-
+    @staticmethod
     @abstractmethod
-    def wrangle_data_resp(self, data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

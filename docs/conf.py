@@ -17,8 +17,8 @@ author = "Systamental"
 # ones.
 extensions = [
     "myst_nb",
-    "autoapi.extension",
     "sphinx.ext.napoleon",
+    "autoapi.extension",
     "sphinx.ext.viewcode",
 ]
 

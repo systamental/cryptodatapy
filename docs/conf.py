@@ -18,15 +18,11 @@ author = "Systamental"
 extensions = [
     "sphinx.ext.napoleon",
     "autoapi.extension",
-    "myst_nb",
     "sphinx.ext.viewcode",
+    "myst_nb",
 ]
 
-# autoapi_dirs = ["../src"]
-# autoapi_dirs = ["../src"]
-autoapi_dirs = ["../src/cryptodatapy/extract/datarequest.py"]
-autoapi_dirs = ["../src/cryptodatapy/extract/getdata.py"]
-autoapi_dirs = ["../src/cryptodatapy/transform/clean.py"]
+autoapi_dirs = ["../src"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

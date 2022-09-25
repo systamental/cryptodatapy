@@ -507,7 +507,7 @@ class CryptoCompare(DataVendor):
                 df = pd.concat([df, df1])  # add data to empty df
 
                 # check if all data has been extracted
-                if len(df1) < self.max_obs_per_call or df1.time[0] <= cc_data_req['start_date'] or \
+                if len(df1) < (self.max_obs_per_call - 1) or df1.time[0] <= cc_data_req['start_date'] or \
                         all(df1.drop(columns=['time']).iloc[0] == 0) or \
                         all(df1.drop(columns=['time']).iloc[0].astype(str) == 'nan'):
                     missing_vals = False

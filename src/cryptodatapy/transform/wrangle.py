@@ -8,9 +8,10 @@ import pandas as pd
 from cryptodatapy.extract.datarequest import DataRequest
 
 
-class WrangleInfo():
+class WrangleInfo:
     """
     Wrangles metadata data responses from various APIs into dataframe or list.
+
     """
 
     def __init__(self, data_resp: Union[Dict[str, Any], pd.DataFrame]):
@@ -21,6 +22,7 @@ class WrangleInfo():
         ----------
         data_resp: pd.DataFrame
             Dataframe containing data response.
+
         """
         self.data_resp = data_resp
 
@@ -37,6 +39,7 @@ class WrangleInfo():
         -------
         exch: pd.DataFrame or list
             Exchanges info converted to dataframe or list.
+
         """
         exch = pd.DataFrame(self.data_resp['Data']).T  # extract data
         exch.set_index('Name', inplace=True)  # set index name
@@ -59,6 +62,7 @@ class WrangleInfo():
         -------
         indexes: pd.DataFrame or list
             Indexes info converted to dataframe or list.
+
         """
         indexes = pd.DataFrame(self.data_resp['Data']).T  # extract data
         indexes.index.name = 'ticker'  # set index name
@@ -81,6 +85,7 @@ class WrangleInfo():
         -------
         assets: pd.DataFrame or list
             Assets info converted to dataframe or list.
+
         """
         assets = pd.DataFrame(self.data_resp['Data']).T  # extract data
         assets.index.name = 'ticker'  # set index name
@@ -103,6 +108,7 @@ class WrangleInfo():
         -------
         mkts: dictionary or list
             Markets info converted to dictionary or list.
+
         """
         mkts = self.data_resp['Data']  # extract data
         mkts_dict = {}
@@ -132,6 +138,7 @@ class WrangleInfo():
         -------
         tickers: pd.DataFrame or list
             On-chain tickers info converted to dataframe or list.
+
         """
         tickers = pd.DataFrame(self.data_resp['Data']).T
         tickers['data_available_from'] = pd.to_datetime(tickers.data_available_from, unit='s')  # format date
@@ -148,6 +155,7 @@ class WrangleInfo():
         -------
         onchain: list
             On-chain fields info converted to list.
+
         """
         onchain = self.data_resp['Data']  # extract data
         onchain_list = []
@@ -166,6 +174,7 @@ class WrangleInfo():
         -------
         social: list
             Social stats fields info converted to list.
+
         """
         social = self.data_resp['Data']  # extract data
         social_list = []
@@ -184,6 +193,7 @@ class WrangleInfo():
         -------
         rate_limit: pd.DataFrame
             Rate limit info converted to dataframe.
+
         """
         rate_limit = pd.DataFrame(self.data_resp['Data'])  # extract data
         rate_limit.index.name = 'frequency'  # set index name
@@ -198,6 +208,7 @@ class WrangleInfo():
         -------
         news: pd.DataFrame
             News feed converted to dataframe.
+
         """
         news = pd.DataFrame(self.data_resp['Data'])  # extract data
 
@@ -211,6 +222,7 @@ class WrangleInfo():
         -------
         news_sources: pd.DataFrame
             News sources converted to dataframe.
+
         """
         news_sources = pd.DataFrame(self.data_resp)  # extract data
         news_sources.set_index('key', inplace=True)  # set index
@@ -225,6 +237,7 @@ class WrangleInfo():
         -------
         top_mkt_cap: pd.DataFrame
             Top market cap coins list.
+
         """
         top_mkt_cap = pd.DataFrame(self.data_resp['Data'])  # extract data
         tickers = []  # create list of tickers
@@ -250,6 +263,7 @@ class WrangleInfo():
         -------
         meta: pd.DataFrame or list
             Metadata converted to dataframe or list.
+
         """
         meta = pd.DataFrame(self.data_resp)  # store in df
         meta.set_index(meta.columns[0], inplace=True)  # set index
@@ -274,6 +288,7 @@ class WrangleInfo():
         -------
         meta: pd.DataFrame or dict
             Metadata converted to dataframe or dictionary.
+
         """
         inst = pd.DataFrame(self.data_resp)  # store in df
         # indexes list
@@ -304,6 +319,7 @@ class WrangleInfo():
         -------
         indexes: dictionary or pd.DataFrame
             Dictionary or dataframe with info on available indexes, by category.
+
         """
         # wrangle data resp
         indexes = self.data_resp.rename(columns={"symbol": "ticker"})
@@ -362,6 +378,7 @@ class WrangleInfo():
         -------
         fx: list or pd.DataFrame
             List or dataframe with fx info.
+
         """
         meta = None
 
@@ -392,6 +409,7 @@ class WrangleInfo():
         -------
         assets: pd.DataFrame or list
             Assets info converted to dataframe or list.
+
         """
         # format response
         assets = pd.DataFrame(self.data_resp)
@@ -419,6 +437,7 @@ class WrangleInfo():
         -------
         fields: list or pd.DataFrame
             List or dataframe with info on available fields.
+
         """
         # format response
         fields = pd.DataFrame(self.data_resp)
@@ -447,7 +466,7 @@ class WrangleInfo():
         return fields
 
 
-class WrangleData():
+class WrangleData:
     """
     Wrangles time series data responses from various APIs into tidy data format.
     """
@@ -462,6 +481,7 @@ class WrangleData():
             Data request object with parameter values.
         data_resp: pd.DataFrame
             Dataframe containing data response.
+
         """
         self.data_req = data_req
         self.data_resp = data_resp
@@ -472,8 +492,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # convert fields to lib
         self.convert_fields_to_lib(data_source='cryptocompare')
@@ -506,8 +527,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # convert fields to lib
         self.convert_fields_to_lib(data_source='coinmetrics')
@@ -569,8 +591,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # create df
         self.data_resp = pd.DataFrame(self.data_resp)
@@ -614,8 +637,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # create df
         if data_type == 'eqty' or data_type == 'crypto':
@@ -651,8 +675,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # df = self.convert_cols().convert_fields_to_lib().convert_to_datetime().set_idx().resample_freq(). \
         #     filter_dates().type_conversion().remove_bad_data().data_resp
@@ -681,8 +706,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
 
         # df = self.convert_cols().convert_fields_to_lib().convert_to_datetime().set_idx().resample_freq(). \
@@ -716,8 +742,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # convert cols
         if self.data_req.cat != 'macro':
@@ -759,8 +786,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # convert tickers to cryptodatapy format
         self.data_resp.columns = self.data_req.tickers  # convert tickers to cryptodatapy format
@@ -791,8 +819,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Wrangled data response into dataframe with tidy data format.
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
         """
         # stack and reset index
         self.data_resp = self.data_resp.stack().reset_index()
@@ -826,8 +855,9 @@ class WrangleData():
 
         Returns
         -------
-        self: WrangleData
+        WrangleData
             WrangleData object with data_resp fields converted to CryptoDataPy format.
+
         """
         # fields dictionary
         with resources.path('cryptodatapy.conf', 'fields.csv') as f:
@@ -869,8 +899,9 @@ class WrangleData():
 
         Returns
         -------
-        df: pd.DataFrame
-            Dataframe with dates filtered.
+        WrangleData
+            WrangleData object with data_resp dates filtered.
+
         """
         if self.data_req.start_date is not None:
             self.data_resp = self.data_resp[(self.data_resp.index >= self.data_req.start_date)]

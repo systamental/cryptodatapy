@@ -1,6 +1,5 @@
 from typing import Dict, Optional
 
-import matplotlib as plt
 import numpy as np
 import pandas as pd
 from prophet import Prophet
@@ -10,6 +9,7 @@ from statsmodels.tsa.seasonal import STL, seasonal_decompose
 class OutlierDetection:
     """
     Detects outliers.
+
     """
 
     def __init__(self, raw_df: pd.DataFrame):
@@ -20,6 +20,7 @@ class OutlierDetection:
         ----------
         raw_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and raw data/values (cols).
+
         """
         self.raw_df = raw_df
 
@@ -59,6 +60,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # sort index and create df copy
         df = self.raw_df.sort_index(level=1)
@@ -180,6 +182,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # sort index and create df copy
         df = self.raw_df.sort_index(level=1)
@@ -295,6 +298,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # sort index and create df copy
         df = self.raw_df.sort_index(level=1).copy()
@@ -390,6 +394,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # sort index and create copy
         df = self.raw_df.sort_index(level=1).copy()
@@ -496,6 +501,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # sort index and create copy
         df = self.raw_df.sort_index(level=1).copy()
@@ -524,7 +530,7 @@ class OutlierDetection:
             ewma = np.exp(ewma)
 
         # type conversion
-        ewam = ewma.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        ewma = ewma.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
@@ -595,6 +601,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # unstack
         df = self.raw_df.unstack().copy()
@@ -753,6 +760,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # unstack
         df = self.raw_df.unstack().copy()
@@ -874,6 +882,7 @@ class OutlierDetection:
             Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
             with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
             values.
+
         """
         # unstack
         df = self.raw_df.unstack().copy()
@@ -990,6 +999,7 @@ class OutlierDetection:
             Dataframe MultiIndex with DatetimeIndex (level 0), tickers (level 1) and fields (cols) outlier values.
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
+
         """
         ax = (
             self.raw_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]

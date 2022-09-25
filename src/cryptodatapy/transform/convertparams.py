@@ -24,8 +24,7 @@ class ConvertParams:
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
-        data_source: str
-            Name of data source, e.g. 'cryptocompare', 'coinmetrics', 'glassnode', etc.
+
         """
         self.data_req = data_req
 
@@ -109,6 +108,7 @@ class ConvertParams:
     def to_coinmetrics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to CoinMetrics format.
+
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -251,6 +251,7 @@ class ConvertParams:
     def to_glassnode(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Glassnode format.
+
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -333,6 +334,7 @@ class ConvertParams:
     def to_tiingo(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Tiingo format.
+
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -430,6 +432,7 @@ class ConvertParams:
     def to_ccxt(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to CCXT format.
+
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -574,6 +577,7 @@ class ConvertParams:
     def to_investpy(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to InvestPy format.
+
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -630,7 +634,7 @@ class ConvertParams:
                     ctys_list.append(tickers_df.loc[ticker, "country_name"].lower())
                 except KeyError:
                     logging.warning(
-                        f"{ticker} not found for {self.data_req.data_source} source. Check tickers in "
+                        f"{ticker} not found for {self.data_req.source} source. Check tickers in "
                         f"data catalog and try again."
                     )
         # convert tickers to markets
@@ -682,6 +686,7 @@ class ConvertParams:
     def to_dbnomics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to DBnomics format.
+
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -740,6 +745,7 @@ class ConvertParams:
     def to_fred(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Fred format.
+
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -813,6 +819,7 @@ class ConvertParams:
     def to_yahoo(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
+
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -875,10 +882,16 @@ class ConvertParams:
         """
         Converts base and quote currency tickers to fx pairs following fx quoting convention.
 
+        Parameters
+        ---------
+        quote_ccy: str
+            Quote currency
+
         Returns
         -------
         quote_ccy: str
             Quote currency.
+
         """
         mkts = []  # fx pairs list
         # fx groups
@@ -911,6 +924,7 @@ class ConvertParams:
         -------
         fields_list: list
             List of fields in data source format.
+
         """
         # get fields
         with resources.path("cryptodatapy.conf", "fields.csv") as f:

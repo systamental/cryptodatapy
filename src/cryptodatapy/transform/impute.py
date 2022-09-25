@@ -1,6 +1,5 @@
 from typing import Optional
 
-import matplotlib as plt
 import numpy as np
 import pandas as pd
 
@@ -8,6 +7,7 @@ import pandas as pd
 class Impute:
     """
     Handles missing values.
+
     """
 
     def __init__(self, filt_df: pd.DataFrame):
@@ -19,6 +19,7 @@ class Impute:
         ----------
         filt_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and fields (cols) with filtered values.
+
         """
         self.filt_df = filt_df
 
@@ -40,6 +41,7 @@ class Impute:
         imp_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and fields (cols) with imputed values
             using forward fill method.
+
         """
         # copy df
         filt_df = self.filt_df.copy()
@@ -91,6 +93,7 @@ class Impute:
         imp_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and fields (cols) with imputed values
             using interpolation method.
+
         """
         # copy df and convert to float for interpolation (code will break if type int64)
         filt_df = self.filt_df.astype(float).copy()
@@ -145,6 +148,7 @@ class Impute:
         imp_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and fields (cols) with imputed values
             using forecasts from outlier detection method.
+
         """
         # copy filtered and forecast dfs
         filt_df, yhat_df = self.filt_df.copy(), fcst_df.copy()
@@ -179,6 +183,7 @@ class Impute:
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and fields (cols) with imputed values.
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
+
         """
         ax = (
             imp_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]

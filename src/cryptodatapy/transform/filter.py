@@ -1,6 +1,5 @@
 from typing import Optional, Union
 
-import matplotlib as plt
 import numpy as np
 import pandas as pd
 
@@ -8,6 +7,7 @@ import pandas as pd
 class Filter:
     """
     Filters dataframe in tidy format.
+
     """
 
     def __init__(
@@ -22,6 +22,7 @@ class Filter:
             Dataframe with raw data. DatetimeIndex (level 0), ticker (level 1) and raw data (cols), in tidy format.
         excl_cols: str or list, default None
             Name of columns to exclude from filtering
+
         """
 
         self.raw_df = raw_df
@@ -51,6 +52,7 @@ class Filter:
         -------
         filt_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
+
         """
         # filter outliers
         filt_df = outliers_dict["filt_vals"]
@@ -99,6 +101,7 @@ class Filter:
         filt_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with values below the
             threshold removed.
+
         """
         # convert string to list
         if self.excl_cols is not None:
@@ -171,6 +174,7 @@ class Filter:
         filt_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with values before
             missing values gaps removed.
+
         """
         # convert string to list
         if self.excl_cols is not None:
@@ -223,6 +227,7 @@ class Filter:
         filt_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers with minimum number of observations (level 1)
             and fields (cols).
+
         """
         # create copy
         df = self.raw_df.copy()
@@ -248,6 +253,7 @@ class Filter:
         -------
         filt_df: pd.DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols).
+
         """
         # create copy
         df = self.raw_df.copy()
@@ -272,6 +278,7 @@ class Filter:
             Dataframe MultiIndex with DatetimeIndex (level 0), tickers (level 1) and filtered values (cols).
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
+
         """
         ax = (
             filt_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]

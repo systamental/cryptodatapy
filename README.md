@@ -90,8 +90,7 @@ GetData(data_req).get_series()
 ```
 
 For more detailed code examples and interactive tutorials 
-see our [documentation](https://cryptodatapy.readthedocs.io/en/latest/example.html).
-
+see [here](https://github.com/systamental/cryptodatapy/blob/main/docs/example.ipynb).
 ## Supported Data Sources
 
 - [CryptoCompare](https://min-api.cryptocompare.com/documentation)

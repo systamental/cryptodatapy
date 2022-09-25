@@ -7,7 +7,6 @@ import json
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.transform.wrangle import WrangleInfo, WrangleData
 
 # url endpoints
 base_url = DataCredentials().glassnode_base_url
@@ -29,6 +28,7 @@ def gn_req_assets():
     with open('tests/data/gn_assets_req.json') as f:
         return json.load(f)
 
+
 @responses.activate
 def test_req_assets(gn_req_assets, gn):
     """
@@ -39,7 +39,6 @@ def test_req_assets(gn_req_assets, gn):
 
     req_assets = gn.req_assets()
     assert req_assets == gn_req_assets
-
 
 
 @pytest.fixture
@@ -82,7 +81,7 @@ def test_wrangle_data_resp(data_req, gn, gn_req_data) -> None:
     """
     Test wrangling of data response into tidy data format.
     """
-    df = gn.wrangle_data_resp(data_req, gn_req_data , field='addresses/count')
+    df = gn.wrangle_data_resp(data_req, gn_req_data, field='addresses/count')
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert df.shape[1] == 1, "Dataframe should only have 1 column."  # shape
     assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
@@ -92,7 +91,7 @@ def test_wrangle_data_resp(data_req, gn, gn_req_data) -> None:
     assert isinstance(df.add_tot.iloc[-1], np.int64), "Total addresses should be a numpy int."  # dtypes
 
 
-def test_integration_get_all_fields(gn) ->  None:
+def test_integration_get_all_fields(gn) -> None:
     """
     Test integration of req_data, wrangle_data_resp (get_tidy_data) to retrieve data for all fields
     by looping through fields and adding them to a dataframe.

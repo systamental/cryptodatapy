@@ -1,9 +1,6 @@
-from time import sleep
-from typing import Optional, Any, Union, Dict, List
+from typing import Optional, Any, Union, Dict
 
 import pandas as pd
-import requests
-import logging
 
 from cryptodatapy.extract.data_vendors.datavendor import DataVendor
 from cryptodatapy.extract.datarequest import DataRequest
@@ -26,14 +23,14 @@ class Glassnode(DataVendor):
 
     def __init__(
             self,
-            categories: list[str] = ['crypto'],
+            categories=None,
             exchanges: Optional[list[str]] = None,
             indexes: Optional[list[str]] = None,
             assets: Optional[list[str]] = None,
             markets: Optional[list[str]] = None,
-            market_types: list[str] = ['spot', 'perpetual_future', 'future', 'option'],
+            market_types=None,
             fields: Optional[list[str]] = None,
-            frequencies: list[str] = ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y'],
+            frequencies=None,
             base_url: str = data_cred.glassnode_base_url,
             api_key: str = data_cred.glassnode_api_key,
             max_obs_per_call: Optional[int] = None,
@@ -75,22 +72,25 @@ class Glassnode(DataVendor):
         DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
+        if frequencies is None:
+            frequencies = ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']
+        if market_types is None:
+            market_types = ['spot', 'perpetual_future', 'future', 'option']
+        if categories is None:
+            categories = ['crypto']
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'GLASSNODE_API_KEY', will allow DataCredentials to automatically load it.")
         self.assets = self.get_assets_info(as_list=True)
         self.fields = self.get_fields_info(data_type=None, as_list=True)
-        self.rate_limit = self.get_rate_limit_info()
 
-    @staticmethod
-    def get_exchanges_info():
+    def get_exchanges_info(self) -> None:
         """
         Gets exchanges info.
         """
-        print(f"See supported exchanges: {data_cred.glassnode_search_url}")
+        return None
 
-    @staticmethod
-    def get_indexes_info():
+    def get_indexes_info(self) -> None:
         """
         Gets indexes info.
         """
@@ -128,8 +128,7 @@ class Glassnode(DataVendor):
 
         return assets
 
-    @staticmethod
-    def get_markets_info():
+    def get_markets_info(self) -> None:
         """
         Get markets info.
         """
@@ -170,8 +169,7 @@ class Glassnode(DataVendor):
 
         return fields
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
         """
@@ -213,7 +211,7 @@ class Glassnode(DataVendor):
         return data_resp
 
     @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame, field: str) -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Dict[str, Any], field: str) -> pd.DataFrame:
         """
         Wrangle data response into tidy data format.
 
@@ -221,8 +219,8 @@ class Glassnode(DataVendor):
         ----------
         data_req: DataRequest
             Data request parameters in CryptoDataPy format.
-        data_resp: pd.DataFrame
-            Data response.
+        data_resp: dictionary
+            Data response in JSON format.
         field: str
             Requested field.
 
@@ -248,7 +246,6 @@ class Glassnode(DataVendor):
             Requested ticker symbol.
         field: str
             Requested field.
-
 
         Returns
         -------
@@ -323,10 +320,10 @@ class Glassnode(DataVendor):
         fields = self.fields
         if not all([field in fields for field in gn_data_req['fields']]):
             raise ValueError(f"Some of the selected fields are not available."
-                             " See fields attribue for a list of available fields.")
+                             " See fields attribute for a list of available fields.")
 
         # check freq
-        if data_req.freq not in self.frequencies:
+        if data_req.freq not in ['10min', '15min', '30min', '1h', '2h', '4h', '8h', 'd', 'w', 'm', 'q', 'y']:
             raise ValueError(f"On-chain data is only available for {self.frequencies} frequencies."
                              f" Change data request frequency and try again.")
 

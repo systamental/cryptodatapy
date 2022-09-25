@@ -20,29 +20,14 @@ class Tiingo(DataVendor):
 
     def __init__(
             self,
-            categories: List[str] = ["crypto", "fx", "eqty"],
+            categories=None,
             exchanges: Optional[Dict[str, List[str]]] = None,
             indexes: Optional[Dict[str, List[str]]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types: List[str] = ["spot"],
+            market_types=None,
             fields: Dict[str, List[str]] = None,
-            frequencies: List[str] = [
-                "1min",
-                "5min",
-                "10min",
-                "15min",
-                "30min",
-                "1h",
-                "2h",
-                "4h",
-                "8h",
-                "d",
-                "w",
-                "m",
-                "q",
-                "y",
-            ],
+            frequencies=None,
             base_url: str = data_cred.tiingo_base_url,
             api_key: str = data_cred.tiingo_api_key,
             max_obs_per_call: Optional[int] = None,
@@ -102,6 +87,27 @@ class Tiingo(DataVendor):
             rate_limit,
         )
 
+        if frequencies is None:
+            frequencies = [
+                "1min",
+                "5min",
+                "10min",
+                "15min",
+                "30min",
+                "1h",
+                "2h",
+                "4h",
+                "8h",
+                "d",
+                "w",
+                "m",
+                "q",
+                "y",
+            ]
+        if market_types is None:
+            market_types = ["spot"]
+        if categories is None:
+            categories = ["crypto", "fx", "eqty"]
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'TIINGO_API_KEY', will allow DataCredentials to automatically load it.")
@@ -191,8 +197,7 @@ class Tiingo(DataVendor):
 
         return exch
 
-    @staticmethod
-    def get_indexes_info():
+    def get_indexes_info(self) -> None:
         """
         Get indexes info.
         """
@@ -303,15 +308,13 @@ class Tiingo(DataVendor):
 
         return assets_info
 
-    @staticmethod
-    def get_markets_info():
+    def get_markets_info(self) -> None:
         """
         Get markets info.
         """
         return None
 
-    @staticmethod
-    def get_fields_info(cat: Optional[str] = None) -> Dict[str, List[str]]:
+    def get_fields_info(self, cat: Optional[str] = None) -> Dict[str, List[str]]:
         """
         Get fields info.
 
@@ -361,8 +364,7 @@ class Tiingo(DataVendor):
 
         return fields
 
-    @staticmethod
-    def get_rate_limit_info():
+    def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
         """
@@ -459,7 +461,7 @@ class Tiingo(DataVendor):
         data_type: str, {'eqty', 'iex', 'crypto', 'fx'}
             Data type to retrieve.
         ticker: str
-            Ticker symbol.|
+            Ticker symbol.
 
         Returns
         -------
@@ -766,14 +768,14 @@ class Tiingo(DataVendor):
             # get eqty intraday OHLCV data
             if (
                     data_req.cat == "eqty"
-                    and data_req.freq in self.frequencies[: self.frequencies.index("d")]
+                    and data_req.freq in ["1min", "5min", "10min", "15min", "30min", "1h", "2h", "4h", "8h"]
             ):
                 df = self.get_eqty_iex(data_req)
 
             # get eqty daily OHLCV data
             elif (
                     data_req.cat == "eqty"
-                    and data_req.freq in self.frequencies[self.frequencies.index("d"):]
+                    and data_req.freq in ["d", "w", "m", "q", "y"]
             ):
                 df = self.get_eqty(data_req)
 

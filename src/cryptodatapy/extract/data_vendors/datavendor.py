@@ -53,6 +53,7 @@ class DataVendor(ABC):
         Sets a list of available categories for the data vendor.
         """
         valid_categories = [
+            None,
             "crypto",
             "fx",
             "eqty",
@@ -66,18 +67,21 @@ class DataVendor(ABC):
         ]
         cat = []
 
-        if not isinstance(categories, str) and not isinstance(categories, list):
-            raise TypeError("Categories must be a string or list of strings.")
-        if isinstance(categories, str):
-            categories = [categories]
-        for category in categories:
-            if category in valid_categories:
-                cat.append(category)
-            else:
-                raise ValueError(
-                    f"{category} is invalid. Valid categories are: {valid_categories}"
-                )
-        self._categories = cat
+        if categories is None:
+            self._categories = categories
+        else:
+            if not isinstance(categories, str) and not isinstance(categories, list):
+                raise TypeError("Categories must be a string or list of strings.")
+            if isinstance(categories, str):
+                categories = [categories]
+            for category in categories:
+                if category in valid_categories:
+                    cat.append(category)
+                else:
+                    raise ValueError(
+                        f"{category} is invalid. Valid categories are: {valid_categories}"
+                    )
+            self._categories = cat
 
     @property
     def exchanges(self):
@@ -385,7 +389,8 @@ class DataVendor(ABC):
         # to be implemented by subclasses
     @staticmethod
     @abstractmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame], **kwargs) \
+            -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

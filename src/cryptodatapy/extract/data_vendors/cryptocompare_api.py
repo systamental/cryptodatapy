@@ -28,14 +28,14 @@ class CryptoCompare(DataVendor):
 
     def __init__(
             self,
-            categories: list[str] = ['crypto'],
+            categories=None,
             exchanges: Optional[list[str]] = None,
             indexes: Optional[list[str]] = None,
             assets: Optional[list[str]] = None,
             markets: Optional[list[str]] = None,
-            market_types: list[str] = ['spot'],
+            market_types=None,
             fields: Optional[list[str]] = None,
-            frequencies: list[str] = ['1min', '1h', 'd'],
+            frequencies=None,
             base_url: str = data_cred.cryptocompare_base_url,
             api_key: str = data_cred.cryptocompare_api_key,
             max_obs_per_call: int = 2000,
@@ -77,6 +77,12 @@ class CryptoCompare(DataVendor):
         DataVendor.__init__(self, categories, exchanges, indexes, assets, markets, market_types, fields,
                             frequencies, base_url, api_key, max_obs_per_call, rate_limit)
 
+        if frequencies is None:
+            frequencies = ['1min', '1h', 'd']
+        if market_types is None:
+            market_types = ['spot']
+        if categories is None:
+            categories = ['crypto']
         if api_key is None:
             raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
                             "'CRYPTOCOMPARE_API_KEY', will allow DataCredentials to automatically load it.")
@@ -101,7 +107,7 @@ class CryptoCompare(DataVendor):
         Returns
         -------
         meta: dictionary
-         Metadata in JSON format.
+            Metadata in JSON format.
         """
         return DataRequest().get_req(url=self.base_url + urls[info_type], params={'api_key': self.api_key})
 
@@ -455,6 +461,9 @@ class CryptoCompare(DataVendor):
         urls_params = self.set_urls_params(data_req, data_type, ticker)
         url, params = urls_params['url'], urls_params['params']
 
+        # # data req
+        # data_resp = DataRequest().get_req(url=url, params=params)
+
         # data req
         data_resp = DataRequest().get_req(url=url, params=params)
 
@@ -472,7 +481,7 @@ class CryptoCompare(DataVendor):
         data_type: str, {'indexes', 'ohlcv', 'on-chain', 'social'}
             Data type to retrieve.
         ticker: str
-            Ticker symbol.|
+            Ticker symbol.
 
         Returns
         -------
@@ -747,7 +756,6 @@ class CryptoCompare(DataVendor):
         """
         Checks the parameters of the data request before requesting data to reduce API calls
         and improve efficiency.
-
         """
         # convert data request parameters to CryptoCompare format
         cc_data_req = ConvertParams(data_req).to_cryptocompare()

@@ -67,7 +67,6 @@ class CoinMetrics(DataVendor):
             api_limit stored in DataCredentials.
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
-
         """
         DataVendor.__init__(
             self,
@@ -285,7 +284,7 @@ class CoinMetrics(DataVendor):
         # req data
         ohlcv_fields = ['price_open', 'price_close', 'price_high', 'price_low', 'vwap', 'volume', 'candle_usd_volume',
                         'candle_trades_count']  # get market fields
-        inst_fields = list(self.get_inst_info(as_dict=True).values)[0]  # inst fields
+        inst_fields = list(self.get_inst_info(as_dict=True).values())[0]  # inst fields
         onchain_fields = self.get_onchain_fields_info()  # get onchain fields
 
         # fields df
@@ -347,7 +346,6 @@ class CoinMetrics(DataVendor):
     def get_rate_limit_info(self) -> None:
         """
         Get rate limit info.
-
         """
         return None
 
@@ -396,7 +394,6 @@ class CoinMetrics(DataVendor):
             logging.warning(e)
 
         else:
-
             return df
 
     @staticmethod
@@ -525,7 +522,7 @@ class CoinMetrics(DataVendor):
 
         # check if fields inst
         if data_type == 'institutions':
-            fields, inst_list = ([], list(self.get_inst_info(as_dict=True).values)[0])
+            fields, inst_list = ([], list(self.get_inst_info(as_dict=True).values())[0])
             for field in cm_data_req["fields"]:
                 if field in inst_list:
                     fields.append(field)  # keep only inst fields

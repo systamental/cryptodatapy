@@ -1855,7 +1855,7 @@ go = ["sphinxcontrib-golangdomain"]
 
 [[package]]
 name = "sphinx-rtd-theme"
-version = "1.0.0"
+version = "0.1.1"
 description = "Read the Docs theme for Sphinx"
 category = "dev"
 optional = false

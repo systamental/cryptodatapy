@@ -42,7 +42,8 @@ class GetData:
                     'base_url', 'api_key', 'max_obs_per_call', 'rate_limit'}, default assets
             Gets the specified attribute or method from the data source object.
         method: str, {'get_exchanges_info', 'get_indexes_info', 'get_assets_info', 'get_markets_info',
-                    'get_fields_info', 'get_frequencies_info', 'get_rate_limit_info', 'get_onchain_tickers_list'}
+                    'get_fields_info', 'get_frequencies_info', 'get_rate_limit_info', 'get_onchain_tickers_list',
+                    'get_top_mkt_cap_info'}
             Gets the specified method from the data source object.
 
         Other Parameters
@@ -124,7 +125,7 @@ class GetData:
             "get_rate_limit_info",
             "get_news_sources",
             "get_news",
-            "get_top_market_cap_info",
+            "get_top_mkt_cap_info",
             "get_onchain_tickers_list",
         ]
 

@@ -213,14 +213,17 @@ class Filter:
 
         return filt_df
 
-    def min_nobs(self, min_obs=100) -> pd.DataFrame:
+    def min_nobs(self, ts_obs=100, cs_obs=1) -> pd.DataFrame:
         """
-        Removes tickers from dataframe if the ticker has less than a minimum number of observations.
+        Removes tickers from dataframe if the ticker has less than a minimum number of observations and removes
+        dates if there is less than a minimum number of tickers.
 
         Parameters
         ----------
-        min_obs: int, default 100
-            Minimum number of observations for field/column.
+        ts_obs: int, default 100
+            Minimum number of observations for field/column over time series.
+        cs_obs: int, default 1
+            Minimum number of observations for tickers over the cross-section.
 
         Returns
         -------
@@ -232,10 +235,15 @@ class Filter:
         # create copy
         df = self.raw_df.copy()
 
-        # drop tickers with nobs < min_obs
-        nobs = df.groupby(level=1).count().min(axis=1)
-        drop_tickers_list = nobs[nobs < min_obs].index.to_list()
+        # drop tickers with nobs < ts_obs
+        obs = df.groupby(level=1).count().min(axis=1)
+        drop_tickers_list = obs[obs < ts_obs].index.to_list()
         filt_df = df.drop(drop_tickers_list, level=1, axis=0)
+
+        # drop tickers with nobs < cs_obs
+        obs = filt_df.groupby(level=0).count().min(axis=1)
+        idx_start = obs[obs > cs_obs].index[0]
+        filt_df = filt_df.unstack()[filt_df.unstack().index > idx_start].stack()
 
         return filt_df
 

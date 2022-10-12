@@ -735,7 +735,7 @@ class Tiingo(DataVendor):
             )
 
             # check fields
-        if not any([field in self.fields[data_req.cat] for field in tg_data_req['fields']]):
+        if not any([field in self.fields[data_req.cat] for field in data_req.fields]):
             raise ValueError(
                 f"Selected fields are not available. Use fields attribute to see available fields."
             )

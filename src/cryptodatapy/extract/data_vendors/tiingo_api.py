@@ -615,7 +615,7 @@ class Tiingo(DataVendor):
 
         # check tickers
         if any([ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']]) and \
-                any([field in self.fields['eqty'] for field in tg_data_req['fields']]):
+                any([field in self.fields['eqty'] for field in data_req.fields]):
             try:
                 df = self.get_all_tickers(data_req, data_type='eqty')
 
@@ -644,7 +644,7 @@ class Tiingo(DataVendor):
 
         # check tickers
         if any([ticker.upper() in self.assets['eqty'] for ticker in tg_data_req['tickers']]) and \
-                any([field in self.fields['eqty'] for field in tg_data_req['fields']]):
+                any([field in self.fields['eqty'] for field in data_req.fields]):
             try:
                 df = self.get_all_tickers(data_req, data_type='iex')
 
@@ -673,7 +673,7 @@ class Tiingo(DataVendor):
 
         # check tickers
         if any([ticker in self.assets['crypto'] for ticker in tg_data_req['mkts']]) and \
-                any([field in self.fields['crypto'] for field in tg_data_req['fields']]):
+                any([field in self.fields['crypto'] for field in data_req.fields]):
 
             try:
                 df = self.get_all_tickers(data_req, data_type='crypto')
@@ -702,7 +702,7 @@ class Tiingo(DataVendor):
         tg_data_req = ConvertParams(data_req).to_tiingo()
 
         # check tickers
-        if any([field in self.fields['fx'] for field in tg_data_req['fields']]):
+        if any([field in self.fields['fx'] for field in data_req.fields]):
 
             try:
                 df = self.get_all_tickers(data_req, data_type='fx')

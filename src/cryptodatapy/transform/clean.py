@@ -257,23 +257,27 @@ class CleanData:
 
         return self
 
-    def filter_min_nobs(self, min_obs=100) -> CleanData:
+    def filter_min_nobs(self,
+                        ts_obs: int = 100,
+                        cs_obs: int = 5
+                        ) -> CleanData:
         """
         Removes tickers from dataframe if the ticker has less than a minimum number of observations.
 
         Parameters
         ----------
-        min_obs: int, default 100
-            Minimum number of observations for field/column.
+        ts_obs: int, default 100
+            Minimum number of observations for field/column over time series.
+        cs_obs: int, default 5
+            Minimum number of observations for tickers over the cross-section.
 
         Returns
         -------
         CleanData
             CleanData object
-
         """
         # filter outliers
-        filt_df = Filter(self.df).min_nobs(min_obs=min_obs)
+        filt_df = Filter(self.df).min_nobs(ts_obs=ts_obs, cs_obs=cs_obs)
         # tickers < min obs
         filt_tickers = list(
             set(filt_df.index.droplevel(0).unique()).symmetric_difference(

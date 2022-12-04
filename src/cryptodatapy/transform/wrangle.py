@@ -770,7 +770,7 @@ class WrangleData:
         # extend index and fwd fill to current date
         ext_idx = pd.date_range(self.data_resp.index.max(), pd.Timestamp.today()).union(self.data_resp.index)
         self.data_resp = self.data_resp.reindex(ext_idx).ffill()
-        # filte dates
+        # filter dates
         self.filter_dates()
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
@@ -823,6 +823,10 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
+        # TODO: resample data
+        # resample
+        # self._data_resp = self.data_resp.resample(data_req.freq).last()
+        #
         # stack and reset index
         self.data_resp = self.data_resp.stack().reset_index()
         # remove name

@@ -39,7 +39,7 @@ class PandasDataReader(Library):
 
         Parameters
         ----------
-        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'commodities', 'credit', 'macro', 'alt'}
+        categories: list or str, {'crypto', 'fx', 'rates', 'eqty', 'cmdty', 'credit', 'macro', 'alt'}
             List or string of available categories, e.g. ['crypto', 'fx', 'alt'].
         exchanges: list, optional, default None
             List of available exchanges, e.g. ['Binance', 'Coinbase', 'Kraken', 'FTX', ...].
@@ -97,6 +97,7 @@ class PandasDataReader(Library):
                 "crypto": ["d", "w", "m", "q", "y"],
                 "fx": ["d", "w", "m", "q", "y"],
                 "rates": ["d", "w", "m", "q", "y"],
+                "cmdty": ["d", "w", "m", "q", "y"],
                 "eqty": ["d", "w", "m", "q", "y"],
                 "credit": ["d", "w", "m", "q", "y"],
                 "macro": ["d", "w", "m", "q", "y"],
@@ -104,7 +105,7 @@ class PandasDataReader(Library):
         if market_types is None:
             self.market_types = ["spot"]
         if categories is None:
-            self.categories = ["fx", "rates", "eqty", "credit", "macro"]
+            self.categories = ["fx", "rates", "eqty", "cmdty", "credit", "macro"]
         if fields is None:
             self.fields = self.get_fields_info()
 
@@ -182,6 +183,7 @@ class PandasDataReader(Library):
             "fx": market_fields_list,
             "rates": market_fields_list,
             "eqty": market_fields_list,
+            "cmdty": market_fields_list,
             "credit": market_fields_list,
             "macro": macro_fields_list,
         }

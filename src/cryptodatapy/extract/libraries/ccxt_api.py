@@ -270,14 +270,9 @@ class CCXT(Library):
 
         return markets
 
-    def get_fields_info(self, data_type: str = None) -> List[str]:
+    def get_fields_info(self) -> List[str]:
         """
         Get fields info.
-
-        Parameters
-        ----------
-        data_type: str, {'market', 'on-chain', 'off-chain'}, default None
-            Name of data type.
 
         Returns
         -------
@@ -458,6 +453,10 @@ class CCXT(Library):
                 time_diff = cx_data_req["end_date"] - df.datetime.iloc[-1]
                 if pd.Timedelta(milliseconds=time_diff) < pd.Timedelta(cx_data_req["freq"]):
                     missing_vals = False
+                # missing data, infinite loop
+                elif df.datetime.iloc[-1] == df.datetime.iloc[-2]:
+                    missing_vals = False
+                    logging.warning(f"Missing recent OHLCV data for {ticker}.")
                 # reset end date and pause before calling API
                 else:
                     # change end date
@@ -526,6 +525,10 @@ class CCXT(Library):
                 ) - pd.to_datetime(data.datetime.iloc[-1]).tz_localize(None)
                 if time_diff < pd.Timedelta("8h"):
                     missing_vals = False
+                # missing data, infinite loop
+                elif df.datetime.iloc[-1] == df.datetime.iloc[-2]:
+                    missing_vals = False
+                    logging.warning(f"Missing recent funding rate data for {ticker}.")
                 # reset end date and pause before calling API
                 else:
                     # change end date

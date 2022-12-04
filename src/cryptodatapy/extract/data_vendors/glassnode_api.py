@@ -232,7 +232,10 @@ class Glassnode(DataVendor):
             Wrangled dataframe with DatetimeIndex and selected field values (cols), in tidy format.
         """
         # wrangle data resp
-        df = WrangleData(data_req, data_resp).glassnode(field)
+        if data_resp is None or len(data_resp) == 0:
+            df = None
+        else:
+            df = WrangleData(data_req, data_resp).glassnode(field)
 
         return df
 
@@ -285,7 +288,7 @@ class Glassnode(DataVendor):
 
         for field in gn_data_req['fields']:  # loop through fields
 
-            df0 = pd.DataFrame()
+            df0 = None
 
             # get tidy data
             if field == 'market/price_usd_ohlc' and counter == 0:
@@ -295,7 +298,7 @@ class Glassnode(DataVendor):
                 df0 = self.get_tidy_data(data_req, ticker, field)
 
             # add field to fields df
-            if not df0.empty:
+            if df0 is not None:
                 df = pd.concat([df, df0], axis=1)
 
         return df

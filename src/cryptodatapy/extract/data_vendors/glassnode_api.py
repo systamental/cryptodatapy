@@ -206,6 +206,7 @@ class Glassnode(DataVendor):
             's': gn_data_req['start_date'],
             'u': gn_data_req['end_date'],
             'i': gn_data_req['freq'],
+            'c': gn_data_req['quote_ccy']
         }
         # data req
         data_resp = DataRequest().get_req(url=url, params=params)

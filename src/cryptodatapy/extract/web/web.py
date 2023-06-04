@@ -310,8 +310,7 @@ class Web(ABC):
 
     @staticmethod
     @abstractmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame], **kwargs) \
-            -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

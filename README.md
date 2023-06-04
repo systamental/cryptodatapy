@@ -102,7 +102,7 @@ see [here](https://github.com/systamental/cryptodatapy/blob/main/docs/example.ip
 - [Yahoo Finance](https://github.com/ranaroussi/yfinance)
 - [Fama-French Data](http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html)
 - [Pandas-datareader](https://pandas-datareader.readthedocs.io/en/latest/)
-- [AQR](https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/)
+- [AQR](https://www.aqr.com/Insights/Datasets)
 - [Federal Reserve Economic Data (FRED)](https://fred.stlouisfed.org/docs/api/fred/)
 - [DBnomics](https://db.nomics.world/docs/)
 - [WorldBank](https://documents.worldbank.org/en/publication/documents-reports/api)

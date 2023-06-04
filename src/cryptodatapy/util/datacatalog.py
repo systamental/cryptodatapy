@@ -31,6 +31,9 @@ class DataCatalog:
             "investpy": "https://investpy.readthedocs.io/",
             "dbnomics": "https://db.nomics.world/providers",
             "fred": "https://fred.stlouisfed.org/",
+            "fama french": "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
+            "world bank": "https://data.worldbank.org/",
+            "aqr": "https://www.aqr.com/Insights/Datasets"
         }
     )
 

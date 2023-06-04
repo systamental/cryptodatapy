@@ -816,15 +816,115 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
+    def to_wb(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert tickers from CryptoDataPy to Yahoo Finance format.
+
+        """
+        # convert tickers
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        elif self.data_req.cat:
+            for ticker in self.data_req.tickers:
+                try:
+                    tickers.append(tickers_df.loc[ticker, "wb_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for World Bank data source. Check tickers in"
+                        f" data catalog and try again."
+                    )
+                    self.data_req.tickers.remove(ticker)
+        # drop dupes
+        tickers = list(set(tickers))
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            freq = self.data_req.freq
+        # convert quote ccy
+        if self.data_req.quote_ccy is None:
+            quote_ccy = "USD"
+        else:
+            quote_ccy = self.data_req.quote_ccy.upper()
+        # convert ctys
+        ctys_list = []
+        if self.data_req.cat == "macro":
+            for ticker in self.data_req.tickers:
+                try:
+                    ctys_list.append(tickers_df.loc[ticker, "country_id_3"].upper())
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for {self.data_req.source} source. Check tickers in "
+                        f"data catalog and try again."
+                    )
+        ctys_list = list(set(ctys_list))
+        # start date
+        if self.data_req.start_date is None:
+            start_date = 1920
+        else:
+            start_date = int(self.data_req.start_date[:4])
+        # end date
+        if self.data_req.end_date is None:
+            end_date = datetime.utcnow().year
+        else:
+            end_date = int(self.data_req.end_date[:4])
+        # fields
+        if self.data_req.source_fields is not None:
+            fields = self.data_req.source_fields
+            self.data_req.fields = self.data_req.source_fields
+        else:
+            fields = self.convert_fields(data_source='wb')
+
+        return {
+            "tickers": tickers,
+            "freq": freq,
+            "quote_ccy": quote_ccy,
+            "exch": self.data_req.exch,
+            "ctys": ctys_list,
+            "mkt_type": None,
+            "mkts": None,
+            "start_date": start_date,
+            "end_date": end_date,
+            "fields": fields,
+            "tz": self.data_req.tz,
+            "inst": None,
+            "cat": self.data_req.cat,
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
     def to_yahoo(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
 
         """
         # convert tickers
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+
         if self.data_req.source_tickers is not None:
             tickers = self.data_req.source_tickers
             self.data_req.tickers = self.data_req.source_tickers
+        elif self.data_req.cat != 'eqty':
+            for ticker in self.data_req.tickers:
+                try:
+                    tickers.append(tickers_df.loc[ticker, "yahoo_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for Yahoo Finance data source. Check tickers in"
+                        f" data catalog and try again."
+                    )
+                    self.data_req.tickers.remove(ticker)
         else:
             tickers = [ticker.upper() for ticker in self.data_req.tickers]
         # convert freq
@@ -837,12 +937,12 @@ class ConvertParams:
         quote_ccy = self.data_req.quote_ccy
         # start date
         if self.data_req.start_date is None:
-            start_date = datetime(1920, 1, 1)
+            start_date = '1920-01-01'
         else:
             start_date = self.data_req.start_date
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            end_date = datetime.utcnow().strftime('%Y-%m-%d')
         else:
             end_date = self.data_req.end_date
         # fields
@@ -869,6 +969,172 @@ class ConvertParams:
             "end_date": end_date,
             "fields": fields,
             "tz": tz,
+            "inst": None,
+            "cat": self.data_req.cat,
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
+    def to_famafrench(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert tickers from CryptoDataPy to Fama-French format.
+        """
+        # convert tickers
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        else:
+            for ticker in self.data_req.tickers:
+                try:
+                    tickers.append(tickers_df.loc[ticker, "famafrench_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for Fama-French source. Check tickers in"
+                        f" data catalog and try again."
+                    )
+                    self.data_req.tickers.remove(ticker)
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            freq = self.data_req.freq
+        # convert quote ccy
+        quote_ccy = self.data_req.quote_ccy
+        # start date
+        if self.data_req.start_date is None:
+            start_date = datetime(1920, 1, 1)
+        else:
+            start_date = self.data_req.start_date
+        # end date
+        if self.data_req.end_date is None:
+            end_date = datetime.utcnow()
+        else:
+            end_date = self.data_req.end_date
+        # # fields
+        # if self.data_req.source_fields is not None:
+        #     fields = self.data_req.source_fields
+        #     self.data_req.fields = self.data_req.source_fields
+        # else:
+        #     fields = self.convert_fields(data_source='famafrench')
+        # tz
+        # if self.data_req.tz is None:
+        #     tz = "America/New_York"
+        # else:
+        #     tz = self.data_req.tz
+
+        return {
+            "tickers": tickers,
+            "freq": freq,
+            "quote_ccy": quote_ccy,
+            "exch": self.data_req.exch,
+            "ctys": None,
+            "mkt_type": self.data_req.mkt_type,
+            "mkts": None,
+            "start_date": start_date,
+            "end_date": end_date,
+            "fields": fields,
+            "tz": tz,
+            "inst": None,
+            "cat": self.data_req.cat,
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
+    def to_aqr(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert tickers from CryptoDataPy to AQR format.
+        """
+        # convert tickers
+        all_tickers_dict = {
+            'The-Devil-in-HMLs-Details-Factors-': {
+                'US_Eqty_Val': 'HML FF',
+                'US_Eqty_Size': 'SMB',
+                'US_Eqty_Mom': 'UMD',
+                'WL_Eqty_Val': 'HML FF',
+                'WL_Eqty_Size': 'SMB',
+                'WL_Eqty_Mom': 'UMD',
+                'US_Rates_1M_RF': 'RF',
+            },
+            'Quality-Minus-Junk-Factors-': {
+                'US_Eqty_Qual': 'QMJ Factors',
+                'WL_Eqty_Qual': 'QMJ Factors'
+            },
+            'Betting-Against-Beta-Equity-Factors-': {
+                'US_Eqty_Beta': 'BAB Factors',
+                'WL_Eqty_Beta': 'BAB Factors'
+            },
+            'Century-of-Factor-Premia-': {
+                'WL_Eqty_Fut_Val': 'Century of Factor Premia',
+                'WL_Eqty_Fut_Mom': 'Century of Factor Premia',
+                'WL_Eqty_Fut_Carry': 'Century of Factor Premia',
+                'WL_Eqty_Fut_Beta': 'Century of Factor Premia',
+                'WL_Rates_Val': 'Century of Factor Premia',
+                'WL_Rates_Mom': 'Century of Factor Premia',
+                'WL_Rates_Carry': 'Century of Factor Premia',
+                'WL_Rates_Beta': 'Century of Factor Premia',
+                'WL_Cmdty_Val': 'Century of Factor Premia',
+                'WL_Cmdty_Mom': 'Century of Factor Premia',
+                'WL_Cmdty_Carry': 'Century of Factor Premia',
+                'WL_FX_Val': 'Century of Factor Premia',
+                'WL_FX_Mom': 'Century of Factor Premia',
+                'WL_FX_Carry': 'Century of Factor Premia'
+            },
+            'Time-Series-Momentum-Factors-': {
+                'WL_Eqty_Fut_Mom_TS': 'TSMOM Factors',
+                'WL_Rates_Mom_TS': 'TSMOM Factors',
+                'WL_Comdty_Mom_TS': 'TSMOM Factors',
+                'WL_FX_Mom_TS': 'TSMOM Factors'
+            },
+            'Commodities-for-the-Long-Run-Index-Level-Data-': {
+                'Cmdty_ER': 'Commodities for the Long Run'
+            },
+            'Credit-Risk-Premium-Preliminary-Paper-Data': {
+                'US_Credit_ER': 'Credit Risk Premium'
+            }
+        }
+        # tickers dict
+        tickers_dict = {}
+        for ticker in self.data_req.tickers:
+            for k, v in all_tickers_dict.items():
+                if ticker in v:
+                    tickers_dict[ticker] = (k, all_tickers_dict[k][ticker])
+        # convert freq
+        daily_freqs_list = ['The-Devil-in-HMLs-Details-Factors-', 'Quality-Minus-Junk-Factors-',
+                            'Betting-Against-Beta-Equity-Factors-']
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            if all([file in daily_freqs_list for file in tickers_dict.keys()]) and\
+               (self.data_req.freq == 'd' or self.data_req.freq == 'w'):
+                freq = 'Daily'
+            else:
+                freq = 'Monthly'
+                self.data_req.freq = 'm'
+
+        return {
+            "tickers": tickers_dict,
+            "freq": freq,
+            "quote_ccy": self.data_req.quote_ccy,
+            "exch": self.data_req.exch,
+            "ctys": None,
+            "mkt_type": self.data_req.mkt_type,
+            "mkts": None,
+            "start_date": self.data_req.start_date,
+            "end_date": self.data_req.end_date,
+            "fields": self.data_req.fields,
+            "tz": self.data_req.tz,
             "inst": None,
             "cat": self.data_req.cat,
             "trials": self.data_req.trials,

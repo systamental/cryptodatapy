@@ -102,6 +102,7 @@ see [here](https://github.com/systamental/cryptodatapy/blob/main/docs/example.ip
 - [DBnomics](https://db.nomics.world/docs/)
 - [investpy](https://investpy.readthedocs.io/)
 - [Pandas-datareader](https://pandas-datareader.readthedocs.io/en/latest/)
+- [AQR](https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/)
 
 ## Contributing
 

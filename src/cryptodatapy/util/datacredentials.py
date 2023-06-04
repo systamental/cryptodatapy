@@ -34,6 +34,7 @@ class DataCredentials:
     cryptocompare_base_url: str = 'https://min-api.cryptocompare.com/data/'
     glassnode_base_url: str = 'https://api.glassnode.com/v1/metrics/'
     tiingo_base_url: str = 'https://api.tiingo.com/tiingo/'
+    aqr_base_url: str = 'https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/'
 
     # vendors URLs
     dbnomics_vendors_url: str = "https://db.nomics.world/providers"

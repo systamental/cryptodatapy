@@ -207,8 +207,7 @@ class AQR(Web):
             return df_dicts
 
     @staticmethod
-    def wrangle_data_resp(
-            data_req: DataRequest, data_resp: Dict[str, pd.DataFrame]) -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Dict[str, pd.DataFrame]) -> pd.DataFrame:
         """
         Wrangle data response.
 

@@ -2,7 +2,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
-import pandas_datareader.data as web
+import yfinance as yf
+from pandas_datareader.data import DataReader as pdr_fetch
+from pandas_datareader import wb
 
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.library import Library
@@ -64,7 +66,8 @@ class PandasDataReader(Library):
             Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
         api_key: dictionary
             Api keys for data source by source-api key key-value pairs, e.g. {'av-daily' :'dcf13983adf7dfa79a0df',
-            'fred' : dcf13983adf7dfa79a0df', ...}. If not provided, default is set to api_key stored in DataCredentials.
+            'fred' : dcf13983adf7dfa79a0df', ...}.
+            If not provided, default is set to api_key stored in DataCredentials.
         max_obs_per_call: int, optional, default None
             Maximum number of observations returned per API call. If not provided, default is set to
             api_limit stored in DataCredentials.
@@ -90,7 +93,8 @@ class PandasDataReader(Library):
         if api_key is None:
             self.api_key = {
                 "fred": None,
-                "yahoo": None
+                "yahoo": None,
+                "fama_french": None
             }
         if frequencies is None:
             self.frequencies = {
@@ -200,67 +204,63 @@ class PandasDataReader(Library):
         """
         print(f"See specific data vendor for rate limits: {data_cred.pdr_vendors_url}")
 
-    def fred(self, data_req: DataRequest) -> pd.DataFrame:
+    @staticmethod
+    def get_series(data_req: DataRequest) -> pd.DataFrame:
         """
-        Request data from Fred with PandasDataReader.
+        Gets series from DBnomics python client.
 
         Parameters
         ----------
-
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
 
         Returns
         -------
         df: pd.DataFrame
-            Dataframe with index and ticker values (cols).
+            Dataframe with DatetimeIndex and actual values (col) for requested series.
 
         """
-        # convert data request parameters to Fred format
-        fred_data_req = ConvertParams(data_req).to_fred()
+        # convert data request parameters to source format
+        conv_data_req = getattr(ConvertParams(data_req), f"to_{data_req.source}")()
 
         try:
-            df = web.DataReader(
-                fred_data_req["tickers"],
-                'fred',
-                fred_data_req["start_date"],
-                fred_data_req["end_date"],
-                api_key=self.api_key['fred'],
-            )
+            # fetch yahoo data
+            if data_req.source == "yahoo":
+                # fetch yf data
+                df = yf.download(conv_data_req["tickers"],
+                                 conv_data_req["start_date"],
+                                 conv_data_req["end_date"])
+
+            # fetch fama-french data
+            elif data_req.source == "famafrench":
+                df = pd.DataFrame()
+                for ticker in conv_data_req["tickers"]:
+                    df1 = pdr_fetch(ticker,
+                                    data_req.source,
+                                    conv_data_req["start_date"],
+                                    conv_data_req["end_date"])
+                    df = pd.concat([df, df1[0]], axis=1)
+
+            # featch wb data
+            elif data_req.source == "wb":
+                df = pd.DataFrame()
+                for ticker in conv_data_req["tickers"]:
+                    df1 = wb.download(indicator=ticker,
+                                      country=conv_data_req['ctys'],
+                                      start=conv_data_req["start_date"],
+                                      end=conv_data_req["end_date"])
+                    df = pd.concat([df, df1], axis=1)
+
+            # fetch pdr data
+            else:
+                df = pdr_fetch(conv_data_req["tickers"],
+                               data_req.source,
+                               conv_data_req["start_date"],
+                               conv_data_req["end_date"])
+
         except Exception as e:
             logging.warning(e)
-            logging.warning(f"Failed to get data for: {fred_data_req['tickers']}.")
-
-        else:
-
-            return df
-
-    def yahoo(self, data_req: DataRequest) -> pd.DataFrame:
-        """
-        Request data from Yahoo Finance with PandasDataReader.
-
-        Parameters
-        ----------
-
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Dataframe with index and ticker values (cols).
-
-        """
-        # convert data request parameters to Fred format
-        yahoo_data_req = ConvertParams(data_req).to_yahoo()
-
-        try:
-            df = web.DataReader(
-                yahoo_data_req["tickers"],
-                'yahoo',
-                yahoo_data_req["start_date"],
-                yahoo_data_req["end_date"],
-                api_key=self.api_key['yahoo'],
-            )
-        except Exception as e:
-            logging.warning(e)
-            logging.warning(f"Failed to get data for: {yahoo_data_req['tickers']}.")
+            logging.warning(f"Failed to get data for: {conv_data_req['tickers']}.")
 
         else:
 
@@ -305,8 +305,8 @@ class PandasDataReader(Library):
             Dataframe with DatetimeIndex (level 0), tickers (level 1) and actual values (cols),
             in tidy data format.
         """
-        # data req
-        df = getattr(self, data_req.source)(data_req)
+        # change to get series
+        df = self.get_series(data_req)
         # wrangle data resp
         df = self.wrangle_data_resp(data_req, df)
 
@@ -319,7 +319,7 @@ class PandasDataReader(Library):
 
         """
         # check data source
-        if data_req.source != 'fred' and data_req.source != 'yahoo':
+        if data_req.source not in ['fred', 'yahoo', 'famafrench', 'wb']:
             raise ValueError(
                 "Select a Pandas-datareader supported data source for the data request."
             )
@@ -363,9 +363,5 @@ class PandasDataReader(Library):
             raise Exception(
                 "No data returned. Check data request parameters and try again."
             )
-
-        # filter df for desired fields and typecast
-        fields = [field for field in data_req.fields if field in df.columns]
-        df = df.loc[:, fields].copy()
 
         return df.sort_index()

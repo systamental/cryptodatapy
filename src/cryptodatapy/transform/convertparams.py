@@ -1018,17 +1018,6 @@ class ConvertParams:
             end_date = datetime.utcnow()
         else:
             end_date = self.data_req.end_date
-        # # fields
-        # if self.data_req.source_fields is not None:
-        #     fields = self.data_req.source_fields
-        #     self.data_req.fields = self.data_req.source_fields
-        # else:
-        #     fields = self.convert_fields(data_source='famafrench')
-        # tz
-        # if self.data_req.tz is None:
-        #     tz = "America/New_York"
-        # else:
-        #     tz = self.data_req.tz
 
         return {
             "tickers": tickers,
@@ -1040,8 +1029,8 @@ class ConvertParams:
             "mkts": None,
             "start_date": start_date,
             "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
+            "fields": self.data_req.fields,
+            "tz": self.data_req.tz,
             "inst": None,
             "cat": self.data_req.cat,
             "trials": self.data_req.trials,

@@ -99,10 +99,13 @@ see [here](https://github.com/systamental/cryptodatapy/blob/main/docs/example.ip
 - [Glassnode](https://docs.glassnode.com/)
 - [Coin Metrics](https://docs.coinmetrics.io/api/v4/)
 - [Tiingo](https://api.tiingo.com/documentation/general/overview)
-- [DBnomics](https://db.nomics.world/docs/)
-- [investpy](https://investpy.readthedocs.io/)
+- [Yahoo Finance](https://github.com/ranaroussi/yfinance)
+- [Fama-French Data](http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html)
 - [Pandas-datareader](https://pandas-datareader.readthedocs.io/en/latest/)
 - [AQR](https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/)
+- [Federal Reserve Economic Data (FRED)](https://fred.stlouisfed.org/docs/api/fred/)
+- [DBnomics](https://db.nomics.world/docs/)
+- [WorldBank](https://documents.worldbank.org/en/publication/documents-reports/api)
 
 ## Contributing
 

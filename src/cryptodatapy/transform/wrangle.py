@@ -471,7 +471,7 @@ class WrangleData:
     Wrangles time series data responses from various APIs into tidy data format.
     """
 
-    def __init__(self, data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]):
+    def __init__(self, data_req: DataRequest, data_resp: Union[Dict[str, pd.DataFrame], pd.DataFrame]):
         """
         Constructor
 
@@ -479,8 +479,8 @@ class WrangleData:
         ----------
         data_req: DataRequest
             Data request object with parameter values.
-        data_resp: pd.DataFrame
-            Dataframe containing data response.
+        data_resp: dictionary or pd.DataFrame
+            Dictionary with Dataframes or DataFrame containing data response.
 
         """
         self.data_req = data_req
@@ -608,7 +608,6 @@ class WrangleData:
             self.data_resp.rename(columns={'t': 'date', 'o': 'open', 'h': 'high', 'c': 'close', 'l': 'low'},
                                   inplace=True)
             self.data_resp = self.data_resp.loc[:, ['date', 'open', 'high', 'low', 'close']]
-
         # convert to datetime
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'], unit='s')
         # set index
@@ -679,8 +678,6 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
-        # df = self.convert_cols().convert_fields_to_lib().convert_to_datetime().set_idx().resample_freq(). \
-        #     filter_dates().type_conversion().remove_bad_data().data_resp
         # convert fields to lib
         self.convert_fields_to_lib(data_source='dbnomics')
         # convert to datetime
@@ -689,7 +686,7 @@ class WrangleData:
         self.data_resp = self.data_resp.set_index('date').sort_index()
         # resample
         self.data_resp = self.data_resp.resample(self.data_req.freq).last().ffill()
-        # filte dates
+        # filter dates
         self.filter_dates()
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
@@ -710,9 +707,6 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
-
-        # df = self.convert_cols().convert_fields_to_lib().convert_to_datetime().set_idx().resample_freq(). \
-        #     type_conversion().remove_bad_data().data_resp
         # convert fields to lib
         self.convert_fields_to_lib(data_source='ccxt')
         # convert to datetime
@@ -821,28 +815,179 @@ class WrangleData:
         -------
         pd.DataFrame
             Wrangled dataframe into tidy data format.
-
         """
-        # TODO: resample data
-        # resample
-        # self._data_resp = self.data_resp.resample(data_req.freq).last()
-        #
-        # stack and reset index
-        self.data_resp = self.data_resp.stack().reset_index()
-        # remove name
-        self.data_resp.columns.name = None
+        # convert tickers
+        if len(self.data_req.tickers) == 1:  # add ticker and reset index
+            self.data_resp['Ticker'] = self.data_req.tickers[0]
+            self.data_resp.reset_index(inplace=True)
+        else:   # convert tickers to cryptodatapy format
+            self.data_resp = self.data_resp.stack()  # stack to multi-index
+            self.data_resp.index.names = ['Date', 'Ticker']
+            self.data_resp.index = self.data_resp.index.set_levels(self.data_req.tickers, level='Ticker')
+            self.data_resp.reset_index(inplace=True)
         # convert fields
         self.convert_fields_to_lib(data_source='yahoo')
         # convert to datetime
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
-        # set index
-        self.data_resp.set_index(['date', 'ticker'], inplace=True)
+        # resample
+        self.data_resp = self.data_resp.set_index('date').groupby('ticker').resample(self.data_req.freq).last().\
+            droplevel(0).reset_index().set_index(['date', 'ticker'])
         # re-order cols
         self.data_resp = self.data_resp.loc[:, ['open', 'high', 'low', 'close', 'close_adj', 'volume']]
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
+        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
+        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+        # keep only requested fields
+        self.data_resp = self.data_resp[self.data_req.fields]
+
+        return self.data_resp
+
+    def famafrench(self) -> pd.DataFrame:
+        """
+        Wrangles Fama-French data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
+        """
+        # convert tickers to cryptodatapy format
+        ff_tickers_dict = {'RF': 'US_Rates_1M',
+                           'Mkt-RF': 'US_Eqty_CSRP_ER',
+                           'HML': 'US_Eqty_Val_LS_TR',
+                           'SMB': 'US_Eqty_Size_LS_TR',
+                           'RMW': 'US_Eqty_Prof_LS_TR',
+                           'CMA': 'US_Eqty_Inv_LS_TR',
+                           'Mom': 'US_Eqty_Mom_LS_TR',
+                           'ST_Rev': 'US_Eqty_STRev_LS_TR'}
+        # remove white space from cols str
+        self.data_resp.columns = [col.strip() for col in self.data_resp.columns]
+        # keep cols in data req tickers
+        self.data_resp.columns = [ff_tickers_dict[col] for col in self.data_resp.columns
+                                  if col in ff_tickers_dict.keys()]  # keep
+        drop_cols = [col for col in self.data_resp.columns if col not in self.data_req.tickers]
+        self.data_resp.drop(columns=drop_cols, inplace=True)
+        self.data_resp = self.data_resp.loc[:, ~self.data_resp.columns.duplicated()]  # drop dup cols
+        # resample freq
+        self.data_resp = self.data_resp.resample(self.data_req.freq).sum()
+        # format index
+        self.data_resp.index.name = 'date'  # rename
+        self.data_resp = self.data_resp.stack().to_frame('close')
+        self.data_resp.index.names = ['date', 'ticker']
+        # type and conversion to decimals
+        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes() / 100
+        # remove bad data
+        self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
+        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
+        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
+        return self.data_resp
+
+    def wb(self) -> pd.DataFrame:
+        """
+        Wrangles World Bank data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
+        """
+        # convert tickers to cryptodatapy format
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
+        self.data_resp = self.data_resp.stack().to_frame()  # stack df
+        # create list of tickers using tickers csv
+        tickers = []
+        for row in self.data_resp.iterrows():
+            tickers.append(
+                tickers_df[(tickers_df.country_name == row[0][0]) & (tickers_df.wb_id == row[0][2])].index[0])
+        self.data_resp['ticker'] = tickers
+        # convert fields
+        self.data_resp = self.data_resp.reset_index().rename(columns={0: 'actual', 'year': 'date'})
+        # convert date
+        self.data_resp.date = pd.to_datetime(self.data_resp.date) + pd.tseries.offsets.YearEnd()
+        # set index
+        self.data_resp = self.data_resp[['date', 'ticker', 'actual']].set_index(['date', 'ticker']).sort_index()
+        # drop tickers
+        drop_tickers = list(set(self.data_resp.index.get_level_values(1).to_list()) - set(self.data_req.tickers))
+        self.data_resp = self.data_resp.drop(drop_tickers, level=1)
+
+        return self.data_resp
+
+    def aqr(self) -> pd.DataFrame:
+        """
+        Wrangles AQR data file to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        # convert tickers to cryptodatapy format
+        tickers_dict = {
+            'US_Eqty_Val': 'USA',
+            'US_Eqty_Size': 'USA',
+            'US_Eqty_Mom': 'USA',
+            'US_Eqty_Qual': 'USA',
+            'US_Eqty_Beta': 'USA',
+            'WL_Eqty_Val': 'Global',
+            'WL_Eqty_Size': 'Global',
+            'WL_Eqty_Mom': 'Global',
+            'WL_Eqty_Qual': 'Global',
+            'WL_Eqty_Beta': 'Global',
+            'WL_Eqty_Fut_Val': 'Equity indices Value',
+            'WL_Eqty_Fut_Mom': 'Equity indices Momentum',
+            'WL_Eqty_Fut_Carry': 'Equity indices Carry',
+            'WL_Eqty_Fut_Beta': 'Equity indices Defensive',
+            'WL_Rates_Val': 'Fixed income Value',
+            'WL_Rates_Mom': 'Fixed income Momentum',
+            'WL_Rates_Carry': 'Fixed income Carry',
+            'WL_Rates_Beta': 'Fixed income Defensive',
+            'WL_Cmdty_Val': 'Commodities Value',
+            'WL_Cmdty_Mom': 'Commodities Momentum',
+            'WL_Cmdty_Carry': 'Commodities Carry',
+            'WL_FX_Val': 'Currencies Value',
+            'WL_FX_Mom': 'Currencies Momentum',
+            'WL_FX_Carry': 'Currencies Carry',
+            'WL_Eqty_Fut_Mom_TS': 'TSMOM^EQ',
+            'WL_Rates_Mom_TS': 'TSMOM^FI',
+            'WL_Comdty_Mom_TS': 'TSMOM^CM',
+            'WL_FX_Mom_TS': 'TSMOM^FX',
+            'Cmdty_ER': 'Excess return of equal-weight commodities portfolio',
+            'US_Credit_ER': 'CORP_XS',
+            'US_Rates_Long_ER': 'GOVT_XS',
+            'US_Rates_1M_RF': 'Risk Free Rate'
+        }
+        # empty df
+        df = pd.DataFrame()
+        # loop through dfs dict
+        for ticker in self.data_resp.keys():
+            # keep ticker col and rename col
+            df1 = self.data_resp[ticker][[tickers_dict[ticker]]]
+            df1.columns = [ticker]
+            # rename index
+            df1.index.name = 'date'
+            # resample
+            if self.data_req.freq != 'd':
+                df1 = df1.resample(self.data_req.freq).sum()
+            # concat to df
+            df = pd.concat([df, df1], join='outer', axis=1)
+        # filter dates
+        self.data_resp = df
+        self.filter_dates()
+        # stack df
+        self.data_resp = self.data_resp.stack().to_frame('er')
+        # create multi index
+        self.data_resp.index.names = ['date', 'ticker']
+        # type and conversion to decimals
+        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        # remove bad data
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
 

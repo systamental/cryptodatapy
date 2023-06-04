@@ -119,7 +119,10 @@ class DataRequest:
             "investpy",
             "yahoo",
             "fred",
+            "famafrench",
             "dbnomics",
+            "wb",
+            "aqr"
         ]
 
         if source in valid_data_sources:

@@ -27,12 +27,11 @@ class DataCatalog:
             "coinmetrics": "https://docs.coinmetrics.io/info/markets",
             "glassnode": "https://glassnode.com/",
             "tiingo": "https://api.tiingo.com/products/crypto-api",
-            "yahoo finance": "https://finance.yahoo.com/",
-            "investpy": "https://investpy.readthedocs.io/",
+            "yahoo_finance": "https://finance.yahoo.com/",
             "dbnomics": "https://db.nomics.world/providers",
             "fred": "https://fred.stlouisfed.org/",
-            "fama french": "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
-            "world bank": "https://data.worldbank.org/",
+            "fama_french": "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
+            "world_bank": "https://data.worldbank.org/",
             "aqr": "https://www.aqr.com/Insights/Datasets"
         }
     )

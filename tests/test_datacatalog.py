@@ -15,6 +15,10 @@ def test_data_sources(datacatalog) -> None:
     """
     dc = datacatalog
     assert (
+        dc.data_sources["ccxt"]
+        == "https://github.com/ccxt/ccxt"
+    ), "Invalid url for data source."
+    assert (
         dc.data_sources["cryptocompare"]
         == "https://min-api.cryptocompare.com/documentation"
     ), "Invalid url for data source."
@@ -25,7 +29,25 @@ def test_data_sources(datacatalog) -> None:
         dc.data_sources["glassnode"] == "https://glassnode.com/"
     ), "Invalid url for data source."
     assert (
-        dc.data_sources["investpy"] == "https://investpy.readthedocs.io/"
+        dc.data_sources["tiingo"] == "https://api.tiingo.com/products/crypto-api"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["yahoo_finance"] == "https://finance.yahoo.com/"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["dbnomics"] == "https://db.nomics.world/providers/"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["fred"] == "https://fred.stlouisfed.org/"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["fama_french"] == "http://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["world_bank"] == "https://data.worldbank.org/"
+    ), "Invalid url for data source."
+    assert (
+        dc.data_sources["aqr"] == "https://www.aqr.com/Insights/Datasets"
     ), "Invalid url for data source."
 
 

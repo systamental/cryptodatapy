@@ -315,7 +315,7 @@ class DataRequest:
             self._end_date = end_date
         elif isinstance(end_date, str):
             try:
-                datetime.strptime(end_date, "%Y-%m-%d")
+                end_date = datetime.strptime(end_date, "%Y-%m-%d")
             except ValueError:
                 raise ValueError('Date must be in "YYYY-MM-DD" string format.')
             else:

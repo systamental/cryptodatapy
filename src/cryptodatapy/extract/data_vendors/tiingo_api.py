@@ -439,6 +439,7 @@ class Tiingo(DataVendor):
 
         # fx
         elif data_type == 'fx':
+            # url = f"https://api.tiingo.com/tiingo/fx/{ticker}/prices"
             url = self.base_url + f"fx/prices"
             headers = {
                 "Content-Type": "application/json",
@@ -557,6 +558,7 @@ class Tiingo(DataVendor):
             for mkt, ticker in zip(tg_data_req['mkts'], data_req.tickers):
                 try:
                     df0 = self.get_tidy_data(data_req, data_type, mkt)
+                    print(df0)
                 except Exception:
                     logging.info(f"Failed to get {data_type} data for {ticker} after many attempts.")
                 else:

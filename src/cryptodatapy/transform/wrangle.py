@@ -730,49 +730,6 @@ class WrangleData:
 
         return self.data_resp
 
-    def investpy(self) -> pd.DataFrame:
-        """
-        Wrangles InvestPy data response to dataframe with tidy data format.
-
-        Returns
-        -------
-        pd.DataFrame
-            Wrangled dataframe into tidy data format.
-
-        """
-        # convert cols
-        if self.data_req.cat != 'macro':
-            # reset index
-            self.data_resp = self.data_resp.reset_index()
-        else:
-            # parse date and time to create datetime
-            self.data_resp.time.replace('Tentative', '23:55', inplace=True)
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.date + self.data_resp.time,
-                                                    format="%d/%m/%Y%H:%M")
-        # convert fields to lib
-        self.convert_fields_to_lib(data_source='investpy')
-        # set index
-        self.data_resp = self.data_resp.set_index('date').sort_index()
-        # replace % and compute surprise
-        if self.data_req.cat == 'macro':
-            self.data_resp = self.data_resp.replace('%', '', regex=True).astype(float) / 100  # remove % str
-            # replace missing vals
-            self.data_resp.expected.fillna(self.data_resp.previous, inplace=True)
-            self.data_resp['surprise'] = self.data_resp.actual - self.data_resp.expected
-        # resample freq
-        self.data_resp = self.data_resp.resample(self.data_req.freq).last().ffill()
-        # extend index and fwd fill to current date
-        ext_idx = pd.date_range(self.data_resp.index.max(), pd.Timestamp.today()).union(self.data_resp.index)
-        self.data_resp = self.data_resp.reindex(ext_idx).ffill()
-        # filter dates
-        self.filter_dates()
-        # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        # remove bad data
-        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
-        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
-
-        return self.data_resp
 
     def fred(self) -> pd.DataFrame:
         """
@@ -818,12 +775,12 @@ class WrangleData:
         """
         # convert tickers
         if len(self.data_req.tickers) == 1:  # add ticker and reset index
-            self.data_resp['Ticker'] = self.data_req.tickers[0]
+            self.data_resp['Ticker'] = self.data_req.tickers[0].upper()
             self.data_resp.reset_index(inplace=True)
         else:   # convert tickers to cryptodatapy format
             self.data_resp = self.data_resp.stack()  # stack to multi-index
             self.data_resp.index.names = ['Date', 'Ticker']
-            self.data_resp.index = self.data_resp.index.set_levels(self.data_req.tickers, level='Ticker')
+            # self.data_resp.index = self.data_resp.index.set_levels(self.data_req.tickers, level='Ticker')
             self.data_resp.reset_index(inplace=True)
         # convert fields
         self.convert_fields_to_lib(data_source='yahoo')
@@ -840,8 +797,8 @@ class WrangleData:
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
-        # keep only requested fields
-        self.data_resp = self.data_resp[self.data_req.fields]
+        # keep only requested fields and sort index
+        self.data_resp = self.data_resp[self.data_req.fields].sort_index()
 
         return self.data_resp
 

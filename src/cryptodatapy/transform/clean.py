@@ -259,7 +259,7 @@ class CleanData:
 
     def filter_min_nobs(self,
                         ts_obs: int = 100,
-                        cs_obs: int = 5
+                        cs_obs: int = 2
                         ) -> CleanData:
         """
         Removes tickers from dataframe if the ticker has less than a minimum number of observations.

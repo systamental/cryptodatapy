@@ -9,7 +9,7 @@ from cryptodatapy.transform.od import OutlierDetection
 # get data for testing
 @pytest.fixture
 def raw_oc_data():
-    return pd.read_csv('tests/data/cm_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
+    return pd.read_csv('data/cm_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 @pytest.fixture
 def oc_filt_df(raw_oc_data):

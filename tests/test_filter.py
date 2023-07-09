@@ -7,15 +7,16 @@ import pytest
 from cryptodatapy.transform.filter import Filter
 from cryptodatapy.transform.od import OutlierDetection
 
+
 # get data for testing
 @pytest.fixture
 def raw_oc_data():
-    return pd.read_csv('tests/data/cc_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
+    return pd.read_csv('data/cc_raw_oc_df.csv', index_col=[0, 1], parse_dates=['date'])
+
 
 @pytest.fixture
 def raw_ohlcv_data():
-    return pd.read_csv('tests/data/cc_raw_ohlcv_df.csv', index_col=[0, 1], parse_dates=['date'])
-
+    return pd.read_csv('data/cc_raw_ohlcv_df.csv', index_col=[0, 1], parse_dates=['date'])
 
 
 def test_filter_atr(raw_ohlcv_data) -> None:

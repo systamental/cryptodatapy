@@ -12,6 +12,7 @@ def datarequest():
     return DataRequest()
 
 
+# Tickers
 # convert cryptodatapy tickers to source format
 @pytest.mark.parametrize(
     "dr_tickers, cv_tickers",
@@ -35,7 +36,8 @@ def test_convert_tickers(dr_tickers, cv_tickers) -> None:
 
 @pytest.mark.parametrize(
     "dr_tickers, tg_tickers",
-    [("SPY", ["spy"]), (["SPY", "TLT", "VXX"], ["spy", "tlt", "vxx"])],
+    [("SPY", ["spy"]), (["SPY", "TLT", "VXX"], ["spy", "tlt", "vxx"]), ("EUR", ["eur"]),
+     (["BTC", "ETH"], ["btc", "eth"])],
 )
 def test_convert_tg_tickers(dr_tickers, tg_tickers) -> None:
     """
@@ -46,64 +48,20 @@ def test_convert_tg_tickers(dr_tickers, tg_tickers) -> None:
     assert tg_params["tickers"] == tg_tickers, "Tickers parameter conversion failed."
 
 
+# fx mkts
 @pytest.mark.parametrize(
-    "dr_tickers, tg_tickers", [("EUR", ["eur"]), (["BTC", "ETH"], ["btc", "eth"])]
+    "dr_tickers, fx_mkts",
+    [(["cad", "eur", "jpy"], ["usdcad", "eurusd", "usdjpy"]), ("mxn", ["usdmxn"])],
 )
-def test_convert_tg_fx_tickers(dr_tickers, tg_tickers) -> None:
+def test_convert_tickers_to_tg_fx_mkts(dr_tickers, fx_mkts) -> None:
     """
-    Test fx tickers parameter conversion to Tiingo format.
+    Test tickers to markets parameter conversion for Tiingo format.
     """
     data_req = DataRequest(tickers=dr_tickers, cat="fx")
     tg_params = ConvertParams(data_req=data_req).to_tiingo()
-    assert tg_params["tickers"] == tg_tickers, "Tickers parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_tickers, ip_tickers", [("eur", ["EUR"]), (["gbp", "cad"], ["GBP", "CAD"])]
-)
-def test_convert_ip_fx_tickers(dr_tickers, ip_tickers) -> None:
-    """
-    Test fx tickers parameter conversion to InvestPy format.
-    """
-    data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_tickers, ip_tickers",
-    [
-        (["spy", "tlt"], ["SPY", "TLT"]),
-        (["US_Eqty_Idx", "JP_Eqty_MSCI"], ["S&P 500", "MSCI Japan JPY"]),
-    ],
-)
-def test_convert_ip_eqty_tickers(dr_tickers, ip_tickers) -> None:
-    """
-    Test eqty tickers parameter conversion to InvestPy format.
-    """
-    data_req = DataRequest(tickers=dr_tickers, cat="eqty")
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_tickers, ip_tickers",
-    [
-        ("GB_Rates_IRS_30Y", ["GBP 30 Years IRS Interest Rate Swap"]),
-        (["Crude_Oil_Brent", "Gold_Spot"], ["Brent Oil", "Gold Spot US Dollar"]),
-        (
-            ["BR_Manuf_PMI", "US_Infl_CPI_MoM"],
-            ["S&P Global Manufacturing PMI", "CPI (MoM)"],
-        ),
-    ],
-)
-def test_convert_ip_macro_tickers(dr_tickers, ip_tickers) -> None:
-    """
-    Test macro tickers parameter conversion to InvestPy format.
-    """
-    data_req = DataRequest(tickers=dr_tickers, cat="macro")
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["tickers"] == ip_tickers, "Tickers parameter conversion failed."
+    assert (
+        tg_params["mkts"] == fx_mkts
+    ), "Tickers to markets parameter conversion failed."
 
 
 @pytest.mark.parametrize(
@@ -111,7 +69,7 @@ def test_convert_ip_macro_tickers(dr_tickers, ip_tickers) -> None:
     [
         ("US_GDP_Sh_PPP", ["IMF/WEO:2021-04/USA.PPPSH.pcent"]),
         (
-            ["EZ_Infl_Exp_1Y", "US_CB_MB"],
+            ["EZ_Infl_Exp_1Y", "US_MB"],
             ["ECB/SPF/M.U2.HICP.POINT.P12M.Q.AVG", "FED/H6_H6_MBASE/RESMO14A_N.M"],
         ),
     ],
@@ -144,35 +102,81 @@ def test_convert_fred_tickers(dr_tickers, fred_tickers) -> None:
     assert fred_params["tickers"] == fred_tickers, "Tickers parameter conversion failed."
 
 
-# fx mkts
 @pytest.mark.parametrize(
-    "dr_tickers, fx_mkts",
-    [(["cad", "eur", "jpy"], ["USD/CAD", "EUR/USD", "USD/JPY"]), ("mxn", ["USD/MXN"])],
+    "dr_tickers, yahoo_tickers",
+    [
+        ("Corn", ['ZC=F']),
+        (
+            ['US_Rates_10Y', 'US_Eqty_Idx'],
+            ['^TNX', '^GSPC'],
+        ),
+    ],
 )
-def test_convert_tickers_to_ip_fx_mkts(dr_tickers, fx_mkts) -> None:
+def test_convert_yahoo_tickers(dr_tickers, yahoo_tickers) -> None:
     """
-    Test tickers to markets parameter conversion for Coin Metrics format.
+    Test tickers parameter conversion to Yahoo format.
     """
-    data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    cm_params = ConvertParams(data_req=data_req).to_investpy()
-    assert (
-        cm_params["mkts"] == fx_mkts
-    ), "Tickers to markets parameter conversion failed."
+    data_req = DataRequest(tickers=dr_tickers)
+    yahoo_params = ConvertParams(data_req=data_req).to_yahoo()
+    assert yahoo_params["tickers"] == yahoo_tickers, "Tickers parameter conversion failed."
 
 
 @pytest.mark.parametrize(
-    "dr_tickers, fx_mkts",
-    [(["cad", "eur", "jpy"], ["usdcad", "eurusd", "usdjpy"]), ("mxn", ["usdmxn"])],
+    "dr_tickers, wb_tickers",
+    [
+        ("WL_Internet_Users_Sh_Pop", ['IT.NET.USER.ZS']),
+        (
+            ['US_GDP_Real_USD', 'WL_GDP_Real_USD'],
+            ['NY.GDP.MKTP.KD'],
+        ),
+    ],
 )
-def test_convert_tickers_to_tg_fx_mkts(dr_tickers, fx_mkts) -> None:
+def test_convert_wb_tickers(dr_tickers, wb_tickers) -> None:
     """
-    Test tickers to markets parameter conversion for Coin Metrics format.
+    Test tickers parameter conversion to World Bank format.
     """
-    data_req = DataRequest(tickers=dr_tickers, cat="fx")
-    cm_params = ConvertParams(data_req=data_req).to_tiingo()
-    assert (
-        cm_params["mkts"] == fx_mkts
-    ), "Tickers to markets parameter conversion failed."
+    data_req = DataRequest(tickers=dr_tickers, cat='macro')
+    wb_params = ConvertParams(data_req=data_req).to_wb()
+    assert wb_params["tickers"] == wb_tickers, "World Bank tickers parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_tickers, ff_tickers",
+    [
+        ("US_Eqty_Val", ["F-F_Research_Data_Factors_daily"]),
+        (
+            ['US_Eqty_Val', 'US_Eqty_Mom'],
+            ['F-F_Research_Data_Factors_daily', 'F-F_Momentum_Factor_daily'],
+        ),
+    ],
+)
+def test_convert_ff_tickers(dr_tickers, ff_tickers) -> None:
+    """
+    Test tickers parameter conversion to Fama French format.
+    """
+    data_req = DataRequest(tickers=dr_tickers)
+    ff_params = ConvertParams(data_req=data_req).to_famafrench()
+    assert ff_params["tickers"] == ff_tickers, "Fama French tickers parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_tickers, aqr_tickers",
+    [
+        ("Cmdty_ER", {'Cmdty_ER': ('Commodities-for-the-Long-Run-Index-Level-Data-', 'Commodities for the Long Run')}),
+        (
+            ['WL_Eqty_Mom', 'WL_FX_Carry'],
+            {'WL_Eqty_Mom': ('The-Devil-in-HMLs-Details-Factors-', 'UMD'),
+             'WL_FX_Carry': ('Century-of-Factor-Premia-', 'Century of Factor Premia')},
+        ),
+    ],
+)
+def test_convert_aqr_tickers(dr_tickers, aqr_tickers) -> None:
+    """
+    Test tickers parameter conversion to AQR format.
+    """
+    data_req = DataRequest(tickers=dr_tickers)
+    aqr_params = ConvertParams(data_req=data_req).to_aqr()
+    assert aqr_params["tickers"] == aqr_tickers, "AQR tickers parameter conversion failed."
 
 
 # convert cryptodatapy params to markets in source format
@@ -247,21 +251,6 @@ def test_convert_exch_to_cx_mkts(dr_exch, cx_mkts) -> None:
     assert (
         cx_params["mkts"] == cx_mkts
     ), "Exchange to markets parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_mkt_types, cx_mkts",
-    [("spot", ["BTC/USDT"]), ("perpetual_future", ["BTC/USDT:USDT"])],
-)
-def test_convert_mkt_types_to_cx_mkts(dr_mkt_types, cx_mkts) -> None:
-    """
-    Test market type to markets parameter conversion for CCXT format.
-    """
-    data_req = DataRequest(mkt_type=dr_mkt_types, exch="ftx")
-    cx_params = ConvertParams(data_req=data_req).to_ccxt()
-    assert (
-        cx_params["mkts"] == cx_mkts
-    ), "Market type to markets parameter conversion failed."
 
 
 # convert cryptodatapy freq to source format
@@ -361,23 +350,24 @@ def test_convert_tg_freq(dr_freq, tg_freq) -> None:
     """
     data_req = DataRequest(freq=dr_freq)
     tg_params = ConvertParams(data_req=data_req).to_tiingo()
-    assert tg_params["freq"] == tg_freq, "Frequency parameter conversion failed."
+    assert tg_params["freq"] == tg_freq, "Tiingo frequency parameter conversion failed."
 
 
 @pytest.mark.parametrize(
-    "dr_freq, ip_freq",
+    "dr_freq, aqr_freq",
     [
-        ("5min", "Daily"),
         ("d", "Daily"),
+        ("w", "Daily"),
+        ("m", "Monthly"),
     ],
 )
-def test_convert_ip_freq(dr_freq, ip_freq) -> None:
+def test_convert_aqr_freq(dr_freq, aqr_freq) -> None:
     """
-    Test frequency parameter conversion to InvestPy format (non-macro categories).
+    Test frequency parameter conversion to AQR format.
     """
-    data_req = DataRequest(freq=dr_freq, cat="rates")
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["freq"] == ip_freq, "Frequency parameter conversion failed."
+    data_req = DataRequest(tickers="US_Eqty_Val", freq=dr_freq)
+    aqr_params = ConvertParams(data_req=data_req).to_aqr()
+    assert aqr_params["freq"] == aqr_freq, "AQR frequency parameter conversion failed."
 
 
 # convert cryptodatapy quote ccy to source format
@@ -391,7 +381,7 @@ def test_convert_ip_freq(dr_freq, ip_freq) -> None:
 )
 def test_convert_quote_ccy(dr_ccy, cv_ccy) -> None:
     """
-    Test quote currency parameter conversion to CryptoCompare, Glassnode and InvestPy formats.
+    Test quote currency parameter conversion to CryptoCompare, and Glassnode formats.
     """
     data_req = DataRequest(quote_ccy=dr_ccy)
     cv_params = ConvertParams(data_req=data_req).to_cryptocompare()
@@ -399,10 +389,6 @@ def test_convert_quote_ccy(dr_ccy, cv_ccy) -> None:
         cv_params["quote_ccy"] == cv_ccy
     ), "Quote currency parameter conversion failed."
     cv_params = ConvertParams(data_req=data_req).to_glassnode()
-    assert (
-        cv_params["quote_ccy"] == cv_ccy
-    ), "Quote currency parameter conversion failed."
-    cv_params = ConvertParams(data_req=data_req).to_investpy()
     assert (
         cv_params["quote_ccy"] == cv_ccy
     ), "Quote currency parameter conversion failed."
@@ -463,6 +449,25 @@ def test_convert_tg_quote_ccy(dr_ccy, tg_ccy) -> None:
     assert (
         tg_params["quote_ccy"] == tg_ccy
     ), "Quote currency parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_ccy, wb_ccy",
+    [
+        (None, "USD"),
+        ("usd", "USD"),
+        ("eur", "EUR"),
+    ],
+)
+def test_convert_wb_quote_ccy(dr_ccy, wb_ccy) -> None:
+    """
+    Test quote currency parameter conversion to World Bank format.
+    """
+    data_req = DataRequest(quote_ccy=dr_ccy)
+    wb_params = ConvertParams(data_req=data_req).to_wb()
+    assert (
+        wb_params["quote_ccy"] == wb_ccy
+    ), "World Bank quote currency parameter conversion failed."
 
 
 # convert cryptodatapy exch to source format
@@ -533,25 +538,6 @@ def test_convert_tg_exchange(dr_exch, tg_exch) -> None:
     assert tg_params["exch"] == tg_exch, "Exchange parameter conversion failed."
 
 
-# convert cryptodatapy tickers to countries for investpy
-@pytest.mark.parametrize(
-    "dr_tickers, ip_ctys",
-    [
-        (["US_Rates_10Y", "CA_Rates_2Y"], ["united states", "canada"]),
-        (["CN_Manuf_PMI", "IN_Infl_CPI_YoY"], ["china", "india"]),
-    ],
-)
-def test_convert_tickers_to_ctys(dr_tickers, ip_ctys) -> None:
-    """
-    Test tickers to countries parameter conversion in InvestPy format.
-    """
-    data_req = DataRequest(tickers=dr_tickers, cat="macro")
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert (
-        ip_params["ctys"] == ip_ctys
-    ), "Tickers to countries parameter conversion failed."
-
-
 # convert cryptodatapy start date to source format
 @pytest.mark.parametrize(
     "dr_sd, cc_sd",
@@ -608,41 +594,69 @@ def test_convert_gn_start_date(dr_sd, gn_sd) -> None:
 
 
 @pytest.mark.parametrize(
-    "dr_sd, ip_sd",
-    [
-        (None, "01/01/1970"),
-        ("2015-01-01", "01/01/2015"),
-        (datetime(2015, 1, 1), "01/01/2015"),
-        (pd.Timestamp("2015-01-01 00:00:00"), "01/01/2015"),
-    ],
-)
-def test_convert_ip_start_date(dr_sd, ip_sd) -> None:
-    """
-    Test start date parameter conversion to InvestPy format.
-    """
-    data_req = DataRequest(start_date=dr_sd)
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["start_date"] == ip_sd, "Start date parameter conversion failed."
-
-
-@pytest.mark.parametrize(
-    "dr_sd, cv_sd",
+    "dr_sd, f_sd",
     [
         (None, datetime(1920, 1, 1)),
-        ("2015-01-01", datetime.strptime("2015-01-01", "%Y-%m-%d")),
+        ("2015-01-01", datetime(2015, 1, 1, 0, 0)),
         (datetime(2015, 1, 1), datetime(2015, 1, 1)),
         (pd.Timestamp("2015-01-01 00:00:00"), pd.Timestamp("2015-01-01 00:00:00")),
     ],
 )
-def test_convert_start_date(dr_sd, cv_sd) -> None:
+def test_convert_fred_start_date(dr_sd, f_sd) -> None:
     """
-    Test start date parameter conversion to Fred and Yahoo formats.
+    Test start date parameter conversion to Fred format.
     """
-    data_req = DataRequest(start_date=dr_sd)
+    data_req = DataRequest(start_date=dr_sd, tickers='US_UE_Rate')
     cv_params = ConvertParams(data_req=data_req).to_fred()
-    assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
-    cv_params = ConvertParams(data_req=data_req).to_yahoo()
-    assert cv_params["start_date"] == cv_sd, "Start date parameter conversion failed."
+    assert cv_params["start_date"] == f_sd, "Start date parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_sd, wb_sd",
+    [
+        (None, 1920),
+        ("2015-01-01", 2015),
+    ],
+)
+def test_convert_wb_start_date(dr_sd, wb_sd) -> None:
+    """
+    Test start date parameter conversion to Yahoo format.
+    """
+    data_req = DataRequest(tickers='US_GDP_Real_USD', start_date=dr_sd)
+    wb_params = ConvertParams(data_req=data_req).to_wb()
+    assert wb_params["start_date"] == wb_sd, "World Bank start date parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_sd, y_sd",
+    [
+        (None, '1920-01-01'),
+        ("2015-01-01", datetime(2015, 1, 1, 0, 0)),
+    ],
+)
+def test_convert_yahoo_start_date(dr_sd, y_sd) -> None:
+    """
+    Test start date parameter conversion to Yahoo format.
+    """
+    data_req = DataRequest(tickers='US_Eqty_Idx', start_date=dr_sd)
+    y_params = ConvertParams(data_req=data_req).to_yahoo()
+    assert y_params["start_date"] == y_sd, "Yahoo start date parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_sd, ff_sd",
+    [
+        (None, datetime(1920, 1, 1, 0, 0)),
+        ("2015-01-01", datetime(2015, 1, 1, 0, 0)),
+    ],
+)
+def test_convert_famafrench_start_date(dr_sd, ff_sd) -> None:
+    """
+    Test start date parameter conversion to Fama French format.
+    """
+    data_req = DataRequest(tickers='US_Eqty_Val', start_date=dr_sd)
+    ff_params = ConvertParams(data_req=data_req).to_famafrench()
+    assert ff_params["start_date"] == ff_sd, "Fama French start date parameter conversion failed."
 
 
 # convert cryptodatapy end date to source format
@@ -713,29 +727,11 @@ def test_convert_gn_end_date(dr_ed, gn_ed) -> None:
 
 
 @pytest.mark.parametrize(
-    "dr_ed, ip_ed",
-    [
-        (None, datetime.utcnow().strftime("%d/%m/%Y")),
-        ("2020-12-31", "31/12/2020"),
-        (datetime(2020, 12, 31), "31/12/2020"),
-        (pd.Timestamp("2020-12-31 00:00:00"), "31/12/2020"),
-    ],
-)
-def test_convert_ip_end_date(dr_ed, ip_ed) -> None:
-    """
-    Test end date parameter conversion to InvestPy format.
-    """
-    data_req = DataRequest(end_date=dr_ed)
-    ip_params = ConvertParams(data_req=data_req).to_investpy()
-    assert ip_params["end_date"] == ip_ed, "End date parameter conversion failed."
-
-
-@pytest.mark.parametrize(
     "dr_ed, cv_ed",
     [
-        (None, datetime.utcnow()),
-        ("2020-12-31", "2020-12-31"),
-        (datetime(2020, 12, 31), datetime(2020, 12, 31)),
+        (None, datetime.utcnow().date()),
+        ("2020-12-31", datetime(2020, 12, 31, 0, 0)),
+        # (datetime(2020, 12, 31), datetime(2020, 12, 31)),
         (pd.Timestamp("2020-12-31 00:00:00"), pd.Timestamp("2020-12-31 00:00:00")),
     ],
 )
@@ -746,14 +742,36 @@ def test_convert_end_date(dr_ed, cv_ed) -> None:
     data_req = DataRequest(end_date=dr_ed)
     if dr_ed is None:
         cv_params = ConvertParams(data_req=data_req).to_tiingo()
-        assert cv_params["end_date"].date() == datetime.utcnow().date()
+        assert cv_params["end_date"].date() == cv_ed
+        cv_params = ConvertParams(data_req=data_req).to_fred()
+        assert cv_params["end_date"].date() == cv_ed
+        cv_params = ConvertParams(data_req=data_req).to_yahoo()
+        assert cv_params["end_date"] == datetime.utcnow().strftime('%Y-%m-%d')
     else:
         cv_params = ConvertParams(data_req=data_req).to_tiingo()
-        assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
+        assert cv_params["end_date"] == cv_ed, "Tiingo end date parameter conversion failed."
         cv_params = ConvertParams(data_req=data_req).to_fred()
-        assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
+        assert cv_params["end_date"] == cv_ed, "Fred end date parameter conversion failed."
         cv_params = ConvertParams(data_req=data_req).to_yahoo()
-        assert cv_params["end_date"] == cv_ed, "End date parameter conversion failed."
+        assert cv_params["end_date"] == cv_ed, "Yahoo end date parameter conversion failed."
+        cv_params = ConvertParams(data_req=data_req).to_famafrench()
+        assert cv_params["end_date"] == cv_ed, "Fama-French end date parameter conversion failed."
+
+
+@pytest.mark.parametrize(
+    "dr_ed, wb_ed",
+    [
+        (None, datetime.utcnow().year),
+        ("2015-01-01", 2015),
+    ],
+)
+def test_convert_wb_end_date(dr_ed, wb_ed) -> None:
+    """
+    Test start date parameter conversion to World Bank format.
+    """
+    data_req = DataRequest(tickers='US_GDP_Real_USD', end_date=dr_ed)
+    wb_params = ConvertParams(data_req=data_req).to_wb()
+    assert wb_params["end_date"] == wb_ed, "World Bank end date parameter conversion failed."
 
 
 # convert cryptodatapy fields to source format
@@ -762,8 +780,8 @@ def test_convert_end_date(dr_ed, cv_ed) -> None:
     [
         ("date", ["Date"]),
         (
-            ["open", "high", "low", "close", "volume"],
-            ["Open", "High", "Low", "Close", "Volume"],
+            ["open", "high", "low", "close", 'close_adj', "volume"],
+            ["Open", "High", "Low", "Close", "Adj Close", "Volume"],
         ),
     ],
 )
@@ -772,8 +790,6 @@ def test_convert_fields(dr_fields, cv_fields) -> None:
     Test fields parameter conversion to InvestPy and Yahoo formats.
     """
     data_req = DataRequest(fields=dr_fields)
-    cv_params = ConvertParams(data_req=data_req).to_investpy()
-    assert cv_params["fields"] == cv_fields, "Fields parameter conversion failed."
     cv_params = ConvertParams(data_req=data_req).to_yahoo()
     assert cv_params["fields"] == cv_fields, "Fields parameter conversion failed."
 
@@ -852,7 +868,9 @@ def test_convert_am_tz(dr_tz, am_tz) -> None:
     """
     data_req = DataRequest(tz=dr_tz)
     am_params = ConvertParams(data_req=data_req).to_fred()
-    assert am_params["tz"] == am_tz, "Timezone parameter conversion failed."
+    assert am_params["tz"] == am_tz, "Fred timezone parameter conversion failed."
+    am_params = ConvertParams(data_req=data_req).to_yahoo()
+    assert am_params["tz"] == am_tz, "Yahoo timezone parameter conversion failed."
 
 
 # convert cryptodatapy institution to source format

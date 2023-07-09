@@ -18,7 +18,7 @@ def data_req():
 
 @pytest.fixture
 def db_data_req():
-    return pd.read_csv('tests/data/db_series_df.csv', index_col=0)
+    return pd.read_csv('data/db_series_df.csv', index_col=0)
 
 
 def test_wrangle_data_resp(db, data_req, db_data_req) -> None:

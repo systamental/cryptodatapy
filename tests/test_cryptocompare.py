@@ -1,5 +1,3 @@
-import datetime
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,7 +7,7 @@ import json
 from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.util.datacredentials import DataCredentials
-from cryptodatapy.transform.wrangle import WrangleInfo, WrangleData
+from cryptodatapy.transform.wrangle import WrangleInfo
 
 
 # url endpoints
@@ -33,7 +31,7 @@ def cc():
 
 @pytest.fixture
 def exch_req():
-    with open('tests/data/cc_exchanges_req.json') as f:
+    with open('data/cc_exchanges_req.json') as f:
         return json.load(f)
 
 
@@ -60,7 +58,7 @@ def test_exch_format(exch_req):
 
 @pytest.fixture
 def idx_req():
-    with open('tests/data/cc_indexes_req.json') as f:
+    with open('data/cc_indexes_req.json') as f:
         return json.load(f)
 
 
@@ -87,7 +85,7 @@ def test_idx_format(idx_req):
 
 @pytest.fixture
 def assets_req():
-    with open('tests/data/cc_assets_req.json') as f:
+    with open('data/cc_assets_req.json') as f:
         return json.load(f)
 
 
@@ -115,7 +113,7 @@ def test_assets_format(assets_req):
 
 @pytest.fixture
 def news_req():
-    with open('tests/data/cc_news_req.json') as f:
+    with open('data/cc_news_req.json') as f:
         return json.load(f)
 
 
@@ -142,7 +140,7 @@ def test_news_format(news_req):
 
 @pytest.fixture
 def top_mkt_cap_req():
-    with open('tests/data/cc_top_mkt_cap_req.json') as f:
+    with open('data/cc_top_mkt_cap_req.json') as f:
         return json.load(f)
 
 
@@ -169,7 +167,7 @@ def test_top_mkt_cap_format(top_mkt_cap_req):
 
 @pytest.fixture
 def ohlcv_url_params():
-    with open('tests/data/cc_ohlcv_url_params.json') as f:
+    with open('data/cc_ohlcv_url_params.json') as f:
         return json.load(f)
 
 
@@ -188,7 +186,7 @@ def test_ohlcv_url_params(ohlcv_url_params, cc) -> None:
 
 @pytest.fixture
 def onchain_url_params():
-    with open('tests/data/cc_on-chain_url_params.json') as f:
+    with open('data/cc_on-chain_url_params.json') as f:
         return json.load(f)
 
 
@@ -205,7 +203,7 @@ def test_onchain_url_params(onchain_url_params, cc) -> None:
 
 @pytest.fixture
 def social_url_params():
-    with open('tests/data/cc_social_url_params.json') as f:
+    with open('data/cc_social_url_params.json') as f:
         return json.load(f)
 
 
@@ -222,7 +220,7 @@ def test_social_url_params(social_url_params, cc) -> None:
 
 @pytest.fixture
 def ohlcv_data_req():
-    with open('tests/data/cc_ohlcv_data_req.json') as f:
+    with open('data/cc_ohlcv_data_req.json') as f:
         return json.load(f)
 
 
@@ -242,7 +240,7 @@ def test_req_data(ohlcv_data_req, cc):
 
 @pytest.fixture
 def ohlcv_data_req():
-    with open('tests/data/cc_ohlcv_data_req.json') as f:
+    with open('data/cc_ohlcv_data_req.json') as f:
         return json.load(f)
 
 
@@ -284,7 +282,7 @@ def test_integration_get_all_data_hist(cc, data_req) -> None:
 
 @pytest.fixture
 def indexes_df():
-    return pd.read_csv('tests/data/cc_indexes_df.csv', index_col=0)
+    return pd.read_csv('data/cc_indexes_df.csv', index_col=0)
 
 
 def test_wrangle_idx_data_resp(data_req, cc, indexes_df) -> None:
@@ -306,7 +304,7 @@ def test_wrangle_idx_data_resp(data_req, cc, indexes_df) -> None:
 
 @pytest.fixture
 def ohlcv_df():
-    return pd.read_csv('tests/data/cc_ohlcv_df.csv', index_col=0)
+    return pd.read_csv('data/cc_ohlcv_df.csv', index_col=0)
 
 
 def test_wrangle_ohlcv_data_resp(data_req, cc, ohlcv_df) -> None:
@@ -329,7 +327,7 @@ def test_wrangle_ohlcv_data_resp(data_req, cc, ohlcv_df) -> None:
 
 @pytest.fixture
 def onchain_df():
-    return pd.read_csv('tests/data/cc_on-chain_df.csv', index_col=0)
+    return pd.read_csv('data/cc_on-chain_df.csv', index_col=0)
 
 
 def test_wrangle_onchain_data_resp(data_req, cc, onchain_df) -> None:
@@ -340,7 +338,7 @@ def test_wrangle_onchain_data_resp(data_req, cc, onchain_df) -> None:
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert (df == 0).sum().sum() == 0, "Found zero values."  # 0s
     assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."  # datetimeindex
-    assert all([field in df.columns for field in ['add_zero_bal', 'add_tot', 'add_act_new', 'add_act', 'tx_count',
+    assert all([field in df.columns for field in ['add_zero_bal', 'add_tot', 'add_new', 'add_act', 'tx_count',
                                                   'hashrate']]), "Fields are missing from dataframe."  # fields
     assert df.index[0] == pd.Timestamp('2009-01-03 00:00:00'), "Wrong start date."  # start date
     assert isinstance(
@@ -350,7 +348,7 @@ def test_wrangle_onchain_data_resp(data_req, cc, onchain_df) -> None:
 
 @pytest.fixture
 def social_df():
-    return pd.read_csv('tests/data/cc_social_df.csv', index_col=0)
+    return pd.read_csv('data/cc_social_df.csv', index_col=0)
 
 
 def test_wrangle_social_data_resp(data_req, cc, social_df) -> None:

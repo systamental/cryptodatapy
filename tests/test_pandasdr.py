@@ -4,7 +4,6 @@ import pytest
 
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
-from cryptodatapy.util.datacredentials import DataCredentials
 
 
 @pytest.fixture
@@ -14,7 +13,7 @@ def pdr():
 
 @pytest.fixture
 def fred_data_resp():
-    df = pd.read_csv('tests/data/fred_df.csv', index_col='DATE')
+    df = pd.read_csv('data/fred_df.csv', index_col='DATE')
     df.index = pd.to_datetime(df.index)
     return df
 
@@ -35,7 +34,7 @@ def test_wrangle_fred_data_resp(pdr, fred_data_resp) -> None:
 
 @pytest.fixture
 def yahoo_data_resp():
-    df = pd.read_csv('tests/data/yahoo_df.csv', header=[0, 1], index_col=0)
+    df = pd.read_csv('data/yahoo_df.csv', header=[0, 1], index_col=0)
     return df
 
 
@@ -43,7 +42,8 @@ def test_wrangle_yahoo_data_resp(pdr, yahoo_data_resp) -> None:
     """
     Tests wrangling of Yahoo data response.
     """
-    data_req = DataRequest(source='yahoo', tickers=['spy', 'tlt', 'gld'])
+    data_req = DataRequest(source='yahoo', tickers=['spy', 'tlt', 'gld'],
+                           fields=['open', 'high', 'low', 'close', 'close_adj', 'volume'])
     df = pdr.wrangle_data_resp(data_req, yahoo_data_resp)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
@@ -75,7 +75,7 @@ def test_integration_get_data_fred(pdr) -> None:
     """
     Test integration of get data method.
     """
-    data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_CB_MB'], fields='actual')
+    data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_MB'], fields='actual')
     df = pdr.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -84,7 +84,7 @@ def test_integration_get_data_fred(pdr) -> None:
     assert isinstance(
         df.index.droplevel(1), pd.DatetimeIndex
     ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {'US_CB_MB', 'US_UE_Rate'}, \
+    assert set(df.index.droplevel(0).unique()) == {'US_MB', 'US_UE_Rate'}, \
         "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == [
         "actual"

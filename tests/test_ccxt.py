@@ -81,7 +81,7 @@ def test_integration_get_all_funding_hist(ccxt) -> None:
 
 @pytest.fixture
 def ccxt_data_resp():
-    return pd.read_csv('tests/data/ccxt_ohlcv_df.csv', index_col=0)
+    return pd.read_csv('data/ccxt_ohlcv_df.csv', index_col=0)
 
 
 def test_wrangle_data_resp(ccxt, data_req, ccxt_data_resp) -> None:

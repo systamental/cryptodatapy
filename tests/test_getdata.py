@@ -1,6 +1,6 @@
-import numpy as np
-import pandas as pd
 import pytest
+import pandas as pd
+import numpy as np
 
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.getdata import GetData
@@ -93,12 +93,9 @@ def test_integration_get_meta_ccxt(data_req_ccxt) -> None:
     """
     Test integration of get metadata for CCXT
     """
-    meta = GetData(data_req_ccxt).get_meta(method="get_exchanges_info", exch="ftx")
+    meta = GetData(data_req_ccxt).get_meta(method="get_exchanges_info", exch="binance")
     assert not meta.empty, "Dataframe was returned empty."  # non empty
-    assert meta.loc["ftx", "name"] == "FTX", "Exchange info is incorrect."  # exch name
-    assert (
-        meta.loc["ftx", "rateLimit"] == "28.57"
-    ), "Rate limit info is incorrect"  # rate limit info
+    assert meta.loc["binance", "name"] == "Binance", "Exchange info is incorrect."  # exch name
     assert isinstance(meta, pd.DataFrame), "Metadata should be a dataframe."  # type
 
 
@@ -343,6 +340,7 @@ def test_integration_get_data_gn(data_req_gn) -> None:
     assert isinstance(
         df.tx_count.dropna().iloc[-1], np.int64
     ), "Transactions count is not a numpy int."  # dtypes
+
 
 def test_integration_get_meta_pdr(data_req_pdr) -> None:
     """

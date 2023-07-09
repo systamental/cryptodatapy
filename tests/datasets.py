@@ -1,15 +1,15 @@
 import json
+import pickle
 
-
-from cryptodatapy.extract.data_vendors import CoinMetrics
-from cryptodatapy.extract.data_vendors import CryptoCompare
+from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
+from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.datarequest import DataRequest
-from cryptodatapy.extract.libraries import CCXT
-from cryptodatapy.extract.libraries import DBnomics
-from cryptodatapy.extract.data_vendors import Glassnode
-from cryptodatapy.extract.libraries import InvestPy
-from cryptodatapy.extract.libraries import PandasDataReader
-from cryptodatapy.extract.data_vendors import Tiingo
+from cryptodatapy.extract.libraries.ccxt_api import CCXT
+from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
+from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
+from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
+from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
+from cryptodatapy.extract.web.aqr import AQR
 
 
 def cc_req_meta(info_type: str, filename: str) -> None:
@@ -160,8 +160,9 @@ def fred_data() -> None:
     Get FRED data from Pandas-datareader.
     """
     pdr = PandasDataReader()
-    data_req = DataRequest(tickers=['US_CB_MB', 'US_UE_Rate'])
-    df = pdr.fred(data_req)
+    data_req = DataRequest(source='fred', tickers=['US_MB', 'US_UE_Rate'], cat='macro')
+
+    df = pdr.get_series(data_req)
     df.to_csv('data/fred_df.csv')
 
 
@@ -170,8 +171,8 @@ def yahoo_data() -> None:
     Get Yahhoo data from Pandas-datareader.
     """
     pdr = PandasDataReader()
-    data_req = DataRequest(tickers=['SPY', 'TLT', 'GLD'])
-    df = pdr.yahoo(data_req)
+    data_req = DataRequest(source='yahoo', tickers=['SPY', 'TLT', 'GLD'], cat='eqty')
+    df = pdr.get_series(data_req)
     df.to_csv('data/yahoo_df.csv')
 
 
@@ -207,17 +208,6 @@ def gn_req_data() -> None:
     filepath = 'data/' + 'gn_data_req.json'
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
-
-
-def ip_econ_cal() -> None:
-    """
-    Retrieves econ calendar from InvestPy
-    """
-    ip = InvestPy()
-    data_req = DataRequest(tickers=['US_Manuf_PMI', 'EZ_Infl_CPI_YoY'], cat='macro',
-                           fields=['actual', 'expected', 'surprise'])
-    econ_cal = ip.get_all_ctys_eco_cals(data_req)
-    econ_cal.to_csv('data/ip_econ_cal.csv')
 
 
 def tg_req_crypto() -> None:
@@ -277,3 +267,14 @@ def tg_req_fx_data() -> None:
     filepath = 'data/' + 'tg_fx_data_req.json'
     with open(filepath, 'w') as json_file:
         json.dump(data_resp, json_file)
+
+
+def aqr_data() -> None:
+    """
+    Get AQR data from website.
+    """
+    aqr = AQR()
+    data_req = DataRequest(tickers=['US_Eqty_Val'], freq='d')
+    aqr_dict = aqr.get_series(data_req)
+    with open('data/aqr_dict.pickle', 'wb') as f:
+        pickle.dump(aqr_dict, f)

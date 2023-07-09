@@ -35,7 +35,7 @@ def test_data_sources(datacatalog) -> None:
         dc.data_sources["yahoo_finance"] == "https://finance.yahoo.com/"
     ), "Invalid url for data source."
     assert (
-        dc.data_sources["dbnomics"] == "https://db.nomics.world/providers/"
+        dc.data_sources["dbnomics"] == "https://db.nomics.world/providers"
     ), "Invalid url for data source."
     assert (
         dc.data_sources["fred"] == "https://fred.stlouisfed.org/"

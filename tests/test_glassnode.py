@@ -25,7 +25,7 @@ def gn():
 
 @pytest.fixture
 def gn_req_assets():
-    with open('tests/data/gn_assets_req.json') as f:
+    with open('data/gn_assets_req.json') as f:
         return json.load(f)
 
 
@@ -43,7 +43,7 @@ def test_req_assets(gn_req_assets, gn):
 
 @pytest.fixture
 def gn_req_fields():
-    with open('tests/data/gn_fields_req.json') as f:
+    with open('data/gn_fields_req.json') as f:
         return json.load(f)
 
 
@@ -61,7 +61,7 @@ def test_req_fields(gn_req_fields, gn):
 
 @pytest.fixture
 def gn_req_data():
-    with open('tests/data/gn_data_req.json') as f:
+    with open('data/gn_data_req.json') as f:
         return json.load(f)
 
 
@@ -70,7 +70,7 @@ def test_req_data(gn_req_data, data_req, gn):
     """
     Test get request for data.
     """
-    url = base_url + 'addresses/count' + '?api_key=' + gn.api_key + '&a=btc&s=1230940800&i=24h'
+    url = base_url + 'addresses/count' + '?api_key=' + gn.api_key + '&a=btc&s=1230940800&i=24h&c=USD'
     responses.add(responses.GET, url, json=gn_req_data, status=200)
 
     req_data = gn.req_data(data_req, ticker='btc', field='addresses/count')

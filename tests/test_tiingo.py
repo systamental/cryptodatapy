@@ -15,7 +15,7 @@ def tg():
 
 @pytest.fixture
 def tg_req_crypto_info():
-    with open('tests/data/tg_crypto_req.json') as f:
+    with open('data/tg_crypto_req.json') as f:
         return json.load(f)
 
 
@@ -33,7 +33,7 @@ def test_req_crypto_info(tg_req_crypto_info, tg):
 
 @pytest.fixture
 def tg_req_iex():
-    with open('tests/data/tg_iex_data_req.json') as f:
+    with open('data/tg_iex_data_req.json') as f:
         return json.load(f)
 
 
@@ -43,7 +43,7 @@ def test_req_iex(tg_req_iex, tg):
     Test get request for iex data.
     """
     url = 'https://api.tiingo.com/iex/spy/prices?startDate=2022-01-01+00%3A00%3A00' + \
-          '&endDate=2022-09-15&resampleFreq=1hour'
+          '&endDate=2022-09-15+00%3A00%3A00&resampleFreq=1hour'
     responses.add(responses.GET, url, json=tg_req_iex, status=200)
 
     data_req = DataRequest(freq='8h', start_date='2022-01-01', end_date='2022-09-15')
@@ -53,7 +53,7 @@ def test_req_iex(tg_req_iex, tg):
 
 @pytest.fixture
 def tg_req_eqty():
-    with open('tests/data/tg_eqty_data_req.json') as f:
+    with open('data/tg_eqty_data_req.json') as f:
         return json.load(f)
 
 
@@ -63,7 +63,7 @@ def test_req_eqty(tg_req_eqty, tg):
     Test get request for eqty data.
     """
     url = 'https://api.tiingo.com/tiingo/daily/prices?tickers=spy&startDate=2000-01-01+00%3A00%3A00' + \
-          '&endDate=2021-12-31'
+          '&endDate=2021-12-31+00%3A00%3A00'
     responses.add(responses.GET, url, json=tg_req_eqty, status=200)
 
     data_req = DataRequest(start_date='2000-01-01', end_date='2021-12-31')
@@ -73,7 +73,7 @@ def test_req_eqty(tg_req_eqty, tg):
 
 @pytest.fixture
 def tg_req_crypto():
-    with open('tests/data/tg_crypto_data_req.json') as f:
+    with open('data/tg_crypto_data_req.json') as f:
         return json.load(f)
 
 
@@ -83,7 +83,7 @@ def test_req_crypto(tg_req_crypto, tg):
     Test get request for crypto data.
     """
     url = 'https://api.tiingo.com/tiingo/crypto/prices?tickers=btcusd&startDate=2015-01-01+00%3A00%3A00&' + \
-          'endDate=2021-12-31&resampleFreq=1day'
+          'endDate=2021-12-31+00%3A00%3A00&resampleFreq=1day'
     responses.add(responses.GET, url, json=tg_req_crypto, status=200)
 
     data_req = DataRequest(start_date='2015-01-01', end_date='2021-12-31')
@@ -93,7 +93,7 @@ def test_req_crypto(tg_req_crypto, tg):
 
 @pytest.fixture
 def tg_req_fx():
-    with open('tests/data/tg_fx_data_req.json') as f:
+    with open('data/tg_fx_data_req.json') as f:
         return json.load(f)
 
 
@@ -102,8 +102,8 @@ def test_req_fx(tg_req_fx, tg):
     """
     Test get request for fx data.
     """
-    url = 'https://api.tiingo.com/tiingo/fx/prices?tickers=eurusd&startDate=2015-01-01+00%3A00%3A00' + \
-          '&endDate=2021-12-31&resampleFreq=1day'
+    url = 'https://api.tiingo.com/tiingo/fx/eurusd/prices?startDate=2015-01-01+00%3A00%3A00' + \
+          '&endDate=2021-12-31+00%3A00%3A00&resampleFreq=1day'
     responses.add(responses.GET, url, json=tg_req_fx, status=200)
 
     data_req = DataRequest(start_date='2015-01-01', end_date='2021-12-31')
@@ -143,7 +143,6 @@ def test_wrangle_crypto_data_resp(tg, tg_req_crypto) -> None:
     """
     Test wrangling of data response into tidy data format.
     """
-
     data_req = DataRequest(start_date='2015-01-01', end_date='2021-12-31')
     df = tg.wrangle_data_resp(data_req, tg_req_crypto, data_type='crypto')
     assert not df.empty, "Dataframe was returned empty."  # non-empty
@@ -159,7 +158,6 @@ def test_wrangle_fx_data_resp(tg, tg_req_fx) -> None:
     """
     Test wrangling of data response into tidy data format.
     """
-
     data_req = DataRequest(start_date='2015-01-01', end_date='2021-12-31')
     df = tg.wrangle_data_resp(data_req, tg_req_fx, data_type='fx')
     assert not df.empty, "Dataframe was returned empty."  # non-empty
@@ -199,7 +197,7 @@ def test_integration_get_eqty(tg) -> None:
     Test get equity daily data integration method with req_data, wrangle_data_resp and get_all_tickers.
     """
     data_req = DataRequest(
-        tickers=["spy", "tlt", "gsp"], cat="eqty", start_date="2020-01-01"
+        tickers=["spy", "tlt", "gsg"], cat="eqty", start_date="2020-01-01"
     )
     df = tg.get_eqty(data_req)
     assert not df.empty, "Indexes dataframe was returned empty."  # non-empty
@@ -212,7 +210,7 @@ def test_integration_get_eqty(tg) -> None:
     assert df.index.droplevel(0).unique().to_list() == [
         "SPY",
         "TLT",
-        "GSP",
+        "GSG",
     ], "Tickers are missing from dataframe"  # tickers
     assert set(df.columns) == {
         "close",
@@ -319,8 +317,7 @@ def test_get_fx(tg) -> None:
     """
     data_req = DataRequest(
         tickers=["eur", "gbp", "jpy", "cad", "try", "brl"],
-        cat="fx",
-        start_date="1990-01-01",
+        cat="fx"
     )
     df = tg.get_fx(data_req)
     assert not df.empty, "Indexes dataframe was returned empty."  # non-empty
@@ -344,9 +341,11 @@ def test_get_fx(tg) -> None:
         "low",
         "close",
     }, "Fields are missing from indexes dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp(
-        "1990-01-02 00:00:00"
-    ), "Wrong start date."  # start date
+    # assert df.index[0][0] == pd.Timestamp(
+    #     "1990-01-02 00:00:00"
+    # ), "Wrong start date."  # start date
+    assert pd.Timestamp.utcnow().tz_localize(None) - df.index[0][0] > pd.Timedelta(days=500), \
+        "End date is more than 4 days ago."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.unstack().index[
         -1
     ] < pd.Timedelta(

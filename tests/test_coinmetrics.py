@@ -2,12 +2,11 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-import json
 import pytest
 
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from cryptodatapy.extract.datarequest import DataRequest
-from cryptodatapy.transform.wrangle import WrangleInfo, WrangleData
+from cryptodatapy.transform.wrangle import WrangleData
 
 
 @pytest.fixture
@@ -59,7 +58,7 @@ def test_req_data(cm) -> None:
 
 @pytest.fixture
 def cm_req_data_mkt_candles():
-    return pd.read_csv('tests/data/cm_ohlcv_df.csv')
+    return pd.read_csv('data/cm_ohlcv_df.csv')
 
 
 def test_wrangle_data_resp(data_req, cm_req_data_mkt_candles):
@@ -287,7 +286,7 @@ def test_integration_get_data(cm) -> None:
     """
     Test integration of get data method.
     """
-    data_req = DataRequest(tickers=["btc", "eth"], fields=["close", "add_act"])
+    data_req = DataRequest(tickers=["btc", "eth", "ada], fields=["close", "add_act", "issuance"])
     df = cm.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -303,6 +302,7 @@ def test_integration_get_data(cm) -> None:
     assert list(df.columns) == [
         "close",
         "add_act",
+        "issuance"
     ], "Fields are missing from dataframe."  # fields
     assert df.index[0][0] == pd.Timestamp(
         "2009-01-09"

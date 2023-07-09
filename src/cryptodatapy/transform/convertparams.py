@@ -331,7 +331,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_tiingo(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_tiingo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Tiingo format.
 
@@ -390,7 +390,6 @@ class ConvertParams:
             start_date = datetime(2010, 1, 1, 0, 0)
         else:
             start_date = self.data_req.start_date
-
         # convert end date
         if self.data_req.end_date is None:
             end_date = datetime.utcnow()
@@ -574,115 +573,6 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_investpy(self) -> Dict[str, Union[list, str, int, float, None]]:
-        """
-        Convert tickers from CryptoDataPy to InvestPy format.
-
-        """
-        # convert tickers
-        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
-            tickers_path = f
-        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
-
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            if self.data_req.cat == "eqty":
-                for ticker in self.data_req.tickers:
-                    if len(ticker) > 4:
-                        try:
-                            tickers.append(tickers_df.loc[ticker, "investpy_id"])
-                        except KeyError:
-                            logging.warning(
-                                f"{ticker} not found for InvestPY data source. Check tickers in "
-                                f"data catalog and try again."
-                            )
-                            self.data_req.tickers.remove(ticker)
-                    else:
-                        tickers.append(ticker.upper())
-            elif self.data_req.cat != "fx":
-                for ticker in self.data_req.tickers:
-                    try:
-                        tickers.append(tickers_df.loc[ticker, "investpy_id"])
-                    except KeyError:
-                        logging.warning(
-                            f"{ticker} not found for InvestPy data source. Check tickers in "
-                            f"data catalog and try again."
-                        )
-                        self.data_req.tickers.remove(ticker)
-            else:
-                tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        elif self.data_req.cat != "macro":
-            freq = "Daily"
-        else:
-            freq = self.data_req.freq
-        # convert quote ccy
-        if self.data_req.quote_ccy is None:
-            quote_ccy = "USD"
-        else:
-            quote_ccy = self.data_req.quote_ccy.upper()
-        # convert ctys
-        ctys_list = []
-        if self.data_req.cat == "macro":
-            for ticker in self.data_req.tickers:
-                try:
-                    ctys_list.append(tickers_df.loc[ticker, "country_name"].lower())
-                except KeyError:
-                    logging.warning(
-                        f"{ticker} not found for {self.data_req.source} source. Check tickers in "
-                        f"data catalog and try again."
-                    )
-        # convert tickers to markets
-        mkts_list = []
-        if self.data_req.source_tickers is not None:
-            mkts_list = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            if self.data_req.cat == "fx":
-                mkts_list = self.convert_fx_tickers(quote_ccy=quote_ccy)
-        # convert start date
-        if self.data_req.start_date is None:
-            start_date = pd.Timestamp("1970-01-01").strftime("%d/%m/%Y")
-        else:
-            start_date = pd.Timestamp(self.data_req.start_date).strftime("%d/%m/%Y")
-        # convert end date
-        if self.data_req.end_date is None:
-            end_date = datetime.utcnow().strftime("%d/%m/%Y")
-        else:
-            end_date = pd.Timestamp(self.data_req.end_date).strftime("%d/%m/%Y")
-        # convert fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='investpy')
-
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": self.data_req.exch,
-            "ctys": ctys_list,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": mkts_list,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": self.data_req.tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
-
     def to_dbnomics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to DBnomics format.
@@ -742,7 +632,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_fred(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_fred(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Fred format.
 
@@ -816,7 +706,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_wb(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_wb(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
 
@@ -829,7 +719,7 @@ class ConvertParams:
         if self.data_req.source_tickers is not None:
             tickers = self.data_req.source_tickers
             self.data_req.tickers = self.data_req.source_tickers
-        elif self.data_req.cat:
+        else:
             for ticker in self.data_req.tickers:
                 try:
                     tickers.append(tickers_df.loc[ticker, "wb_id"])
@@ -868,12 +758,12 @@ class ConvertParams:
         if self.data_req.start_date is None:
             start_date = 1920
         else:
-            start_date = int(self.data_req.start_date[:4])
+            start_date = int(self.data_req.start_date.year)
         # end date
         if self.data_req.end_date is None:
             end_date = datetime.utcnow().year
         else:
-            end_date = int(self.data_req.end_date[:4])
+            end_date = int(self.data_req.end_date.year)
         # fields
         if self.data_req.source_fields is not None:
             fields = self.data_req.source_fields
@@ -902,7 +792,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_yahoo(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_yahoo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
 
@@ -917,6 +807,8 @@ class ConvertParams:
             self.data_req.tickers = self.data_req.source_tickers
         elif self.data_req.cat != 'eqty':
             for ticker in self.data_req.tickers:
+                if self.data_req.cat == 'fx':
+                    ticker = ticker.upper()
                 try:
                     tickers.append(tickers_df.loc[ticker, "yahoo_id"])
                 except KeyError:
@@ -978,7 +870,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_famafrench(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_famafrench(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Fama-French format.
         """
@@ -1015,7 +907,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            end_date = datetime.utcnow().date()
         else:
             end_date = self.data_req.end_date
 
@@ -1040,7 +932,7 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_aqr(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_aqr(self) -> Dict[str, Union[list, str, int, dict, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to AQR format.
         """
@@ -1105,7 +997,7 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if all([file in daily_freqs_list for file in tickers_dict.keys()]) and\
+            if all([file[0] in daily_freqs_list for file in tickers_dict.values()]) and \
                (self.data_req.freq == 'd' or self.data_req.freq == 'w'):
                 freq = 'Daily'
             else:

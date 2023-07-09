@@ -134,7 +134,7 @@ class AQR(Web):
         """
         if data_type == "on-chain" or data_type == 'off-chain':
             raise ValueError(
-                "AQR publishes total and excess return series used in their research papers."
+                "AQR only publishes total and excess return series used in their research papers."
             )
 
         # list of fields
@@ -155,6 +155,58 @@ class AQR(Web):
 
         return fields
 
+    def set_excel_params(self, data_req: DataRequest, ticker: str) -> Dict[str, Union[str, int]]:
+        """
+        Sets excel parameters for reading excel files.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+        ticker: str
+            Ticker symbol.
+
+        Returns
+        -------
+        dict: dictionary
+            Dictionary with params to read excel file.
+
+        """
+        # convert data request parameters to aqr format
+        conv_data_req = ConvertParams(data_req).to_aqr()
+
+        # param dict
+        params = {
+            'file': conv_data_req['tickers'][ticker][0],  # file name
+            'freq': conv_data_req['freq'],  # freq
+            'format': self.file_formats[0],  # file format
+            'sheet': conv_data_req['tickers'][ticker][1],  # sheet name
+            'url': None,  # url
+            'parse_dates': True,  # parsing dates
+            'index_col': None,      # index col
+            'header': None      # header row
+        }
+        # set index url, col and header
+        params['url'] = self.base_url + params['file'] + params['freq'] + "." + params['format']
+        if params['file'] == 'Century-of-Factor-Premia-':
+            params['index_col'] = 'Unnamed: 0'
+            params['header'] = 18
+        elif params['file'] == 'Time-Series-Momentum-Factors-':
+            params['index_col'] = 'Unnamed: 0'
+            params['header'] = 17
+        elif params['file'] == 'Commodities-for-the-Long-Run-Index-Level-Data-':
+            params['index_col'] = 'Unnamed: 0'
+            params['header'] = 10
+        elif params['file'] == 'Credit-Risk-Premium-Preliminary-Paper-Data':
+            params['url'] = self.base_url + params['file'] + "." + params['format']
+            params['index_col'] = 'Date'
+            params['header'] = 10
+        else:
+            params['index_col'] = 'DATE'
+            params['header'] = 18
+
+        return params
+
     def get_series(self, data_req: DataRequest) -> Dict[str, pd.DataFrame]:
         """
         Gets series from AQR data file.
@@ -170,32 +222,19 @@ class AQR(Web):
             Dictionary with ticker-dataframe key-value pairs.
 
         """
-        # convert data request parameters to source format
-        conv_data_req = getattr(ConvertParams(data_req), f"to_aqr")()
+        # convert data request parameters to aqr format
+        conv_data_req = ConvertParams(data_req).to_aqr()
 
         try:
             # fetch data
             df_dicts = {}
-            for ticker in conv_data_req['tickers']:
-                # create url and sheet names
-                file = conv_data_req['tickers'][ticker][0]  # file name
-                freq = conv_data_req['freq']  # freq
-                ff = self.file_formats[0]  # file format
-                sheet = conv_data_req['tickers'][ticker][1]  # sheet name
-                url = self.base_url + file + freq + "." + ff  # url
-                # read data
-                if file == 'Century-of-Factor-Premia-':
-                    df1 = pd.read_excel(url, sheet_name=sheet, index_col='Unnamed: 0', parse_dates=True, header=18)
-                elif file == 'Time-Series-Momentum-Factors-':
-                    df1 = pd.read_excel(url, sheet_name=sheet, index_col='Unnamed: 0', parse_dates=True, header=17)
-                elif file == 'Commodities-for-the-Long-Run-Index-Level-Data-':
-                    df1 = pd.read_excel(url, sheet_name=sheet, index_col='Unnamed: 0', parse_dates=True, header=10)
-                elif file == 'Credit-Risk-Premium-Preliminary-Paper-Data':
-                    url = self.base_url + file + "." + ff
-                    df1 = pd.read_excel(url, sheet_name=sheet, index_col='Date', parse_dates=True, header=10)
-                else:
-                    df1 = pd.read_excel(url, sheet_name=sheet, index_col='DATE', parse_dates=True, header=18)
 
+            for ticker in conv_data_req['tickers']:
+                # set excel params
+                params = self.set_excel_params(data_req, ticker)
+                # fetch excel file
+                df1 = pd.read_excel(params['url'], sheet_name=params['sheet'], index_col=params['index_col'],
+                                    parse_dates=params['parse_dates'], header=params['header'])
                 # add df to dicts
                 df_dicts[ticker] = df1
 
@@ -225,7 +264,7 @@ class AQR(Web):
             for selected fields (cols), in tidy format.
         """
         # wrangle data resp
-        df = getattr(WrangleData(data_req, data_resp), data_req.source)()
+        df = WrangleData(data_req, data_resp).aqr()
 
         return df
 

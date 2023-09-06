@@ -813,14 +813,14 @@ class WrangleData:
 
         """
         # convert tickers to cryptodatapy format
-        ff_tickers_dict = {'RF': 'US_Rates_1M',
+        ff_tickers_dict = {'RF': 'US_Rates_1M_RF',
                            'Mkt-RF': 'US_Eqty_CSRP_ER',
-                           'HML': 'US_Eqty_Val_LS_TR',
-                           'SMB': 'US_Eqty_Size_LS_TR',
-                           'RMW': 'US_Eqty_Prof_LS_TR',
-                           'CMA': 'US_Eqty_Inv_LS_TR',
-                           'Mom': 'US_Eqty_Mom_LS_TR',
-                           'ST_Rev': 'US_Eqty_STRev_LS_TR'}
+                           'HML': 'US_Eqty_Val',
+                           'SMB': 'US_Eqty_Size',
+                           'RMW': 'US_Eqty_Prof',
+                           'CMA': 'US_Eqty_Inv',
+                           'Mom': 'US_Eqty_Mom',
+                           'ST_Rev': 'US_Eqty_STRev'}
         # remove white space from cols str
         self.data_resp.columns = [col.strip() for col in self.data_resp.columns]
         # keep cols in data req tickers
@@ -833,7 +833,7 @@ class WrangleData:
         self.data_resp = self.data_resp.resample(self.data_req.freq).sum()
         # format index
         self.data_resp.index.name = 'date'  # rename
-        self.data_resp = self.data_resp.stack().to_frame('close')
+        self.data_resp = self.data_resp.stack().to_frame('er')
         self.data_resp.index.names = ['date', 'ticker']
         # type and conversion to decimals
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes() / 100

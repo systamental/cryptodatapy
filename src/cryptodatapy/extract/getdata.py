@@ -1,5 +1,4 @@
 from typing import Optional
-
 import pandas as pd
 
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
@@ -11,6 +10,7 @@ from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
 from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
+from cryptodatapy.extract.web.aqr import AQR
 
 
 class GetData:
@@ -96,9 +96,11 @@ class GetData:
             "fred": PandasDataReader,
             "av-daily": PandasDataReader,
             "av-forex-daily": PandasDataReader,
+            "famafrench": PandasDataReader,
+            "aqr": AQR
         }
 
-        # available properties and methods
+        # available attr and methods
         valid_attr = [
             "source_type",
             "categories",
@@ -203,6 +205,8 @@ class GetData:
             "fred": PandasDataReader,
             "av-daily": PandasDataReader,
             "av-forex-daily": PandasDataReader,
+            "famafrench": PandasDataReader,
+            "aqr": AQR
         }
 
         # data source

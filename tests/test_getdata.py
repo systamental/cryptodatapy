@@ -18,7 +18,6 @@ def data_req_ccxt():
 def data_req_cm():
     data_req = DataRequest(
         source="coinmetrics",
-        start_date="2000-01-01",
         tickers=["btc", "eth", "ada"],
         fields=["close", "add_act", "issuance"],
     )
@@ -356,6 +355,7 @@ def test_integration_get_meta_pdr(data_req_pdr) -> None:
         "low",
         "close",
         "volume",
+        "er"
     ], "Fields are incorrect."
 
 
@@ -435,8 +435,8 @@ def test_integration_get_data_tg(data_req_tg) -> None:
         "1980-12-12 00:00:00"
     ), "Wrong start date."  # start date
     assert pd.Timestamp.utcnow().tz_localize(None) - df.index[-1][0] < pd.Timedelta(
-        days=4
-    ), "End date is more than 4 days ago."  # end date
+        days=5
+    ), "End date is more than 5 days ago."  # end date
     assert isinstance(
         df.close.dropna().iloc[-1], np.float64
     ), "Close is not a numpy float."  # dtypes

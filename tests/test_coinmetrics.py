@@ -286,7 +286,7 @@ def test_integration_get_data(cm) -> None:
     """
     Test integration of get data method.
     """
-    data_req = DataRequest(tickers=["btc", "eth", "ada], fields=["close", "add_act", "issuance"])
+    data_req = DataRequest(tickers=["btc", "eth", "ada"], fields=["close", "add_act", "issuance"])
     df = cm.get_data(data_req)
     assert not df.empty, "Dataframe was returned empty."  # non empty
     assert isinstance(
@@ -298,6 +298,7 @@ def test_integration_get_data(cm) -> None:
     assert list(df.index.droplevel(0).unique()) == [
         "BTC",
         "ETH",
+        "ADA"
     ], "Tickers are missing from dataframe."  # tickers
     assert list(df.columns) == [
         "close",

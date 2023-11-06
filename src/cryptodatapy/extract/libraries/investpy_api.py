@@ -1,6 +1,5 @@
 import logging
 from importlib import resources
-from time import sleep
 from typing import Any, Dict, List, Optional, Union
 
 import investpy
@@ -91,10 +90,6 @@ class InvestPy(Library):
 
         if frequencies is None:
             self.frequencies = {
-                "fx": ["d", "w", "m", "q", "y"],
-                "rates": ["d", "w", "m", "q", "y"],
-                "eqty": ["d", "w", "m", "q", "y"],
-                "cmdty": ["d", "w", "m", "q", "y"],
                 "macro": [
                     "1min",
                     "5min",
@@ -112,10 +107,8 @@ class InvestPy(Library):
                     "y",
                 ],
             }
-        if market_types is None:
-            self.market_types = ["spot", "future"]
         if categories is None:
-            self.categories = ["fx", "rates", "eqty", "cmdty", "macro"]
+            self.categories = ["macro"]
         if indexes is None:
             self.indexes = self.get_indexes_info(as_list=True)
         if assets is None:
@@ -367,20 +360,10 @@ class InvestPy(Library):
             Dictionary with info on available fields, by category.
         """
         # list of fields
-        crypto_fields_list = ["date", "open", "high", "low", "close", "volume"]
-        fx_fields_list = ["date", "open", "high", "low", "close"]
-        rates_fields_list = ["date", "open", "high", "low", "close"]
-        eqty_fields_list = ["date", "open", "high", "low", "close", "volume"]
-        cmdty_fields_list = ["date", "open", "high", "low", "close", "volume"]
         macro_fields_list = ["actual", "previous", "expected", "surprise"]
 
         # fields dict
         fields = {
-            "crypto": crypto_fields_list,
-            "fx": fx_fields_list,
-            "rates": rates_fields_list,
-            "eqty": eqty_fields_list,
-            "cmdty": cmdty_fields_list,
             "macro": macro_fields_list,
         }
         # fields info cat
@@ -396,117 +379,21 @@ class InvestPy(Library):
         return None
 
     @staticmethod
-    def req_data(data_type: str, **kwargs) -> pd.DataFrame:
-        """
-        Sends data request to Python client.
-
-        Parameters
-        ----------
-        data_type: str, {'indexes', 'fx', 'rates', 'etfs', 'eqty', 'cmdty'}
-            Data type to retrieve.
-
-        Other Parameters
-        ----------------
-        ticker: list
-            List of tickers
-        country: str
-            Name of country.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Dataframe with datetime, ticker/identifier, and field/col values.
-        """
-        data_types = {'indexes': ['indices', 'index'],
-                      'fx': ['currency_crosses', 'currency_cross'],
-                      'rates': ['bonds', 'bond'],
-                      'etfs': ['etfs', 'etf'],
-                      'eqty': ['stocks', 'stock'],
-                      'cmdty': ['commodities', 'commodity']}
-        try:
-            df = getattr(getattr(investpy, data_types[data_type][0]),
-                         'get_' + data_types[data_type][1] + '_historical_data')(**kwargs)
-            assert not df.empty
-
-        except Exception as e:
-            logging.warning(f"Failed to {data_type} data.")
-            logging.warning(e)
-
-        else:
-
-            return df
-
-    @staticmethod
-    def get_econ_calendar(data_req: DataRequest, cty: str, start_date: str = None) -> pd.DataFrame:
+    def get_econ_calendar(cty: str) -> pd.DataFrame:
         """
         Get economic calendar from start date.
 
         Parameters
         ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
         cty: str
             Country to retrieve econ calendar for.
-        start_date: str
-            Start date for calendar, in InvestPy 'DD/MM/YYYY' format.
 
         Returns
         -------
         df: pd.DataFrame
             Dataframe with econ calendar data.
         """
-        # convert data req params to InvestPy format
-        ip_data_req = ConvertParams(data_req).to_investpy()
-        # set start date
-        if start_date is None:
-            start_date = ip_data_req["start_date"]
-        # cty must be list
-        if isinstance(cty, str):
-            cty = [cty]
-
-        # set number of attempts and bool for while loop
-        attempts = 0
-        # run a while loop to pull ohlcv prices in case the attempt fails
-        while attempts < ip_data_req["trials"]:
-
-            try:
-                # get data calendar
-                df = investpy.news.economic_calendar(
-                    countries=cty,
-                    time_zone="GMT",
-                    from_date=start_date,
-                    to_date=ip_data_req["end_date"],
-                )
-                assert not df.empty
-
-            except Exception as e:
-                logging.warning(e)
-                attempts += 1
-                sleep(ip_data_req["pause"])
-                if attempts == ip_data_req["trials"]:
-                    raise Exception(
-                        "Failed to get economic data release calendar after many attempts."
-                    )
-            else:
-
-                return df
-
-    def get_updated_econ_calendar(self, data_req: DataRequest, cty: str) -> pd.DataFrame:
-        """
-        Get updated economic calendar from most recent date in csv file.
-
-        Parameters
-        ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
-        cty: str
-            Country to retrieve econ calendar for.
-
-        Returns
-        -------
-        df: pd.DataFrame
-            Dataframe with updated econ calendar data.
-        """
+        # country dictionary
         ctys_dict = {'united states': 'us', 'euro zone': 'ez', 'china': 'cn', 'india': 'in', 'japan': 'jp',
                      'germany': 'de', 'russia': 'ru', 'indonesia': 'id', 'brazil': 'br', 'united kingdom': 'gb',
                      'france': 'fr', 'turkey': 'tr', 'italy': 'it', 'mexico': 'mx', 'south korea': 'kr',
@@ -518,20 +405,11 @@ class InvestPy(Library):
         # get fields and data resp
         ec_df = pd.read_csv(fields_dict_path, index_col=0)
 
-        # convert data req params to InvestPy format
-        start_date = ec_df.dropna().iloc[-1].date  # most recent date
-
-        # get econ calendar if not updated
-        if start_date != pd.Timestamp.utcnow().strftime("%d/%m/%Y"):
-            up_df = self.get_econ_calendar(data_req, cty, start_date)
-            # concat dfs
-            ec_df = pd.concat([ec_df, up_df])
-
         return ec_df
 
     def get_all_ctys_eco_cals(self, data_req: DataRequest) -> pd.DataFrame:
         """
-        Get updated economic calendar for all requested countries.
+        Get economic calendar for all requested countries.
 
         Parameters
         ----------
@@ -551,7 +429,7 @@ class InvestPy(Library):
         df = pd.DataFrame()
 
         for cty in ctys:
-            df0 = self.get_updated_econ_calendar(data_req, cty)
+            df0 = self.get_econ_calendar(cty)
             df = pd.concat([df, df0])
 
         return df
@@ -581,10 +459,8 @@ class InvestPy(Library):
         # loop through tickers, countries
         for dr_ticker, ip_ticker, cty in zip(data_req.tickers, ip_data_req["tickers"], ip_data_req["ctys"]):
             # filter data calendar for ticker, country
-            df0 = econ_cal[
-                (econ_cal.event.str.startswith(ip_ticker))
-                & (econ_cal.zone.str.match(cty.lower()))].copy()
-
+            df0 = econ_cal[(econ_cal.event.str.startswith(ip_ticker))
+                           & (econ_cal.zone.str.match(cty.lower()))].copy()
             # wrangle data resp
             df1 = self.wrangle_data_resp(data_req, df0)
             # add ticker to index
@@ -593,7 +469,7 @@ class InvestPy(Library):
             # stack ticker dfs
             df = pd.concat([df, df1])
 
-        return df
+        return df.sort_index()
 
     def check_params(self, data_req: DataRequest) -> None:
         """
@@ -602,9 +478,9 @@ class InvestPy(Library):
 
         """
         # check cat
-        if data_req.cat not in self.categories:
+        if data_req.cat != 'macro':
             raise ValueError(
-                f"Invalid category. Valid categories are: {self.categories}."
+                f"Invalid category. Only historical macro data is available."
             )
 
         # check freq
@@ -633,7 +509,7 @@ class InvestPy(Library):
         """
         # econ cal
         econ_cal = self.get_all_ctys_eco_cals(data_req)
-
+        # emppty df to store data
         df = pd.DataFrame()
 
         # get data
@@ -644,15 +520,12 @@ class InvestPy(Library):
         except Exception as e:
             logging.warning(e)
             raise Exception(
-                "No data returned. Check data request parameters and try again."
+                f"No data returned. InvestPy is deprecated. "
+                f"Only metadata and historical macroeconomic data are available. "
+                f"Check data request parameters and try again."
             )
 
-        else:
-            # filter df for desired fields and typecast
-            fields = [field for field in data_req.fields if field in df.columns]
-            df = df.loc[:, fields]
-
-            return df.sort_index()
+        return df
 
     @staticmethod
     def wrangle_data_resp(

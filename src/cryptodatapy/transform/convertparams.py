@@ -351,12 +351,8 @@ class ConvertParams:
                 freq = self.data_req.freq
             elif self.data_req.freq[-1] == "h":
                 freq = "1hour"
-            elif self.data_req.freq == "d":
-                freq = "1day"
-            elif self.data_req.freq == "w":
-                freq = "1week"
             else:
-                freq = self.data_req.freq
+                freq = "1day"
         # convert quote ccy
         if self.data_req.quote_ccy is None:
             quote_ccy = "usd"
@@ -621,6 +617,92 @@ class ConvertParams:
             "mkts": None,
             "start_date": self.data_req.start_date,
             "end_date": self.data_req.end_date,
+            "fields": fields,
+            "tz": self.data_req.tz,
+            "inst": None,
+            "cat": self.data_req.cat,
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
+    def to_investpy(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert tickers from CryptoDataPy to InvestPy format.
+        """
+        # convert tickers
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        else:
+            for ticker in self.data_req.tickers:
+                try:
+                    tickers.append(tickers_df.loc[ticker, "investpy_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for InvestPy data source. Check tickers in "
+                        f"data catalog and try again."
+                    )
+                    self.data_req.tickers.remove(ticker)
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            freq = self.data_req.freq
+        # convert quote ccy
+        if self.data_req.quote_ccy is None:
+            quote_ccy = "USD"
+        else:
+            quote_ccy = self.data_req.quote_ccy.upper()
+        # convert ctys
+        ctys_list = []
+        for ticker in self.data_req.tickers:
+            try:
+                ctys_list.append(tickers_df.loc[ticker, "country_name"].lower())
+            except KeyError:
+                logging.warning(
+                    f"{ticker} not found for {self.data_req.source} source. Check tickers in "
+                    f"data catalog and try again."
+                )
+        # convert tickers to markets
+        mkts_list = []
+        if self.data_req.source_tickers is not None:
+            mkts_list = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        # convert start date
+        if self.data_req.start_date is None:
+            start_date = pd.Timestamp("1970-01-01").strftime("%d/%m/%Y")
+        else:
+            start_date = pd.Timestamp(self.data_req.start_date).strftime("%d/%m/%Y")
+        # convert end date
+        if self.data_req.end_date is None:
+            end_date = datetime.utcnow().strftime("%d/%m/%Y")
+        else:
+            end_date = pd.Timestamp(self.data_req.end_date).strftime("%d/%m/%Y")
+        # convert fields
+        if self.data_req.source_fields is not None:
+            fields = self.data_req.source_fields
+            self.data_req.fields = self.data_req.source_fields
+        else:
+            fields = self.convert_fields(data_source='investpy')
+
+        return {
+            "tickers": tickers,
+            "freq": freq,
+            "quote_ccy": quote_ccy,
+            "exch": self.data_req.exch,
+            "ctys": ctys_list,
+            "mkt_type": self.data_req.mkt_type,
+            "mkts": mkts_list,
+            "start_date": start_date,
+            "end_date": end_date,
             "fields": fields,
             "tz": self.data_req.tz,
             "inst": None,

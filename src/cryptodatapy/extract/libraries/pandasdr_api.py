@@ -179,7 +179,7 @@ class PandasDataReader(Library):
             )
 
         # list of fields
-        market_fields_list = ["open", "high", "low", "close", "volume", "er"]
+        market_fields_list = ["open", "high", "low", "close", "volume", "close_adj", "er"]
         macro_fields_list = ["actual"]
 
         # fields dict

@@ -100,14 +100,15 @@ class Library(ABC):
             exchanges is None
             or isinstance(exchanges, list)
             or isinstance(exchanges, dict)
+            or isinstance(exchanges, pd.DataFrame)
         ):
             self._exchanges = exchanges
         elif isinstance(exchanges, str):
             self._exchanges = [exchanges]
         else:
             raise TypeError(
-                "Exchanges must be a string, list of strings (exchanges) or"
-                " dict with {cat: List[str]} key-value pairs."
+                "Exchanges must be a string, list of strings (exchanges), "
+                " dict with {cat: List[str]} key-value pairs or a dataframe."
             )
 
     @abstractmethod
@@ -158,14 +159,19 @@ class Library(ABC):
         """
         Sets a list of available assets for the data vendor.
         """
-        if assets is None or isinstance(assets, list) or isinstance(assets, dict):
+        if (
+            assets is None 
+            or isinstance(assets, list) 
+            or isinstance(assets, dict)
+            or isinstance(assets, pd.DataFrame)
+        ):
             self._assets = assets
         elif isinstance(assets, str):
             self._assets = [assets]
         else:
             raise TypeError(
-                "Assets must be a string (ticker), list of strings (tickers) or"
-                " a dict with {cat: List[str]} key-value pairs."
+                "Assets must be a string (ticker), list of strings (tickers),"
+                " a dict with {cat: List[str]} key-value pairs or dataframe."
             )
 
     @abstractmethod
@@ -187,14 +193,19 @@ class Library(ABC):
         """
         Sets a list of available markets for the data vendor.
         """
-        if markets is None or isinstance(markets, list) or isinstance(markets, dict):
+        if (
+            markets is None 
+            or isinstance(markets, list) 
+            or isinstance(markets, dict)
+            or isinstance(markets, pd.DataFrame)
+        ):
             self._markets = markets
         elif isinstance(markets, str):
             self._markets = [markets]
         else:
             raise TypeError(
-                "Markets must be a string (ticker), list of strings (tickers) or"
-                " a dict with {cat: List[str]} key-value pairs."
+                "Markets must be a string (ticker), list of strings (tickers),"
+                " a dict with {cat: List[str]} key-value pairs or dataframe."
             )
 
     @abstractmethod

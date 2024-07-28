@@ -750,14 +750,12 @@ class WrangleData:
         if 'close' in self.data_resp.columns:
             self.data_resp['date'] = pd.to_datetime(self.data_resp.date, unit='ms')
         elif 'funding_rate' in self.data_resp.columns:
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.set_index('date').index). \
-                floor('S').tz_localize(None)
+            self.data_resp['date'] = pd.to_datetime(self.data_resp.set_index('date').index).floor('s').tz_localize(None)
         # set index
         self.data_resp = self.data_resp.set_index('date').sort_index()
         # resample
         if 'funding_rate' in self.data_resp.columns and self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
-            self.data_resp = (self.data_resp.funding_rate + 1).cumprod().resample(self.data_req.freq).last(). \
-                diff().to_frame()
+            self.data_resp = ((self.data_resp.funding_rate + 1).resample(self.data_req.freq).prod() - 1).to_frame()
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         # remove bad data

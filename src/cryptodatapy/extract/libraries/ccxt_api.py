@@ -28,7 +28,7 @@ class CCXT(Library):
             indexes: Optional[List[str]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types=None,
+            market_types: List[str] = ["spot", "future", "perpetual_future", "option"],
             fields: Optional[List[str]] = None,
             frequencies: Optional[Dict[str, List[str]]] = None,
             base_url: Optional[str] = None,
@@ -86,24 +86,10 @@ class CCXT(Library):
             rate_limit,
         )
 
-        if market_types is None:
-            self.market_types = ["spot", "future", "perpetual_future", "option"]
-        if market_types is exchanges:
-            self.exchanges = self.get_exchanges_info(as_list=True)
-        if assets is None:
-            self.assets = self.get_assets_info(as_list=True)
-        if markets is None:
-            self.markets = self.get_markets_info(as_list=True)
-        if fields is None:
-            self.fields = self.get_fields_info()
-        if frequencies is None:
-            self.frequencies = self.get_frequencies_info()
-        if rate_limit is None:
-            self.rate_limit = self.get_rate_limit_info()
-
-    @staticmethod
     def get_exchanges_info(
-            exch: Optional[str] = None, as_list: bool = False
+            self,
+            exch: Optional[str] = None,
+            as_list: bool = True
     ) -> Union[List[str], pd.DataFrame]:
         """
         Get exchanges info.
@@ -122,12 +108,14 @@ class CCXT(Library):
         """
         # list
         if as_list:
-            exchanges = ccxt.exchanges
+            self.exchanges = ccxt.exchanges
+
+        # df
         else:
             if exch is not None:
-                exchanges = [exch]
+                self.exchanges = [exch]
             else:
-                exchanges = ccxt.exchanges
+                self.exchanges = ccxt.exchanges
                 print(
                     "Getting metadata for all supported exchanges can take a few minutes."
                     " For quick info on a specific exchange, provide the name of the exchange in the exch parameter."
@@ -135,7 +123,7 @@ class CCXT(Library):
 
             # exch df
             exch_df = pd.DataFrame(
-                index=exchanges,
+                index=self.exchanges,
                 columns=[
                     "id",
                     "name",
@@ -161,24 +149,36 @@ class CCXT(Library):
                 ],
             )
 
-            # extract exch info
-            for row in exch_df.iterrows():
+            # Extract exchange info
+            for index, row in exch_df.iterrows():
                 try:
-                    exchange = getattr(ccxt, str(row[0]))()
+                    exchange = getattr(ccxt, index)()
                     exchange.load_markets()
-                except Exception:
-                    exch_df.loc[row[0], :] = np.nan
+                except AttributeError as e:
+                    print(f"AttributeError: {e} for exchange {index}")
+                    exch_df.loc[index, :] = np.nan
+                except ccxt.BaseError as e:  # Catch specific ccxt exceptions
+                    print(f"CCXT Error: {e} for exchange {index}")
+                    exch_df.loc[index, :] = np.nan
+                except Exception as e:  # Fallback for any other exceptions
+                    print(f"Unexpected error: {e} for exchange {index}")
+                    exch_df.loc[index, :] = np.nan
                 else:
                     for col in exch_df.columns:
                         try:
-                            exch_df.loc[row[0], col] = str(getattr(exchange, str(col)))
-                        except Exception:
-                            exch_df.loc[row[0], col] = np.nan
+                            exch_df.loc[index, col] = str(getattr(exchange, col))
+                        except AttributeError as e:
+                            print(f"AttributeError: {e} for attribute {col} in exchange {index}")
+                            exch_df.loc[index, col] = np.nan
+                        except Exception as e:  # Fallback for any other exceptions
+                            print(f"Unexpected error: {e} for attribute {col} in exchange {index}")
+                            exch_df.loc[index, col] = np.nan
+
             # set index name
             exch_df.index.name = "exchange"
-            exchanges = exch_df
+            self.exchanges = exch_df
 
-        return exchanges
+        return self.exchanges
 
     def get_indexes_info(self) -> None:
         """
@@ -187,7 +187,9 @@ class CCXT(Library):
         return None
 
     def get_assets_info(
-            self, exch: str = "binance", as_list: bool = False
+            self,
+            exch: str = "binance",
+            as_list: bool = False
     ) -> Union[pd.DataFrame, List[str]]:
         """
         Get assets info.
@@ -209,14 +211,14 @@ class CCXT(Library):
 
         # get assets on exchange and create df
         exchange.load_markets()
-        assets = pd.DataFrame(exchange.currencies).T
-        assets.index.name = "ticker"
+        self.assets = pd.DataFrame(exchange.currencies).T
+        self.assets.index.name = "ticker"
 
         # as list of assets
         if as_list:
-            assets = assets.index.to_list()
+            self.assets = self.assets.index.to_list()
 
-        return assets
+        return self.assets
 
     def get_markets_info(
             self,
@@ -224,7 +226,7 @@ class CCXT(Library):
             quote_ccy: Optional[str] = None,
             mkt_type: Optional[str] = None,
             as_list: bool = False,
-    ) -> Union[Dict[str, List[str]], pd.DataFrame]:
+    ) -> Union[pd.DataFrame, List[str]]:
         """
         Get markets info.
 
@@ -241,34 +243,34 @@ class CCXT(Library):
 
         Returns
         -------
-        markets: dictionary or pd.DataFrame
-            Dictionary or dataframe with info on available markets, by exchange.
+        markets: list or pd.DataFrame
+            List or dataframe with info on available markets, by exchange.
         """
         # inst exch
         exchange = getattr(ccxt, exch)()
 
         # get assets on exchange
-        markets = pd.DataFrame(exchange.load_markets()).T
-        markets.index.name = "ticker"
+        self.markets = pd.DataFrame(exchange.load_markets()).T
+        self.markets.index.name = "ticker"
 
         # quote ccy
         if quote_ccy is not None:
-            markets = markets[markets.quote == quote_ccy.upper()]
+            self.markets = self.markets[self.markets.quote == quote_ccy.upper()]
 
         # mkt type
         if mkt_type == "perpetual_future":
-            if markets[markets.type == "swap"].empty:
-                markets = markets[markets.type == "future"]
+            if self.markets[self.markets.type == "swap"].empty:
+                self.markets = self.markets[self.markets.type == "future"]
             else:
-                markets = markets[markets.type == "swap"]
+                self.markets = self.markets[self.markets.type == "swap"]
         elif mkt_type == "spot" or mkt_type == "future" or mkt_type == "option":
-            markets = markets[markets.type == mkt_type]
+            self.markets = self.markets[self.markets.type == mkt_type]
 
         # dict of assets
         if as_list:
-            markets = markets.index.to_list()
+            self.markets = self.markets.index.to_list()
 
-        return markets
+        return self.markets
 
     def get_fields_info(self) -> List[str]:
         """
@@ -280,12 +282,11 @@ class CCXT(Library):
             List of available fields.
         """
         # list of fields
-        fields = ["open", "high", "low", "close", "volume", "funding_rate"]
+        self.fields = ["open", "high", "low", "close", "volume", "funding_rate"]
 
-        return fields
+        return self.fields
 
-    @staticmethod
-    def get_frequencies_info(exch: str = "binance") -> Dict[str, List[str]]:
+    def get_frequencies_info(self, exch: str = "binance") -> Dict[str, List[str]]:
         """
         Get frequencies info.
 
@@ -304,9 +305,9 @@ class CCXT(Library):
         exchange.load_markets()
 
         # freq dict
-        freq = exchange.timeframes
+        self.frequencies = exchange.timeframes
 
-        return freq
+        return self.frequencies
 
     def get_rate_limit_info(self, exch: str = "binance") -> Dict[str, Union[str, int]]:
         """
@@ -325,10 +326,30 @@ class CCXT(Library):
         # inst exch
         exchange = getattr(ccxt, exch)()
 
-        return {
+        self.rate_limit = {
             "exchange rate limit": "delay in milliseconds between two consequent HTTP requests to the same exchange",
-            exch: exchange.rateLimit,
+            exch: exchange.rateLimit
         }
+        return self.rate_limit
+
+    def get_metadata(self) -> None:
+        """
+        Get CCXT metadata.
+        """
+        if self.exchanges is None:
+            self.exchanges = self.get_exchanges_info(as_list=True)
+        if self.market_types is None:
+            self.market_types = ["spot", "future", "perpetual_future", "option"]
+        if self.assets is None:
+            self.assets = self.get_assets_info(as_list=True)
+        if self.markets is None:
+            self.markets = self.get_markets_info(as_list=True)
+        if self.fields is None:
+            self.fields = self.get_fields_info()
+        if self.frequencies is None:
+            self.frequencies = self.get_frequencies_info()
+        if self.rate_limit is None:
+            self.rate_limit = self.get_rate_limit_info()
 
     def req_data(self,
                  data_req: DataRequest,
@@ -623,7 +644,7 @@ class CCXT(Library):
                 f"Assets are not available. Use assets attribute to check available assets for {cx_data_req['exch']}")
 
         # check tickers
-        fields = self.fields
+        fields = self.get_fields_info()
         if not any([field in fields for field in data_req.fields]):
             raise ValueError(
                 f"Fields are not available. Use fields attribute to check available fields."
@@ -689,7 +710,7 @@ class CCXT(Library):
             try:
                 df0 = self.get_tidy_ohlcv(data_req, mkt)
 
-            except Exception:
+            except AssertionError:
                 logging.info(f"Failed to get OHLCV data for {ticker} after many attempts.")
 
             else:
@@ -731,7 +752,7 @@ class CCXT(Library):
             try:
                 df0 = self.get_tidy_funding_rates(data_req, mkt)
 
-            except Exception:
+            except AssertionError:
                 logging.info(f"Failed to get funding rates for {ticker} after many attempts.")
 
             else:

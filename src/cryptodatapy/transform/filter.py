@@ -7,12 +7,13 @@ import pandas as pd
 class Filter:
     """
     Filters dataframe in tidy format.
-
     """
-
-    def __init__(
-        self, raw_df: pd.DataFrame, excl_cols: Optional[Union[str, list]] = None
-    ):
+    def __init__(self,
+                 raw_df: pd.DataFrame,
+                 excl_cols: Optional[Union[str, list]] = None,
+                 plot: bool = False,
+                 plot_series: tuple = ("BTC", "close")
+                 ):
         """
         Constructor
 
@@ -22,64 +23,18 @@ class Filter:
             Dataframe with raw data. DatetimeIndex (level 0), ticker (level 1) and raw data (cols), in tidy format.
         excl_cols: str or list, default None
             Name of columns to exclude from filtering
-
         """
-
         self.raw_df = raw_df
         self.excl_cols = excl_cols
-
-    def outliers(
-        self,
-        outliers_dict: dict,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> pd.DataFrame:
-        """
-        Filters outliers, replacing them with NaNs.
-
-        Parameters
-        ----------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
-
-        Returns
-        -------
-        filt_df: DataFrame - MultiIndex
-            Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
-
-        """
-        # filter outliers
-        filt_df = outliers_dict["filt_vals"]
-
-        # add excl cols
-        if self.excl_cols is not None:
-            filt_df = pd.concat(
-                [filt_df, self.raw_df[self.excl_cols]], join="outer", axis=1
-            )
-
-        # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
-                raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
-                )
-            else:
-                self.plot_filtered(filt_df, plot_series=plot_series)
-
-        return filt_df
+        self.plot = plot
+        self.plot_series = plot_series
+        self.df = raw_df.copy() if excl_cols is None else raw_df.drop(columns=excl_cols).copy()
+        self.filtered_df = None
 
     def avg_trading_val(
         self,
         thresh_val: int = 10000000,
         window_size: int = 30,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
     ) -> pd.DataFrame:
         """
         Filters values below a threshold of average trading value (price * volume/size in quote currency) over some
@@ -91,35 +46,24 @@ class Filter:
             Threshold/cut-off for avg trading value.
         window_size: int, default 30
             Size of rolling window.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
 
         Returns
         -------
-        filt_df: DataFrame - MultiIndex
+        filtered_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with values below the
             threshold removed.
-
         """
-        # convert string to list
-        if self.excl_cols is not None:
-            df = self.raw_df.drop(columns=self.excl_cols).copy()
-        else:
-            df = self.raw_df.copy()
-
         # compute traded val
-        if "close" in df.columns and "volume" in df.columns:
-            df["trading_val"] = df.close * df.volume
-        elif ("bid" in df.columns and "ask" in df.columns) and (
-            "bid_size" in df.columns and "ask_size" in df.columns
+        if "close" in self.df.columns and "volume" in self.df.columns:
+            self.df["trading_val"] = self.df.close * self.df.volume
+        elif ("bid" in self.df.columns and "ask" in self.df.columns) and (
+            "bid_size" in self.df.columns and "ask_size" in self.df.columns
         ):
-            df["trading_val"] = ((df.bid + df.ask) / 2) * (
-                (df.bid_size + df.ask_size) / 2
+            self.df["trading_val"] = ((self.df.bid + self.df.ask) / 2) * (
+                (self.df.bid_size + self.df.ask_size) / 2
             )
-        elif "trade_size" in df.columns and "trade_price" in df.columns:
-            df["trading_val"] = df.trade_price * df.trade_size
+        elif "trade_size" in self.df.columns and "trade_price" in self.df.columns:
+            self.df["trading_val"] = self.df.trade_price * self.df.trade_size
         else:
             raise Exception(
                 "Dataframe must include at least one price series (e.g. close price, trade price, "
@@ -127,36 +71,28 @@ class Filter:
             )
 
         # compute rolling mean/avg
-        df1 = df.groupby(level=1).rolling(window_size).mean().droplevel(0)
+        df1 = self.df.groupby(level=1).rolling(window_size).mean().droplevel(0)
         # divide by thresh
         df1 = df1 / thresh_val
         # filter df1
-        filt_df = (
-            df.loc[df1.trading_val > 1].reindex(df.index).drop(columns="trading_val")
-        )
-        # add excl cols
-        if self.excl_cols is not None:
-            filt_df = pd.concat(
-                [filt_df, self.raw_df[self.excl_cols]], join="outer", axis=1
-            )
+        self.filtered_df = self.df.loc[df1.trading_val > 1].reindex(self.df.index).drop(columns="trading_val")
 
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
                 )
             else:
-                self.plot_filtered(filt_df, plot_series=plot_series)
+                self.plot_filtered(plot_series=self.plot_series)
 
-        return filt_df
+        # add excl cols
+        if self.excl_cols is not None:
+            self.filtered_df = pd.concat([self.filtered_df, self.raw_df[self.excl_cols]], join="outer", axis=1)
 
-    def missing_vals_gaps(
-        self,
-        gap_window: int = 30,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> pd.DataFrame:
+        return self.filtered_df
+
+    def missing_vals_gaps(self, gap_window: int = 30) -> pd.DataFrame:
         """
         Filters values before a large gap of missing values, replacing them with NaNs.
 
@@ -164,27 +100,16 @@ class Filter:
         ----------
         gap_window: int, default 30
             Size of window where all values are missing (NaNs).
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
 
         Returns
         -------
-        filt_df: DataFrame - MultiIndex
+        filtered_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with values before
             missing values gaps removed.
-
         """
-        # convert string to list
-        if self.excl_cols is not None:
-            df = self.raw_df.drop(columns=self.excl_cols).copy()
-        else:
-            df = self.raw_df.copy()
-
         # window obs count
         window_count = (
-            df.groupby(level=1)
+            self.df.groupby(level=1)
             .rolling(window=gap_window, min_periods=gap_window)
             .count()
             .droplevel(0)
@@ -194,24 +119,24 @@ class Filter:
         for col in gap.unstack().columns:
             start_idx = gap.unstack()[col].last_valid_index()
             if start_idx is not None:
-                df.loc[pd.IndexSlice[:start_idx, col[1]], col[0]] = np.nan
-
-        # add excl cols
-        if self.excl_cols is not None:
-            filt_df = pd.concat([df, self.raw_df[self.excl_cols]], join="outer", axis=1)
-        else:
-            filt_df = df
+                self.df.loc[pd.IndexSlice[:start_idx, col[1]], col[0]] = np.nan
 
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to plot (ticker, column)."
                 )
             else:
-                self.plot_filtered(filt_df, plot_series=plot_series)
+                self.plot_filtered(plot_series=self.plot_series)
 
-        return filt_df
+        # add excl cols
+        if self.excl_cols is not None:
+            self.filtered_df = pd.concat([self.df, self.raw_df[self.excl_cols]], join="outer", axis=1)
+        else:
+            self.filtered_df = self.df
+
+        return self.filtered_df
 
     def min_nobs(self, ts_obs=100, cs_obs=1) -> pd.DataFrame:
         """
@@ -227,25 +152,21 @@ class Filter:
 
         Returns
         -------
-        filt_df: DataFrame - MultiIndex
+        filtered_df: DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers with minimum number of observations (level 1)
             and fields (cols).
-
         """
-        # create copy
-        df = self.raw_df.copy()
-
         # drop tickers with nobs < ts_obs
-        obs = df.groupby(level=1).count().min(axis=1)
+        obs = self.df.groupby(level=1).count().min(axis=1)
         drop_tickers_list = obs[obs < ts_obs].index.to_list()
-        filt_df = df.drop(drop_tickers_list, level=1, axis=0)
+        self.filtered_df = self.df.drop(drop_tickers_list, level=1, axis=0)
 
         # drop tickers with nobs < cs_obs
-        obs = filt_df.groupby(level=0).count().min(axis=1)
+        obs = self.filtered_df.groupby(level=0).count().min(axis=1)
         idx_start = obs[obs > cs_obs].index[0]
-        filt_df = filt_df.unstack()[filt_df.unstack().index > idx_start].stack()
-
-        return filt_df
+        # self.filtered_df = self.filtered_df.unstack()[self.filtered_df.unstack().index > idx_start].stack()
+        self.filtered_df = self.filtered_df.loc[idx_start:]
+        return self.filtered_df
 
     def tickers(self, tickers_list) -> pd.DataFrame:
         """
@@ -259,37 +180,29 @@ class Filter:
 
         Returns
         -------
-        filt_df: pd.DataFrame - MultiIndex
+        filtered_df: pd.DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols).
-
         """
-        # create copy
-        df = self.raw_df.copy()
         # tickers list
         if isinstance(tickers_list, str):
             tickers_list = [tickers_list]
+
         # drop tickers
-        filt_df = df.drop(tickers_list, level=1, axis=0)
+        self.filtered_df = self.df.drop(tickers_list, level=1, axis=0)
 
-        return filt_df
+        return self.filtered_df
 
-    @staticmethod
-    def plot_filtered(
-        filt_df: pd.DataFrame, plot_series: Optional[tuple] = None
-    ) -> None:
+    def plot_filtered(self, plot_series: Optional[tuple] = None) -> None:
         """
         Plots filtered time series.
 
         Parameters
         ----------
-        filt_df: pd.DataFrame - MultiIndex
-            Dataframe MultiIndex with DatetimeIndex (level 0), tickers (level 1) and filtered values (cols).
         plot_series: tuple, optional, default None
             Plots the time series of a specific (ticker, field) tuple.
-
         """
         ax = (
-            filt_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+            self.filtered_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
             .droplevel(1)
             .plot(linewidth=1, figsize=(15, 7), color="#1f77b4", zorder=0)
         )

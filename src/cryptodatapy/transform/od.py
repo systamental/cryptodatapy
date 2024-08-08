@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -9,10 +9,17 @@ from statsmodels.tsa.seasonal import STL, seasonal_decompose
 class OutlierDetection:
     """
     Detects outliers.
-
     """
-
-    def __init__(self, raw_df: pd.DataFrame):
+    def __init__(self,
+                 raw_df: pd.DataFrame,
+                 excl_cols: Optional[Union[str, list]] = None,
+                 log: bool = False,
+                 window_size: int = 7,
+                 model_type: str = 'estimation',
+                 thresh_val: int = 5,
+                 plot: bool = False,
+                 plot_series: tuple = ('BTC', 'close')
+                 ):
         """
         Constructor
 
@@ -20,26 +27,10 @@ class OutlierDetection:
         ----------
         raw_df: pd.DataFrame - MultiIndex
             DataFrame MultiIndex with DatetimeIndex (level 0), ticker (level 1) and raw data/values (cols).
-
-        """
-        self.raw_df = raw_df
-
-    def atr(
-        self,
-        log: bool = False,
-        window_size: int = 7,
-        model_type: str = "estimation",
-        thresh_val: int = 2,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Detects outliers using OHLC values and H-L range.
-
-        Parameters
-        ----------
+        excl_cols: str or list, optional, default None
+            Columns to exclude from outlier detection.
         log: bool, default False
-            Converts series into log of series.
+            Log transform the series.
         window_size: int, default 7
             Number of observations in the rolling window.
         model_type: str, {'estimation', 'prediction'}, default 'estimation'
@@ -47,405 +38,298 @@ class OutlierDetection:
             e.g. expected x_t of series x at time t uses values from [x_t-s, x_t+s].
             Prediction models use only past and current values to estimate the expected value of a series,
             e.g. expected x_t of series x at time t uses values from [x_t-s, x_t].
-        thresh_val: int, default 2
-            Value for upper and lower thresholds used in outlier detection.
-        plot: bool, default False
-            Plots series with outliers highlighted (red dots).
-        plot_series: tuple, default ('BTC', 'close')
-            The specific time series to plot given by (ticker, field/column) tuple.
-
-        Returns
-        -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
-        """
-        # sort index and create df copy
-        df = self.raw_df.sort_index(level=1)
-
-        # log
-        if log:
-            df0 = np.log(df).copy()
-        else:
-            df0 = df.copy()
-
-        # ohlc
-        if not all(col in df.columns for col in ["open", "high", "low", "close"]):
-            raise Exception("Dataframe must have OHLC prices to compute ATR.")
-
-        # compute true range
-        df0["hl"], df0["hc"], df0["lc"] = (
-            (df0.high - df.low).abs(),
-            (df0.high - df.close.shift(1)).abs(),
-            (df0.low - df.close.shift(1)).abs(),
-        )
-        df0["tr"] = df0.loc[:, "hl":"lc"].max(axis=1)
-
-        # compute ATR for estimation and prediction models
-        if model_type == "estimation":
-            df0["atr"] = (
-                df0.tr.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .mean()
-                .sort_index()
-            )
-            med = (
-                df0.loc[:, :"volume"]
-                .groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .median()
-                .sort_index()
-            )
-        else:
-            df0["atr"] = (
-                df0.tr.groupby(level=1).ewm(span=window_size).mean().droplevel(0)
-            )
-            med = (
-                df0.loc[:, :"volume"]
-                .groupby(level=1)
-                .rolling(window_size)
-                .median()
-                .droplevel(0)
-            )
-
-        # compute dev, score and upper/lower
-        dev = df0.loc[:, :"volume"] - med
-        score = dev.divide(df0.atr, axis=0)
-        upper, lower = thresh_val, thresh_val * -1
-
-        # outliers
-        out_df = df[(score > upper) | (score < lower)]
-        filt_df = df[(score < upper) & (score > lower)]
-
-        # log
-        if log:
-            med = np.exp(med)
-
-        # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
-                raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to "
-                    "plot (ticker, column)."
-                )
-            else:
-                self.plot_outliers(out_df, plot_series=plot_series)
-
-        outliers_dict = {
-            "yhat": med.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
-
-        return outliers_dict
-
-    def iqr(
-        self,
-        log: bool = True,
-        window_size: int = 7,
-        model_type: str = "estimation",
-        thresh_val: int = 1.5,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Detects outliers using interquartile range (IQR) method.
-
-        Parameters
-        ----------
-        log: bool, default True
-            Converts series into log of series.
-        window_size: int, default 7
-            Number of observations in the rolling window.
-        model_type: str, {'estimation', 'prediction'}, default 'estimation'
-            Estimation models use past, current and future values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t+s].
-            Prediction models use only past and current values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t].
-        thresh_val: int, default 1.5
-            Value for upper and lower thresholds used in outlier detection.
-            Computed as: IQR x thresh_val +/- 75th/25th percentiles (upper/lower bands), respectively.
-        plot: bool, default False
-            Plots series with outliers highlighted (red dots).
-        plot_series: tuple, default ('BTC', 'close')
-            The specific time series to plot given by (ticker, field/column) tuple.
-
-        Returns
-        -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
-        """
-        # sort index and create df copy
-        df = self.raw_df.sort_index(level=1)
-
-        # log
-        if log:
-            df0 = np.log(df).copy()
-        else:
-            df0 = df.copy()
-
-        # compute 75th, 50th and 25th percentiles for estimation and prediction models
-        if model_type == "estimation":
-            perc_75th = (
-                df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .quantile(0.75)
-            )
-            perc_25th = (
-                df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .quantile(0.25)
-            )
-            med = (
-                df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .median()
-            )
-        else:
-            perc_75th = (
-                df0.groupby(level=1).rolling(window_size).quantile(0.75).droplevel(0)
-            )
-            perc_25th = (
-                df0.groupby(level=1).rolling(window_size).quantile(0.25).droplevel(0)
-            )
-            med = df0.groupby(level=1).rolling(window_size).median().droplevel(0)
-
-        # compute iqr and upper/lower thresholds
-        iqr = perc_75th - perc_25th
-        upper = perc_75th.add(thresh_val * iqr, axis=1)
-        lower = perc_25th.subtract(thresh_val * iqr, axis=1)
-
-        # detect outliers
-        out_df = df[(df0 > upper) | (df0 < lower)]
-        filt_df = df[(df0 < upper) & (df0 > lower)]
-
-        # log
-        if log:
-            med = np.exp(med)
-
-        # type conversion
-        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-
-        # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
-                raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to "
-                    "plot (ticker, column)."
-                )
-            else:
-                self.plot_outliers(out_df, plot_series=plot_series)
-
-        outliers_dict = {
-            "yhat": med.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
-
-        return outliers_dict
-
-    def mad(
-        self,
-        log: bool = True,
-        window_size: int = 7,
-        model_type: str = "estimation",
-        thresh_val: int = 10,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Detects outliers using a median absolute deviation method, aka Hampler filter.
-
-        Parameters
-        ----------
-        log: bool, default True
-            Converts series into log of series.
-        window_size: int, default 7
-            Number of observations in the rolling window.
-        model_type: str, {'estimation', 'prediction'}, default 'estimation'
-            Estimation models use past, current and future values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t+s].
-            Prediction models use only past and current values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t].
-        thresh_val: int, default 10
-            Value for upper and lower thresholds used in outlier detection.
-            Computed as: [median - thresh_val * mad, median + thresh_val * mad] for lower/upper thresholds.
-        plot: bool, default False
-            Plots series with outliers highlighted (red dots).
-        plot_series: tuple, default ('BTC', 'close')
-            The specific time series to plot given by (ticker, field/column) tuple.
-
-        Returns
-        -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
-        """
-        # sort index and create df copy
-        df = self.raw_df.sort_index(level=1).copy()
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
-
-        # compute median for estimation and prediction models
-        if model_type == "estimation":
-            med = (
-                df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
-                .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
-                .median()
-            )
-        else:
-            med = df0.groupby(level=1).rolling(window_size).median().droplevel(0)
-
-        # compute dev, mad, upper/lower thresholds
-        dev = df0 - med
-        mad = dev.abs().groupby(level=1).rolling(window_size).median().droplevel(0)
-        upper = med.add(thresh_val * mad, axis=1)
-        lower = med.subtract(thresh_val * mad, axis=1)
-
-        # outliers
-        out_df = df[(df0 > upper) | (df0 < lower)]
-        filt_df = df[(df0 < upper) & (df0 > lower)]
-
-        # log
-        if log:
-            med = np.exp(med)
-
-        # type conversion
-        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-
-        # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
-                raise TypeError(
-                    "Plot_series must be a tuple specifying the ticker and column/field to "
-                    "plot (ticker, column)."
-                )
-            else:
-                self.plot_outliers(out_df, plot_series=plot_series)
-
-        outliers_dict = {
-            "yhat": med.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
-
-        return outliers_dict
-
-    def z_score(
-        self,
-        log: bool = True,
-        window_size: int = 7,
-        model_type: str = "estimation",
-        thresh_val: int = 2,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Detects outliers using a z-score method, aka simple moving average.
-
-        Parameters
-        ----------
-        log: bool, default True
-            Converts series into log of series.
-        window_size: int, default 7
-            Number of observations in the rolling window.
-        model_type: str, {'estimation', 'prediction'}, default 'estimation'
-            Estimation models use past, current and future values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t+s].
-            Prediction models use only past and current values to estimate the expected value of a series,
-            e.g. expected x_t of series x at time t uses values from [x_t-s, x_t].
-        thresh_val: int, default 2
+        thresh_val: int, default 5
             Value for upper and lower thresholds used in outlier detection.
         plot: bool, default False
             Plots series with outliers highlighted with red dots.
         plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific ticker/field combination (tuple).
+            Plots the time series of a specific (ticker, field/column) tuple.
+        """
+        self.raw_df = raw_df
+        self.excl_cols = excl_cols
+        self.log = log
+        self.window_size = window_size
+        self.model_type = model_type
+        self.thresh_val = thresh_val
+        self.plot = plot
+        self.plot_series = plot_series
+        self.df = raw_df.copy() if excl_cols is None else raw_df.drop(columns=excl_cols).copy()
+        self.yhat = None
+        self.outliers = None
+        self.filtered_df = None
+        self.log_transform()
+
+    def log_transform(self) -> None:
+        """
+        Log transform the dataframe.
+        """
+        if self.log:
+            # remove negative values
+            self.df[self.df <= 0] = np.nan
+            # log and replace inf
+            self.df = np.log(self.df).replace([np.inf, -np.inf], np.nan)
+
+    def atr(self) -> pd.DataFrame:
+        """
+        Detects outliers using OHLC values and H-L range.
 
         Returns
         -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
+        """
+        # ohlc
+        if not all(col in self.df.columns for col in ["open", "high", "low", "close"]):
+            raise Exception("Dataframe must have OHLC prices to compute ATR.")
 
+        # df copy
+        df0 = self.df.copy()
+
+        # compute true range
+        df0["hl"], df0["hc"], df0["lc"] = (
+            (df0.high - df0.low).abs(),
+            (df0.high - df0.close.groupby(level=1).shift(1)).abs(),
+            (df0.low - df0.close.groupby(level=1).shift(1)).abs(),
+        )
+        df0["tr"] = df0.loc[:, "hl":"lc"].max(axis=1)
+
+        # compute ATR for estimation and prediction models
+        if self.model_type == "estimation":
+            df0["atr"] = (
+                df0.tr.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .mean()
+                .sort_index()
+            )
+            med = (
+                df0.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .median()
+                .sort_index()
+            )
+        else:
+            df0["atr"] = (
+                df0.tr.groupby(level=1).ewm(span=self.window_size).mean().droplevel(0)
+            )
+            med = (
+                df0.groupby(level=1)
+                .rolling(self.window_size)
+                .median()
+                .droplevel(0)
+            )
+
+        # compute dev and score for outliers
+        dev = df0 - med
+        score = dev.divide(df0.atr, axis=0)
+
+        # outliers
+        self.outliers = self.df[score.abs() > self.thresh_val].sort_index()
+        self.filtered_df = self.df[score.abs() < self.thresh_val].sort_index()
+
+        # log to original scale
+        if self.log:
+            self.yhat = np.exp(med).sort_index()
+
+        # plot
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
+            else:
+                self.plot_outliers()
+
+        return self.filtered_df
+
+    def iqr(self) -> pd.DataFrame:
+        """
+        Detects outliers using interquartile range (IQR) method.
+
+        Returns
+        -------
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
+        """
+        # sort index
+        df0 = self.df.sort_index(level=1)
+
+        # compute 75th, 50th and 25th percentiles for estimation and prediction models
+        if self.model_type == "estimation":
+            perc_75th = (
+                df0.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .quantile(0.75)
+            )
+            perc_25th = (
+                df0.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .quantile(0.25)
+            )
+            med = (
+                df0.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .median()
+            )
+        else:
+            perc_75th = (
+                df0.groupby(level=1).rolling(self.window_size).quantile(0.75).droplevel(0)
+            )
+            perc_25th = (
+                df0.groupby(level=1).rolling(self.window_size).quantile(0.25).droplevel(0)
+            )
+            med = df0.groupby(level=1).rolling(self.window_size).median().droplevel(0)
+
+        # compute iqr and upper/lower thresholds
+        iqr = perc_75th - perc_25th
+        upper = perc_75th.add(self.thresh_val * iqr, axis=1)
+        lower = perc_25th.subtract(self.thresh_val * iqr, axis=1)
+
+        # detect outliers
+        out_df = self.df[(df0 > upper) | (df0 < lower)]
+        filt_df = self.df[(df0 < upper) & (df0 > lower)]
+
+        # log to original scale
+        if self.log:
+            med = np.exp(med)
+
+        # type conversion
+        self.yhat = med.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
+        self.outliers = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
+        self.filtered_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
+
+        # plot
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
+            else:
+                self.plot_outliers()
+
+        return self.filtered_df
+
+    def mad(self) -> pd.DataFrame:
+        """
+        Detects outliers using a median absolute deviation method, aka Hampler filter.
+
+        Returns
+        -------
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
+        """
+        # sort index and create df copy
+        df0 = self.df.sort_index(level=1).copy()
+
+        # compute median for estimation and prediction models
+        if self.model_type == "estimation":
+            med = (
+                df0.groupby(level=1)
+                .shift(-1 * int((self.window_size + 1) / 2))
+                .sort_index(level=1)
+                .rolling(self.window_size, min_periods=1)
+                .median()
+            )
+        else:
+            med = df0.groupby(level=1).rolling(self.window_size).median().droplevel(0)
+
+        # compute dev, mad, upper/lower thresholds
+        dev = df0 - med
+        mad = dev.abs().groupby(level=1).rolling(self.window_size).median().droplevel(0)
+        upper = med.add(self.thresh_val * mad, axis=1)
+        lower = med.subtract(self.thresh_val * mad, axis=1)
+
+        # outliers
+        out_df = self.df[(df0 > upper) | (df0 < lower)]
+        filt_df = self.df[(df0 < upper) & (df0 > lower)]
+
+        # log to original scale
+        if self.log:
+            med = np.exp(med)
+
+        # type conversion
+        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
+        self.yhat = med.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
+        # plot
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
+                raise TypeError(
+                    "Plot_series must be a tuple specifying the ticker and column/field to "
+                    "plot (ticker, column)."
+                )
+            else:
+                self.plot_outliers()
+
+        return self.filtered_df
+
+    def z_score(self) -> pd.DataFrame:
+        """
+        Detects outliers using a z-score method, aka simple moving average.
+
+        Returns
+        -------
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # sort index and create copy
-        df = self.raw_df.sort_index(level=1).copy()
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
+        df0 = self.df.sort_index(level=1).copy()
 
         # compute rolling mean and std for estimation and prediction models
-        if model_type == "estimation":
+        if self.model_type == "estimation":
             roll_mean = (
                 df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
+                .shift(-1 * int((self.window_size + 1) / 2))
                 .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
+                .rolling(self.window_size, min_periods=1)
                 .mean()
             )
             roll_std = (
                 df0.groupby(level=1)
-                .shift(-1 * int((window_size + 1) / 2))
+                .shift(-1 * int((self.window_size + 1) / 2))
                 .sort_index(level=1)
-                .rolling(window_size, min_periods=1)
+                .rolling(self.window_size, min_periods=1)
                 .std()
             )
         else:
             roll_mean = (
                 df0.groupby(level=1)
-                .rolling(window_size, min_periods=1)
+                .rolling(self.window_size, min_periods=1)
                 .mean()
                 .droplevel(0)
             )
             roll_std = (
                 df0.groupby(level=1)
-                .rolling(window_size, min_periods=1)
+                .rolling(self.window_size, min_periods=1)
                 .std()
                 .droplevel(0)
             )
 
         # compute z-score and upper/lower thresh
         z = (df0 - roll_mean) / roll_std
-        upper = thresh_val
-        lower = thresh_val * -1
 
         # outliers
-        out_df = df[(z > upper) | (z < lower)]
-        filt_df = df[(z < upper) & (z > lower)]
+        out_df = self.df[z.abs() > self.thresh_val]
+        filt_df = self.df[z.abs() < self.thresh_val]
 
-        # log
-        if log:
+        # log to original scale
+        if self.log:
             roll_mean = np.exp(roll_mean)
 
         # type conversion
@@ -453,80 +337,47 @@ class OutlierDetection:
         out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
+        self.yhat = roll_mean.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to "
                     "plot (ticker, column)."
                 )
             else:
-                self.plot_outliers(out_df, plot_series=plot_series)
+                self.plot_outliers()
 
-        outliers_dict = {
-            "yhat": roll_mean.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
+        return self.filtered_df
 
-        return outliers_dict
-
-    def ewma(
-        self,
-        log: bool = True,
-        window_size: int = 7,
-        thresh_val: int = 1.5,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
+    def ewma(self) -> pd.DataFrame:
         """
         Detects outliers using an exponential moving average method.
 
-        Parameters
-        ----------
-        log: bool, default True
-            Converts series into log of series.
-        window_size: int, default 7
-            Number of observations in the rolling window.
-        thresh_val: int, default 1.5
-            Value for upper and lower thresholds used in outlier detection.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific ticker/field combination (tuple).
-
         Returns
         -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # sort index and create copy
-        df = self.raw_df.sort_index(level=1).copy()
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
+        df0 = self.df.sort_index(level=1).copy()
 
         # compute ew ma and std for estimation and prediction models
-        ewma = df0.groupby(level=1).ewm(span=window_size).mean().droplevel(0)
-        ewstd = df0.groupby(level=1).ewm(span=window_size).std().droplevel(0)
+        ewma = df0.groupby(level=1).ewm(span=self.window_size).mean().droplevel(0)
+        ewstd = df0.groupby(level=1).ewm(span=self.window_size).std().droplevel(0)
 
         # compute z-score and upper/lower thresh
         z = (df0 - ewma) / ewstd
-        upper = thresh_val
-        lower = thresh_val * -1
 
         # outliers
-        out_df = df[(z > upper) | (z < lower)]
-        filt_df = df[(z < upper) & (z > lower)]
+        out_df = self.df[z.abs() > self.thresh_val]
+        filt_df = self.df[z.abs() < self.thresh_val]
 
-        # log
-        if log:
+        # log to original scale
+        if self.log:
             ewma = np.exp(ewma)
 
         # type conversion
@@ -534,35 +385,29 @@ class OutlierDetection:
         out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
+        self.yhat = ewma.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to "
                     "plot (ticker, column)."
                 )
             else:
-                self.plot_outliers(out_df, plot_series=plot_series)
+                self.plot_outliers()
 
-        outliers_dict = {
-            "yhat": ewma.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
-
-        return outliers_dict
+        return self.filtered_df
 
     def seasonal_decomp(
         self,
-        log: bool = True,
-        thresh_val: int = 5,
         period: int = 7,
         model: str = "additive",
         filt: Optional[np.array] = None,
         two_sided: Optional[bool] = True,
         extrapolate_trend: Optional[int] = 0,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
     ) -> Dict[str, pd.DataFrame]:
         """
         Detects outliers with seasonal decomposition moving averages from statsmodels.
@@ -571,10 +416,6 @@ class OutlierDetection:
 
         Parameters
         ----------
-        log: bool, default True
-            Converts series into log of series.
-        thresh_val: int, default 5
-            Value for upper and lower thresholds used in outlier detection.
         period: int, optional, default 7
             periodicity of the sequence.
         model: str, {'additive', 'multiplicative'}, default 'additive'
@@ -590,29 +431,16 @@ class OutlierDetection:
             on both ends (or the single one if two_sided is False) considering this many (+1) closest points.
             If set to ‘freq’, use freq closest points. Setting this parameter results in no NaN values in trend
             or resid components.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
 
         Returns
         -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # unstack
-        df = self.raw_df.unstack().copy()
+        df0 = self.df.unstack().copy()
         # original idx, unstacked idx
-        mult_idx, idx = self.raw_df.index, df.index
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
+        mult_idx, idx = self.raw_df.index, self.df.unstack().index
 
         # store resid dfs in dict
         resid_dict, yhat_dict = {}, {}
@@ -653,13 +481,13 @@ class OutlierDetection:
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
 
-        # log
-        if log:
+        # log to original scale
+        if self.log:
             yhat_df = np.exp(yhat_df)
 
         # filter outliers
-        out_df = df[resid_df.abs() > thresh_val]
-        filt_df = df[resid_df.abs() < thresh_val]
+        out_df = self.df.unstack()[resid_df.abs() > self.thresh_val]
+        filt_df = self.df.unstack()[resid_df.abs() < self.thresh_val]
 
         # stack and reindex
         out_df = out_df.stack().reindex(mult_idx)
@@ -671,28 +499,24 @@ class OutlierDetection:
         out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
+        self.yhat = yhat_df.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to "
                     "plot (ticker, column)."
                 )
             else:
-                self.plot_outliers(out_df, plot_series=plot_series)
+                self.plot_outliers()
 
-        outliers_dict = {
-            "yhat": yhat_df.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
-
-        return outliers_dict
+        return self.filtered_df
 
     def stl(
         self,
-        log: bool = True,
-        thresh_val: int = 5,
         period: Optional[int] = 7,
         seasonal: Optional[int] = 7,
         trend: Optional[int] = None,
@@ -704,9 +528,7 @@ class OutlierDetection:
         seasonal_jump: Optional[int] = 1,
         trend_jump: Optional[int] = 1,
         low_pass_jump: Optional[int] = 1,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
+    ) -> pd.DataFrame:
         """
         Detects outliers with seasonal decomposition moving averages from statsmodels.
 
@@ -714,10 +536,6 @@ class OutlierDetection:
 
         Parameters
         ----------
-        log: bool, default True
-            Converts series into log of series.
-        thresh_val: int, default 5
-            Value for upper and lower thresholds used in outlier detection.
         period: int, optional, default 7
             Periodicity of the sequence.
         seasonal: int, optional, default 7
@@ -749,35 +567,23 @@ class OutlierDetection:
             Positive integer determining the linear interpolation step. If larger than 1,
             the LOESS is used every low_pass_jump points and values between the two are linearly interpolated.
             Higher values reduce estimation time.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
 
         Returns
         -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # unstack
-        df = self.raw_df.unstack().copy()
+        df0 = self.df.unstack().copy()
         # original idx, unstacked idx
-        mult_idx, idx = self.raw_df.index, df.index
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
+        mult_idx, idx = self.df.index, self.df.unstack().index
 
         # store resid dfs in dict
         resid_dict, yhat_dict = {}, {}
         for field in df0.columns.get_level_values(0).unique():
             resid_df, yhat_df = pd.DataFrame(index=idx), pd.DataFrame(index=idx)
             for ticker in df0[field].columns:
+
                 # decompose
                 res = STL(
                     df0[field][ticker].dropna(),
@@ -818,13 +624,13 @@ class OutlierDetection:
         # convert dict to multiindex
         resid_df, yhat_df = pd.concat(resid_dict, axis=1), pd.concat(yhat_dict, axis=1)
 
-        # log
-        if log:
+        # log to original scale
+        if self.log:
             yhat_df = np.exp(yhat_df)
 
         # filter outliers
-        out_df = df[resid_df.abs() > thresh_val]
-        filt_df = df[resid_df.abs() < thresh_val]
+        out_df = self.df.unstack()[resid_df.abs() > self.thresh_val]
+        filt_df = self.df.unstack()[resid_df.abs() < self.thresh_val]
 
         # stack and reindex
         out_df = out_df.stack().reindex(mult_idx)
@@ -836,64 +642,41 @@ class OutlierDetection:
         out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
+        self.yhat = yhat_df.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to "
                     "plot (ticker, column)."
                 )
             else:
-                self.plot_outliers(out_df, plot_series=plot_series)
+                self.plot_outliers()
 
-        outliers_dict = {
-            "yhat": yhat_df.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
+        return self.filtered_df
 
-        return outliers_dict
-
-    def prophet(
-        self,
-        log: bool = True,
-        interval_width: Optional[float] = 0.99,
-        plot: bool = False,
-        plot_series: tuple = ("BTC", "close"),
-    ) -> Dict[str, pd.DataFrame]:
+    def prophet(self, interval_width: Optional[float] = 0.999) -> pd.DataFrame:
         """
         Detects outliers using Prophet, a time series forecasting algorithm published by Facebook.
 
         Parameters
         ----------
-        log: bool, default True
-            Converts series into log of series.
         interval_width: float, optional, default 0.99
             Uncertainty interval estimated by Monte Carlo simulation. The larger the value,
             the larger the upper/lower thresholds interval for outlier detection.
-        plot: bool, default False
-            Plots series with outliers highlighted with red dots.
-        plot_series: tuple, default ('BTC', 'close')
-            Plots the time series of a specific (ticker, field/column) tuple.
 
         Returns
         -------
-        outliers_dict: Dictionary of pd.DataFrame - MultiIndex
-            Dictionary of forecasts (yhat), outliers (outliers) and filtered values (filt_vals) multiindex dataframes
-            with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with forecasted, outlier or filtered
-            values.
-
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataframe with DatetimeIndex (level 0), tickers (level 1) and fields (cols) with outliers removed.
         """
         # unstack
-        df = self.raw_df.unstack().copy()
+        df0 = self.raw_df.unstack().copy()
         # original idx, unstacked idx
-        mult_idx, idx = self.raw_df.index, df.index
-
-        # log
-        if log:
-            df0 = np.log(df)
-        else:
-            df0 = df
+        mult_idx, idx = self.raw_df.index, df0.index
 
         # store predictions for fields dfs in dict
         upper_dict, lower_dict, yhat_dict = {}, {}, {}
@@ -949,15 +732,15 @@ class OutlierDetection:
         yhat.columns.names = [None, "ticker"]
 
         # transform log
-        if log:
+        if self.log:
             yhat_upper = np.exp(yhat_upper)
             yhat_lower = np.exp(yhat_lower)
             yhat = np.exp(yhat)
 
         # filter outliers
         yhat_df = yhat
-        out_df = df[df.gt(yhat_upper) | df.lt(yhat_lower)]
-        filt_df = df[df.lt(yhat_upper) & df.gt(yhat_lower)]
+        out_df = self.df.unstack()[self.df.unstack().gt(yhat_upper) | self.df.unstack().lt(yhat_lower)]
+        filt_df = self.df.unstack()[self.df.unstack().lt(yhat_upper) & self.df.unstack().gt(yhat_lower)]
 
         # stack and reindex
         yhat_df = yhat_df.stack().reindex(mult_idx)
@@ -969,47 +752,35 @@ class OutlierDetection:
         out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
         filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
 
+        self.yhat = yhat_df.sort_index()
+        self.outliers = out_df.sort_index()
+        self.filtered_df = filt_df.sort_index()
+
         # plot
-        if plot:
-            if not isinstance(plot_series, tuple):
+        if self.plot:
+            if not isinstance(self.plot_series, tuple):
                 raise TypeError(
                     "Plot_series must be a tuple specifying the ticker and column/field to "
                     "plot (ticker, column)."
                 )
             else:
-                self.plot_outliers(out_df, plot_series=plot_series)
+                self.plot_outliers()
 
-        outliers_dict = {
-            "yhat": yhat_df.sort_index(),
-            "outliers": out_df.sort_index(),
-            "filt_vals": filt_df.sort_index(),
-        }
+        return self.filtered_df
 
-        return outliers_dict
-
-    def plot_outliers(
-        self, outliers_df: pd.DataFrame, plot_series: Optional[tuple] = None
-    ) -> None:
+    def plot_outliers(self) -> None:
         """
         Plots time series with outliers highlighted (red dots).
-
-        Parameters
-        ----------
-        outliers_df: pd.DataFrame - MultiIndex
-            Dataframe MultiIndex with DatetimeIndex (level 0), tickers (level 1) and fields (cols) outlier values.
-        plot_series: tuple, optional, default None
-            Plots the time series of a specific (ticker, field) tuple.
-
         """
         ax = (
-            self.raw_df.loc[pd.IndexSlice[:, plot_series[0]], plot_series[1]]
+            self.df.loc[pd.IndexSlice[:, self.plot_series[0]], self.plot_series[1]]
             .droplevel(1)
             .plot(linewidth=1, figsize=(15, 7), color="#1f77b4", zorder=0)
         )
-        outliers_df.unstack()[plot_series[1]].reset_index().plot(
+        self.outliers.unstack()[self.plot_series[1]].reset_index().plot(
             kind="scatter",
             x="date",
-            y=plot_series[0],
+            y=self.plot_series[0],
             color="#E64E53",
             ax=ax,
             label="outliers",
@@ -1019,5 +790,5 @@ class OutlierDetection:
         ax.ticklabel_format(style="plain", axis="y")
         ax.set_facecolor("whitesmoke")
         ax.legend(
-            [plot_series[1] + "_raw", plot_series[1] + "_outliers"], loc="upper left"
+            [self.plot_series[1] + "_raw", self.plot_series[1] + "_outliers"], loc="upper left"
         )

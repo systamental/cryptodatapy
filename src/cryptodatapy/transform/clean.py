@@ -131,7 +131,7 @@ class CleanData:
         ).values * 100
 
         # filtered df
-        self.df = self.filtered_df
+        self.df = self.filtered_df.sort_index()
 
         return self
 
@@ -161,11 +161,12 @@ class CleanData:
 
         # repaired df
         if self.excluded_cols is not None:
-            self.df = pd.concat([self.repaired_df, self.raw_df[self.excluded_cols]], join="outer", axis=1)
+            self.df = pd.concat([self.repaired_df, self.raw_df[self.excluded_cols]], join="inner", axis=1)
         else:
             self.df = self.repaired_df
+
         # reorder cols
-        self.df = self.df[self.raw_df.columns]
+        self.df = self.df[self.raw_df.columns].sort_index()
 
         return self
 
@@ -196,7 +197,7 @@ class CleanData:
         ).values * 100
 
         # filtered df
-        self.df = self.filtered_df
+        self.df = self.filtered_df.sort_index()
 
         return self
 
@@ -226,7 +227,7 @@ class CleanData:
         ).values * 100
 
         # filtered df
-        self.df = self.filtered_df
+        self.df = self.filtered_df.sort_index()
 
         return self
 
@@ -260,7 +261,41 @@ class CleanData:
         self.summary.loc["n_tickers_below_min_obs", self.df.unstack().columns] = len(self.filtered_tickers)
 
         # filtered df
-        self.df = self.filtered_df
+        self.df = self.filtered_df.sort_index()
+
+        return self
+
+    def filter_delisted_tickers(self, field: str = 'close', n_unch_vals: int = 30) -> CleanData:
+        """
+        Removes delisted tickers from dataframe.
+
+        Parameters
+        ----------
+        field: str, default 'close'
+            Field/column to use for detecting delisted tickers.
+        n_unch_vals: int, default 30
+            Number of consecutive unchanged values to consider a ticker as delisted.
+
+        Returns
+        -------
+        CleanData
+            CleanData object
+        """
+        # filter tickers
+        self.filtered_df = Filter(self.df).remove_delisted(field=field, n_unch_vals=n_unch_vals)
+
+        # tickers < min obs
+        self.filtered_tickers = list(
+            set(self.filtered_df.index.droplevel(0).unique()).symmetric_difference(
+                set(self.df.index.droplevel(0).unique())
+            )
+        )
+
+        # add to summary
+        self.summary.loc["n_filtered_tickers", self.df.unstack().columns] = len(self.filtered_tickers)
+
+        # filtered df
+        self.df = self.filtered_df.sort_index()
 
         return self
 
@@ -283,6 +318,7 @@ class CleanData:
         self.filtered_df = Filter(self.df).tickers(tickers_list)
 
         # tickers < min obs
+
         self.filtered_tickers = list(
             set(self.filtered_df.index.droplevel(0).unique()).symmetric_difference(
                 set(self.df.index.droplevel(0).unique())
@@ -293,7 +329,7 @@ class CleanData:
         self.summary.loc["n_filtered_tickers", self.df.unstack().columns] = len(self.filtered_tickers)
 
         # filtered df
-        self.df = self.filtered_df
+        self.df = self.filtered_df.sort_index()
 
         return self
 

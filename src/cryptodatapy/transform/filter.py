@@ -88,7 +88,8 @@ class Filter:
 
         # add excl cols
         if self.excl_cols is not None:
-            self.filtered_df = pd.concat([self.filtered_df, self.raw_df[self.excl_cols]], join="outer", axis=1)
+            self.filtered_df = pd.concat([self.filtered_df,
+                                          self.raw_df[self.excl_cols].reindex(self.filtered_df.index)], axis=1)
 
         return self.filtered_df
 
@@ -132,7 +133,8 @@ class Filter:
 
         # add excl cols
         if self.excl_cols is not None:
-            self.filtered_df = pd.concat([self.df, self.raw_df[self.excl_cols]], join="outer", axis=1)
+            self.filtered_df = pd.concat([self.df,
+                                          self.raw_df[self.excl_cols].reindex(self.df)], axis=1)
         else:
             self.filtered_df = self.df
 
@@ -164,8 +166,34 @@ class Filter:
         # drop tickers with nobs < cs_obs
         obs = self.filtered_df.groupby(level=0).count().min(axis=1)
         idx_start = obs[obs > cs_obs].index[0]
-        # self.filtered_df = self.filtered_df.unstack()[self.filtered_df.unstack().index > idx_start].stack()
         self.filtered_df = self.filtered_df.loc[idx_start:]
+
+        return self.filtered_df
+
+    def remove_delisted(self, field: str = 'close', n_unch_vals: int = 30) -> pd.DataFrame:
+        """
+        Removes delisted tickers from dataframe.
+
+        Parameters
+        ----------
+        field: str, default 'close'
+            Field/column to use for detecting delisted tickers.
+        n_unch_vals: int, default 30
+            Number of consecutive unchanged values to consider a ticker as delisted.
+
+        Returns
+        -------
+        filtered_df: pd.DataFrame - MultiIndex
+            Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols).
+        """
+        # delisted tickers
+        delisted_tickers = self.df[field].unstack()[self.df[field].unstack().pct_change().iloc[-n_unch_vals:] == 0].\
+            dropna(how='all', axis=0).dropna(thresh=n_unch_vals, axis=1).columns
+        print(delisted_tickers)
+
+        # drop delisted tickers
+        self.filtered_df = self.df.drop(delisted_tickers, level=1)
+
         return self.filtered_df
 
     def tickers(self, tickers_list) -> pd.DataFrame:
@@ -188,7 +216,7 @@ class Filter:
             tickers_list = [tickers_list]
 
         # drop tickers
-        self.filtered_df = self.df.drop(tickers_list, level=1, axis=0)
+        self.filtered_df = self.df.drop(tickers_list, level=1)
 
         return self.filtered_df
 

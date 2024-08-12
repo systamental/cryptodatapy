@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.2.3"
+version = "0.2.4"
 description = "Cryptoasset data library"
 authors = ["Systamental"]
 license = "Apache License 2.0"
@@ -25,6 +25,9 @@ responses = ">=0.21.0"
 yfinance = ">=0.2.14"
 openpyxl = ">=3.1.2"
 xlrd = ">=2.0.1"
+fsspec = ">=2024.6.1"
+pyarrow = ">=17.0.0"
+s3fs = "^2024.6.1"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"

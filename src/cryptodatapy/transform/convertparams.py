@@ -427,7 +427,6 @@ class ConvertParams:
     def to_ccxt(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to CCXT format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:

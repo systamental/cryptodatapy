@@ -189,7 +189,6 @@ class Filter:
         # delisted tickers
         delisted_tickers = self.df[field].unstack()[self.df[field].unstack().pct_change().iloc[-n_unch_vals:] == 0].\
             dropna(how='all', axis=0).dropna(thresh=n_unch_vals, axis=1).columns
-        print(delisted_tickers)
 
         # drop delisted tickers
         self.filtered_df = self.df.drop(delisted_tickers, level=1)

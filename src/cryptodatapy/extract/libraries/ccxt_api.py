@@ -19,7 +19,6 @@ class CCXT(Library):
     """
     Retrieves data from CCXT API.
     """
-
     def __init__(
             self,
             categories: Union[str, List[str]] = "crypto",

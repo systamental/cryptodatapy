@@ -19,8 +19,8 @@ def test_get_exchanges_info(ccxt) -> None:
     """
     Test get exchanges info method.
     """
-    df = ccxt.get_exchanges_info(exch='binance')
-    assert df.loc['binance', 'rateLimit'] == '50'
+    exchanges = ccxt.get_exchanges_info()
+    assert isinstance(exchanges, list), "Exchanges should be a list."
 
 
 def test_get_assets_info(ccxt) -> None:
@@ -33,10 +33,18 @@ def test_get_assets_info(ccxt) -> None:
 
 def test_get_markets_info(ccxt) -> None:
     """
-    Test get assets info method.
+    Test get markets info method.
     """
-    df = ccxt.get_assets_info(exch='binance')
-    assert df.loc['BTC', 'id'] == 'BTC'
+    df = ccxt.get_markets_info(exch='binance')
+    assert df.loc['BTC/USDT', 'id'] == 'BTCUSDT'
+
+
+def test_get_fields_info(ccxt) -> None:
+    """
+    Test get fields info method.
+    """
+    fields = ccxt.get_fields_info()
+    assert fields == ['open', 'high', 'low', 'close', 'volume'], "Wrong fields for binance."
 
 
 def test_get_frequencies_info(ccxt) -> None:
@@ -56,6 +64,15 @@ def test_get_rate_limit_info(ccxt) -> None:
     """
     rate_limit = ccxt.get_rate_limit_info(exch='binance')['binance']
     assert rate_limit == 50, "Rate limit should be 50 for binance"
+
+def test_get_metadata_info(ccxt) -> None:
+    """
+    Test get metadata info method.
+    """
+    metadata = ccxt.get_metadata_info()
+    assert isinstance(metadata.exchanges, list), "Exchanges should be a list."
+    assert isinstance(metadata.markets_types, list), "Assets should be a list."
+    assert isinstance(metadata.assets, pd.DataFrame), "Assets should be a DataFrame."
 
 
 def test_integration_get_all_ohlcv_hist(ccxt, data_req) -> None:

@@ -3,7 +3,6 @@ from time import sleep
 from typing import Any, Dict, List, Optional, Union
 
 import ccxt
-import numpy as np
 import pandas as pd
 
 from cryptodatapy.extract.datarequest import DataRequest
@@ -86,97 +85,16 @@ class CCXT(Library):
             rate_limit,
         )
 
-    def get_exchanges_info(
-            self,
-            exch: Optional[str] = None,
-            as_list: bool = True
-    ) -> Union[List[str], pd.DataFrame]:
+    def get_exchanges_info(self) -> List[str]:
         """
         Get exchanges info.
-
-        Parameters
-        ----------
-        exch: str, default None
-            Name of exchange.
-        as_list: bool, default False
-            Returns exchanges info as list.
 
         Returns
         -------
         exch: list or pd.DataFrame
             List or dataframe with info on supported exchanges.
         """
-        # list
-        if as_list:
-            self.exchanges = ccxt.exchanges
-
-        # df
-        else:
-            if exch is not None:
-                self.exchanges = [exch]
-            else:
-                self.exchanges = ccxt.exchanges
-                print(
-                    "Getting metadata for all supported exchanges can take a few minutes."
-                    " For quick info on a specific exchange, provide the name of the exchange in the exch parameter."
-                )
-
-            # exch df
-            exch_df = pd.DataFrame(
-                index=self.exchanges,
-                columns=[
-                    "id",
-                    "name",
-                    "countries",
-                    "urls",
-                    "version",
-                    "api",
-                    "has",
-                    "timeframes",
-                    "timeout",
-                    "rateLimit",
-                    "userAgent",
-                    "verbose",
-                    "markets",
-                    "symbols",
-                    "currencies",
-                    "markets_by_id",
-                    "currencies_by_id",
-                    "api_key",
-                    "secret",
-                    "uid",
-                    "options",
-                ],
-            )
-
-            # Extract exchange info
-            for index, row in exch_df.iterrows():
-                try:
-                    exchange = getattr(ccxt, index)()
-                    exchange.load_markets()
-                except AttributeError as e:
-                    print(f"AttributeError: {e} for exchange {index}")
-                    exch_df.loc[index, :] = np.nan
-                except ccxt.BaseError as e:  # Catch specific ccxt exceptions
-                    print(f"CCXT Error: {e} for exchange {index}")
-                    exch_df.loc[index, :] = np.nan
-                except Exception as e:  # Fallback for any other exceptions
-                    print(f"Unexpected error: {e} for exchange {index}")
-                    exch_df.loc[index, :] = np.nan
-                else:
-                    for col in exch_df.columns:
-                        try:
-                            exch_df.loc[index, col] = str(getattr(exchange, col))
-                        except AttributeError as e:
-                            print(f"AttributeError: {e} for attribute {col} in exchange {index}")
-                            exch_df.loc[index, col] = np.nan
-                        except Exception as e:  # Fallback for any other exceptions
-                            print(f"Unexpected error: {e} for attribute {col} in exchange {index}")
-                            exch_df.loc[index, col] = np.nan
-
-            # set index name
-            exch_df.index.name = "exchange"
-            self.exchanges = exch_df
+        self.exchanges = ccxt.exchanges
 
         return self.exchanges
 
@@ -337,7 +255,7 @@ class CCXT(Library):
         Get CCXT metadata.
         """
         if self.exchanges is None:
-            self.exchanges = self.get_exchanges_info(as_list=True)
+            self.exchanges = self.get_exchanges_info()
         if self.market_types is None:
             self.market_types = ["spot", "future", "perpetual_future", "option"]
         if self.assets is None:
@@ -370,9 +288,6 @@ class CCXT(Library):
             Ticker symbol to request data for.
         start_date: str
             Start date in 'YYYY-MM-DD' format.
-
-        Other Parameters
-        ----------------
 
 
         Returns
@@ -407,16 +322,15 @@ class CCXT(Library):
                     limit=1000,
                 )
 
-            assert data_resp != []
+            return data_resp
 
         except Exception as e:
             logging.warning(f"Failed to get {data_type} data for {ticker}.")
             logging.warning(e)
 
-        else:
-            return data_resp
+            return None
 
-    def get_all_ohlcv_hist(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+    def fetch_all_ohlcv_hist(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
         """
         Submits get requests to API until entire OHLCV history has been collected. Only necessary when
         number of observations is larger than the maximum number of observations per call.
@@ -439,21 +353,19 @@ class CCXT(Library):
 
         # create empty df
         df = pd.DataFrame()
+
         # while loop condition
         missing_vals, attempts = True, 0
 
         # run a while loop until all data collected
         while missing_vals and attempts < cx_data_req['trials']:
 
-            try:
-                # data req
-                data_resp = self.req_data(data_req=data_req,
-                                          data_type='ohlcv',
-                                          ticker=ticker,
-                                          start_date=start_date)
+            data_resp = self.req_data(data_req=data_req,
+                                      data_type='ohlcv',
+                                      ticker=ticker,
+                                      start_date=start_date)
 
-            except AssertionError as e:
-                logging.warning(e)
+            if data_resp is None:
                 attempts += 1
                 sleep(self.get_rate_limit_info(exch=cx_data_req['exch'])[cx_data_req['exch']] / 1000)
                 logging.warning(
@@ -463,6 +375,7 @@ class CCXT(Library):
                     logging.warning(
                         f"Failed to get OHLCV data from {cx_data_req['exch']} for {ticker} after many attempts."
                     )
+                    return None
 
             else:
                 # name cols and create df
@@ -488,7 +401,7 @@ class CCXT(Library):
 
         return df
 
-    def get_all_funding_hist(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+    def fetch_all_funding_hist(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
         """
         Submits get requests to API until entire funding rate history has been collected. Only necessary when
         number of observations is larger than the maximum number of observations per call.
@@ -517,15 +430,13 @@ class CCXT(Library):
         # run a while loop until all data collected
         while missing_vals and attempts < cx_data_req['trials']:
 
-            try:
-                # data req
-                data_resp = self.req_data(data_req=data_req,
-                                          data_type='funding_rates',
-                                          ticker=ticker,
-                                          start_date=start_date)
+            # data req
+            data_resp = self.req_data(data_req=data_req,
+                                      data_type='funding_rates',
+                                      ticker=ticker,
+                                      start_date=start_date)
 
-            except AssertionError as e:
-                logging.warning(e)
+            if data_resp is None:
                 attempts += 1
                 sleep(self.get_rate_limit_info(exch=cx_data_req['exch'])[cx_data_req['exch']] / 1000)
                 logging.warning(
@@ -533,8 +444,9 @@ class CCXT(Library):
                 )
                 if attempts == cx_data_req["trials"]:
                     logging.warning(
-                        f"Failed to get funding rates from {cx_data_req['exch']} for {ticker} after many attempts."
+                        f"Failed to get funding_rates from {cx_data_req['exch']} for {ticker} after many attempts."
                     )
+                    return None
 
             else:
                 # add to df
@@ -580,7 +492,7 @@ class CCXT(Library):
 
         return WrangleData(data_req, data_resp).ccxt()
 
-    def get_tidy_ohlcv(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+    def fetch_tidy_ohlcv(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
         """
         Gets entire OHLCV history and wrangles the data response into tidy data format.
 
@@ -597,13 +509,15 @@ class CCXT(Library):
             Dataframe with entire data history retrieved and wrangled into tidy data format.
         """
         # get entire data history
-        df = self.get_all_ohlcv_hist(data_req, ticker)
+        df = self.fetch_all_ohlcv_hist(data_req, ticker)
+
         # wrangle df
-        df = self.wrangle_data_resp(data_req, df)
+        if df is not None:
+            df = self.wrangle_data_resp(data_req, df)
 
         return df
 
-    def get_tidy_funding_rates(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
+    def fetch_tidy_funding_rates(self, data_req: DataRequest, ticker: str) -> pd.DataFrame:
         """
         Gets entire funding rates history and wrangles the data response into tidy data format.
 
@@ -620,9 +534,11 @@ class CCXT(Library):
             Dataframe with entire data history retrieved and wrangled into tidy data format.
         """
         # get entire data history
-        df = self.get_all_funding_hist(data_req, ticker)
+        df = self.fetch_all_funding_hist(data_req, ticker)
+
         # wrangle df
-        df = self.wrangle_data_resp(data_req, df)
+        if df is not None:
+            df = self.wrangle_data_resp(data_req, df)
 
         return df
 
@@ -680,7 +596,7 @@ class CCXT(Library):
                 f" Market type must be perpetual futures."
             )
 
-    def get_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Loops list of tickers, retrieves OHLCV data for each ticker in tidy format and stores it in a
         multiindex dataframe.
@@ -707,13 +623,9 @@ class CCXT(Library):
         # loop through tickers
         for mkt, ticker in zip(cx_data_req['mkts'], data_req.tickers):
 
-            try:
-                df0 = self.get_tidy_ohlcv(data_req, mkt)
+            df0 = self.fetch_tidy_ohlcv(data_req, mkt)
 
-            except AssertionError:
-                logging.info(f"Failed to get OHLCV data for {ticker} after many attempts.")
-
-            else:
+            if df0 is not None:
                 # add ticker to index
                 df0['ticker'] = ticker.upper()
                 df0.set_index(['ticker'], append=True, inplace=True)
@@ -722,7 +634,7 @@ class CCXT(Library):
 
         return df
 
-    def get_funding_rates(self, data_req: DataRequest) -> pd.DataFrame:
+    def fetch_funding_rates(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Loops list of tickers, retrieves funding rates data for each ticker in tidy format and stores it in a
         multiindex dataframe.
@@ -749,13 +661,9 @@ class CCXT(Library):
         # loop through tickers
         for mkt, ticker in zip(cx_data_req['mkts'], data_req.tickers):
 
-            try:
-                df0 = self.get_tidy_funding_rates(data_req, mkt)
+            df0 = self.fetch_tidy_funding_rates(data_req, mkt)
 
-            except AssertionError:
-                logging.info(f"Failed to get funding rates for {ticker} after many attempts.")
-
-            else:
+            if df0 is not None:
                 # add ticker to index
                 df0['ticker'] = ticker.upper()
                 df0.set_index(['ticker'], append=True, inplace=True)
@@ -783,12 +691,12 @@ class CCXT(Library):
         # get OHLCV data
         ohlcv_list = ["open", "high", "low", "close", "volume"]
         if any([field in ohlcv_list for field in data_req.fields]):
-            df0 = self.get_ohlcv(data_req)
+            df0 = self.fetch_ohlcv(data_req)
             df = pd.concat([df, df0])
 
         # get funding rate data
         if any([field == "funding_rate" for field in data_req.fields]):
-            df1 = self.get_funding_rates(data_req)
+            df1 = self.fetch_funding_rates(data_req)
             df = pd.concat([df, df1], axis=1)
 
         # check if df empty

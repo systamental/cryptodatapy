@@ -1,7 +1,7 @@
 ![](cryptodatapy_logo.jpeg)
 
 # CryptoDataPy
-### _Better data beats fancier algorithms_
+### _Better data beats advanced algorithms_
 <br/>
 
 **CryptoDataPy** is a python library which makes it easy to build high quality data pipelines 

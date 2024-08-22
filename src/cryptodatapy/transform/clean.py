@@ -66,9 +66,9 @@ class CleanData:
         self.excluded_cols = None
         self.outliers = None
         self.yhat = None
+        self.repaired_df = None
         self.filtered_df = None
         self.filtered_tickers = None
-        self.repaired_df = None
         self.summary = pd.DataFrame()
         self.initialize_summary()
         self.check_types()
@@ -127,7 +127,7 @@ class CleanData:
 
         # add to summary
         self.summary.loc["%_outliers", self.outliers.unstack().columns] = (
-            self.outliers.unstack().notna().sum() / self.df.unstack().shape[0]
+            self.outliers.unstack().notna().sum() / od.df.unstack().notna().sum()
         ).values * 100
 
         # filtered df
@@ -157,7 +157,7 @@ class CleanData:
 
         # add repaired % to summary
         rep_vals = self.repaired_df.unstack().notna().sum() - self.df.unstack().notna().sum()
-        self.summary.loc["%_imputed", self.df.unstack().columns] = rep_vals / self.df.unstack().shape[0] * 100
+        self.summary.loc["%_imputed", self.df.unstack().columns] = rep_vals / self.df.unstack().notna().sum() * 100
 
         # repaired df
         if self.excluded_cols is not None:
@@ -192,9 +192,8 @@ class CleanData:
 
         # add to summary
         filtered_vals = self.df.unstack().notna().sum() - self.filtered_df.unstack().notna().sum()
-        self.summary.loc["%_below_avg_trading_val", self.df.unstack().columns] = (
-            filtered_vals / self.df.unstack().shape[0]
-        ).values * 100
+        self.summary.loc["%_below_avg_trading_val", self.df.unstack().columns] = \
+            (filtered_vals / self.df.unstack().notna().sum()).values * 100
 
         # filtered df
         self.df = self.filtered_df.sort_index()
@@ -223,7 +222,7 @@ class CleanData:
             self.df.unstack().notna().sum() - self.filtered_df.unstack().notna().sum()
         )
         self.summary.loc["%_missing_vals_gaps", self.df.unstack().columns] = (
-            missing_vals_gap / self.df.unstack().shape[0]
+            missing_vals_gap / self.df.unstack().notna().sum()
         ).values * 100
 
         # filtered df
@@ -258,7 +257,7 @@ class CleanData:
         )
 
         # add to summary
-        self.summary.loc["n_tickers_below_min_obs", self.df.unstack().columns] = len(self.filtered_tickers)
+        self.summary.loc["n_filtered_tickers", self.df.unstack().columns] = len(self.filtered_tickers)
 
         # filtered df
         self.df = self.filtered_df.sort_index()

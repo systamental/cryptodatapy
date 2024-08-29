@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Union
 
 import numpy as np
+np.float_ = np.float64
 import pandas as pd
 from prophet import Prophet
 from statsmodels.tsa.seasonal import STL, seasonal_decompose

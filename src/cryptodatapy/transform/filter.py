@@ -170,28 +170,35 @@ class Filter:
 
         return self.filtered_df
 
-    def remove_delisted(self, field: str = 'close', n_unch_vals: int = 30) -> pd.DataFrame:
+    def delisted_tickers(self, method: str = 'replace') -> pd.DataFrame:
         """
-        Removes delisted tickers from dataframe.
+        Repairs delisted tickers by either removing them or replacing them with NaNs.
 
         Parameters
         ----------
-        field: str, default 'close'
-            Field/column to use for detecting delisted tickers.
-        n_unch_vals: int, default 30
-            Number of consecutive unchanged values to consider a ticker as delisted.
+        method: str, {'replace', 'remove'}, default 'replace'
+            Method to repair delisted tickers. Can be 'remove' or 'replace'.
 
         Returns
         -------
         filtered_df: pd.DataFrame - MultiIndex
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols).
         """
-        # delisted tickers
-        delisted_tickers = self.df[field].unstack()[self.df[field].unstack().pct_change().iloc[-n_unch_vals:] == 0].\
-            dropna(how='all', axis=0).dropna(thresh=n_unch_vals, axis=1).columns
+        # unchanged rows
+        unch_rows = (self.df.subtract(self.df.iloc[:, :4].mean(axis=1), axis=0) == 0).any(axis=1)
 
-        # drop delisted tickers
-        self.filtered_df = self.df.drop(delisted_tickers, level=1)
+        # delisted tickers
+        delisted_tickers = unch_rows.unstack().iloc[-1][unch_rows.unstack().iloc[-1]].index.to_list()
+
+        # repair
+        if method == 'remove':
+            self.filtered_df = self.df.drop(delisted_tickers, level=1)
+        else:
+            self.filtered_df = self.df.loc[~unch_rows].reindex(self.df.index)
+
+        # # delisted tickers
+        # delisted_tickers = self.df[field].unstack()[self.df[field].unstack().pct_change().iloc[-n_unch_vals:] == 0].\
+        #     dropna(how='all', axis=0).dropna(thresh=n_unch_vals, axis=1).columns
 
         return self.filtered_df
 

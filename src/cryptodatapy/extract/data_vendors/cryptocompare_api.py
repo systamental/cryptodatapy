@@ -84,8 +84,9 @@ class CryptoCompare(DataVendor):
         if categories is None:
             self.categories = ['crypto']
         if api_key is None:
-            raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
-                            "'CRYPTOCOMPARE_API_KEY', will allow DataCredentials to automatically load it.")
+            raise TypeError("Set your CryptoCompare api key in environment variables as 'CRYPTOCOMPARE_API_KEY' or "
+                            "add it as an argument when instantiating the class. To get an api key, visit: "
+                            "https://min-api.cryptocompare.com/")
         if exchanges is None:
             self.exchanges = self.get_exchanges_info(as_list=True)
         if indexes is None:

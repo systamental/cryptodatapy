@@ -468,9 +468,6 @@ class CryptoCompare(DataVendor):
         urls_params = self.set_urls_params(data_req, data_type, ticker)
         url, params = urls_params['url'], urls_params['params']
 
-        # # data req
-        # data_resp = DataRequest().get_req(url=url, params=params)
-
         # data req
         data_resp = DataRequest().get_req(url=url, params=params)
 

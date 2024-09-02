@@ -108,7 +108,6 @@ class ConvertParams:
     def to_coinmetrics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to CoinMetrics format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -124,7 +123,7 @@ class ConvertParams:
             if self.data_req.freq == "block":
                 freq = "1b"
             elif self.data_req.freq == "tick":
-                freq = "tick"
+                freq = "raw"
             elif self.data_req.freq[-1] == "s":
                 freq = "1s"
             elif self.data_req.freq[-3:] == "min":
@@ -226,6 +225,16 @@ class ConvertParams:
                         + "-"
                         + "future"
                     )
+        # start date
+        if self.data_req.start_date is not None:
+            start_date = self.data_req.start_date.strftime('%Y-%m-%d')
+        else:
+            start_date = None
+        # end date
+        if self.data_req.end_date is not None:
+            end_date = self.data_req.end_date.strftime('%Y-%m-%d')
+        else:
+            end_date = None
 
         return {
             "tickers": tickers,
@@ -235,8 +244,8 @@ class ConvertParams:
             "ctys": None,
             "mkt_type": self.data_req.mkt_type,
             "mkts": mkts_list,
-            "start_date": self.data_req.start_date,
-            "end_date": self.data_req.end_date,
+            "start_date": start_date,
+            "end_date": end_date,
             "fields": fields,
             "tz": tz,
             "inst": inst,
@@ -251,7 +260,6 @@ class ConvertParams:
     def to_glassnode(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Glassnode format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -334,7 +342,6 @@ class ConvertParams:
     def to_tiingo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Tiingo format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -571,7 +578,6 @@ class ConvertParams:
     def to_dbnomics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to DBnomics format.
-
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -716,7 +722,6 @@ class ConvertParams:
     def to_fred(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Fred format.
-
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -790,7 +795,6 @@ class ConvertParams:
     def to_wb(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
-
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:

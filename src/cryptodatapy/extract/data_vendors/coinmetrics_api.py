@@ -13,6 +13,7 @@ from cryptodatapy.util.datacredentials import DataCredentials
 
 # data credentials
 data_cred = DataCredentials()
+
 # CoinMetrics community API client:
 client = CoinMetricsClient()
 
@@ -33,8 +34,8 @@ class CoinMetrics(DataVendor):
             fields: Optional[List[str]] = None,
             frequencies: List[str] = ["tick", "block", "1s", "1min", "5min", "10min", "15min", "30min",
                                       "1h", "2h", "4h", "8h", "d", "w", "m", "q"],
-            base_url: Optional[str] = None,
-            api_key: Optional[str] = None,
+            base_url: Optional[str] = data_cred.coinmetrics_base_url,
+            api_key: Optional[str] = data_cred.coinmetrics_api_key,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
     ):
@@ -300,12 +301,15 @@ class CoinMetrics(DataVendor):
         # fields param
         fields = cm_data_req["fields"]
 
+        # fields info
+        self.get_fields_info()
         # fields dict
         fields_dict = {}
         for field in fields:
-            df = self.get_fields_info().loc[field]  # get fields info
-            # add to dict
-            fields_dict[field] = df["frequencies"][0]["assets"]
+            if field in self.fields.index:
+                df = self.fields.loc[field]  # get fields metadata
+                # add to dict
+                fields_dict[field] = df["frequencies"][0]["assets"]
 
         # asset list
         asset_list = list(set.intersection(*(set(val) for val in fields_dict.values())))
@@ -336,35 +340,55 @@ class CoinMetrics(DataVendor):
             self.get_markets_info(as_list=True)
         if self.fields is None:
             self.get_fields_info(as_list=True)
-        if self.rate_limit is None:
-            self.get_rate_limit_info()
 
-    @staticmethod
-    def req_data(data_type: str, **kwargs) -> pd.DataFrame:
+    def req_data(self, data_type: str, params: Dict[str, Union[str, int]]) -> pd.DataFrame:
         """
         Sends data request to Python client.
 
         Parameters
         ----------
-        data_type: str, {'get_index_levels', 'get_institution_metrics', 'get_market_candles', 'get_asset_metrics',
-                         'get_market_open_interest', 'get_market_funding_rates', 'get_market_trades',
-                         'get_market_quotes'}
+        data_type: str
             Data type to retrieve.
+        params: dict
+            Dictionary containing parameter values for get request.
 
         Returns
         -------
         df: pd.DataFrame
             Dataframe with datetime, ticker/identifier, and field/col values.
         """
+        # url
+        url = self.base_url + data_type
+
+        # data request
         try:
-            df = getattr(client, data_type)(**kwargs).to_dataframe()
-            assert not df.empty
+            data_resp = DataRequest().get_req(url=url, params=params)
+            data, next_page_url = data_resp.get('data', []), data_resp.get('next_page_url')
+
+            # while loop
+            while next_page_url:
+                # wait to avoid exceeding rate limit
+                sleep(0.6)
+
+                # request next page
+                next_page_data_resp = DataRequest(pause=0.6).get_req(url=next_page_url, params=None)
+                next_page_data, next_page_url = next_page_data_resp.get('data', []), next_page_data_resp.get(
+                    'next_page_url')
+
+                # add data to list
+                data.extend(next_page_data)
+
+            # check data
+            assert (len(data) > 0)
 
         except Exception as e:
-            logging.warning(f"Failed to {data_type}.")
+            logging.warning(f"Failed to fetch {data_type}.")
             logging.warning(e)
 
         else:
+            # convert to df
+            df = pd.DataFrame(data)
+
             return df
 
     @staticmethod
@@ -390,7 +414,7 @@ class CoinMetrics(DataVendor):
 
         return df
 
-    def get_tidy_data(self, data_req: DataRequest, data_type: str, **kwargs) -> pd.DataFrame:
+    def get_tidy_data(self, data_req: DataRequest, data_type: str, params: dict) -> pd.DataFrame:
         """
         Gets data and wrangles it into tidy data format.
 
@@ -402,7 +426,8 @@ class CoinMetrics(DataVendor):
                          'get_market_open_interest', 'get_market_funding_rates', 'get_market_trades',
                          'get_market_quotes'}
             Data type to retrieve.
-        **kwargs: other parameters
+        params: dict
+            Dictionary containing parameter values for get request.
 
         Returns
         -------
@@ -410,7 +435,7 @@ class CoinMetrics(DataVendor):
             Dataframe with DatetimeIndex (level 0), ticker (level 1) and values for fields/col, in tidy data format.
         """
         # get entire data history
-        df = self.req_data(data_type, **kwargs)
+        df = self.req_data(data_type, params)
         # wrangle df
         df = self.wrangle_data_resp(data_req, df)
 
@@ -504,7 +529,7 @@ class CoinMetrics(DataVendor):
         # raise error if fields is empty
         if len(fields) == 0:
             raise ValueError(
-                f"{data_req.fields} are not valid institution fields."
+                f"{data_req.fields} are not valid fields."
                 f" Use the get_fields_info or get_inst_info methods to get available source fields."
             )
 
@@ -574,11 +599,19 @@ class CoinMetrics(DataVendor):
                     f" 'option' market types. Change 'mkt_type' in data request and try again."
                 )
 
-        # trades & quotes
-        elif data_type == 'trades' or data_type == 'quotes':
-            if cm_data_req["freq"] != "tick":
+        # trades
+        elif data_type == 'trades':
+            if cm_data_req["freq"] != "raw":
                 raise ValueError(
                     f"{data_type} data is only available at the 'tick' frequency."
+                    f" Change data request frequency and try again."
+                )
+
+        # quotes
+        elif data_type == 'quotes':
+            if cm_data_req["freq"] not in ["raw", "1s", "1m", "1h", "1d"]:
+                raise ValueError(
+                    f"{data_type} data is only available at the 'tick', '1s', '1m', '1h' and '1d' frequencies."
                     f" Change data request frequency and try again."
                 )
 
@@ -601,20 +634,27 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check data request paramaters
+        # check params
         self.check_params(data_req, data_type='indexes')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='indexes')
+        sleep(0.6)
 
-        # get indexes
+        # params
+        params = {
+            'indexes': ','.join(tickers),
+            'frequency': cm_data_req['freq'],
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
+
+        # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_index_levels',
-                                indexes=tickers,
-                                frequency=cm_data_req["freq"],
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
-                                )
+                                data_type='/timeseries/index-levels',
+                                params=params)
 
         return df
 
@@ -635,21 +675,28 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check freq
+        # check params
         self.check_params(data_req, data_type='institutions')
 
-        # filter fields
+        # check fields
         fields = self.check_fields(data_req, data_type='institutions')
+        sleep(0.6)
+
+        # params
+        params = {
+            'institutions': cm_data_req["inst"],
+            'metrics': ','.join(fields),
+            'frequency': cm_data_req['freq'],
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
 
         # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_institution_metrics',
-                                institutions=cm_data_req["inst"],
-                                metrics=fields,
-                                frequency=cm_data_req["freq"],
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
-                                )
+                                data_type='/timeseries/institution-metrics',
+                                params=params)
 
         return df
 
@@ -673,17 +720,24 @@ class CoinMetrics(DataVendor):
         # check freq
         self.check_params(data_req, data_type='market_candles')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='market_candles')
+        sleep(0.6)
+
+        # params
+        params = {
+            'markets': ','.join(tickers),
+            'frequency': cm_data_req['freq'],
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
 
         # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_market_candles',
-                                markets=tickers,
-                                frequency=cm_data_req["freq"],
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
-                                )
+                                data_type='/timeseries/market-candles',
+                                params=params)
 
         return df
 
@@ -704,22 +758,35 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check freq
+        # check params
         self.check_params(data_req, data_type='asset_metrics')
 
         # check tickers
         tickers = self.check_tickers(data_req, data_type='asset_metrics')
+        sleep(0.6)
+
         # check fields
         fields = self.check_fields(data_req, data_type='asset_metrics')
+        sleep(0.6)
+
+        # params
+        params = {
+            'assets': ','.join(tickers),
+            'metrics': ','.join(fields),
+            'frequency': cm_data_req['freq'],
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+            'ignore_forbidden_errors': True,
+            'ignore_unsupported_errors': True
+
+        }
 
         # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_asset_metrics',
-                                assets=tickers,
-                                metrics=fields,
-                                frequency=cm_data_req["freq"],
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
+                                data_type='/timeseries/asset-metrics',
+                                params=params
                                 )
 
         return df
@@ -741,18 +808,26 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check mkt type
+        # check params
         self.check_params(data_req, data_type='open_interest')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='open_interest')
+        sleep(0.6)
 
-        # get indexes
+        # params
+        params = {
+            'markets': ','.join(tickers),
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
+
+        # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_market_open_interest',
-                                markets=tickers,
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
+                                data_type='/timeseries/market-openinterest',
+                                params=params
                                 )
 
         return df
@@ -774,18 +849,26 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check mkt type
+        # check params
         self.check_params(data_req, data_type='funding_rates')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='funding_rates')
+        sleep(0.6)
 
-        # get indexes
+        # params
+        params = {
+            'markets': ','.join(tickers),
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
+
+        # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_market_funding_rates',
-                                markets=tickers,
-                                start_time=cm_data_req["start_date"],
-                                end_time=cm_data_req["end_date"],
+                                data_type='/timeseries/market-funding-rates',
+                                params=params
                                 )
 
         return df
@@ -807,17 +890,26 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check mkt type
+        # check params
         self.check_params(data_req, data_type='trades')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='trades')
+        sleep(0.6)
 
-        # get indexes
+        # params
+        params = {
+            'markets': ','.join(tickers),
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
+
+        # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_market_trades',
-                                markets=tickers,
-                                start_time=cm_data_req["start_date"]
+                                data_type='/timeseries/market-trades',
+                                params=params
                                 )
 
         return df
@@ -839,17 +931,27 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # check mkt type
+        # check params
         self.check_params(data_req, data_type='quotes')
 
-        # filter tickers
+        # check tickers
         tickers = self.check_tickers(data_req, data_type='quotes')
+        sleep(0.6)
 
-        # get indexes
+        # params
+        params = {
+            'markets': ','.join(tickers),
+            'granularity': cm_data_req['freq'],
+            'start_time': cm_data_req["start_date"],
+            'end_time': cm_data_req["end_date"],
+            'pretty': True,
+            'page_size': 10000,
+        }
+
+        # get tidy data
         df = self.get_tidy_data(data_req,
-                                data_type='get_market_quotes',
-                                markets=tickers,
-                                start_time=cm_data_req["start_date"]
+                                data_type='/timeseries/market-quotes',
+                                params=params
                                 )
 
         return df
@@ -872,15 +974,13 @@ class CoinMetrics(DataVendor):
         # convert data request parameters to Coin Metrics format
         cm_data_req = ConvertParams(data_req).to_coinmetrics()
 
-        # get metadata
-        self.get_metadata()
-        sleep(6)
-
         # check if fields available
+        self.get_fields_info(as_list=True)
+        sleep(0.6)
         if not all([field in self.fields for field in cm_data_req["fields"]]):
             raise ValueError(
                 "Some selected fields are not available. Check available fields with"
-                " fields property and try again."
+                " get_fields_info method and try again."
             )
 
         # ohlc fields list
@@ -892,6 +992,8 @@ class CoinMetrics(DataVendor):
         df = pd.DataFrame()
 
         # get indexes data
+        self.get_indexes_info(as_list=True)
+        sleep(0.6)
         if any([ticker.upper() in self.indexes for ticker in cm_data_req["tickers"]]) and any(
                 [field in ohlcv_list for field in cm_data_req["fields"]]
         ):
@@ -899,6 +1001,8 @@ class CoinMetrics(DataVendor):
             df = pd.concat([df, df0])
 
         # get OHLCV data
+        self.get_assets_info(as_list=True)
+        sleep(0.6)
         if any([ticker in self.assets for ticker in cm_data_req["tickers"]]) and any(
                 [field in ohlcv_list for field in cm_data_req["fields"]]
         ):

@@ -1600,7 +1600,6 @@ EZ_Eqty_MSCI_ETF,iShares MSCI Eurozone ETF,,,EZ,EMU,Euro zone,Euro zone,eqty,ind
 FR_Eqty_MSCI_ETF,iShares MSCI France ETF,,,FR,FRA,France,DM,eqty,index,etf,tick,,total return index,USD,,EWQ,,,,iShares MSCI France,,
 FI_Eqty_MSCI_ETF,iShares MSCI Finland ETF,,,FI,FIN,Finland,DM,eqty,index,etf,tick,,total return index,USD,,EFNL,,,,iShares MSCI Finland,,
 GB_Eqty_MSCI_ETF,iShares MSCI United Kingdom ETF,,,GB,GBR,United Kingdom,DM,eqty,index,etf,tick,,total return index,USD,,EWU,,,,iShares MSCI United Kingdom,,
-GR_Eqty_MSCI_ETF,Global X MSCI Greece ETF,,,GR,GRC,Greece,EM,eqty,index,etf,tick,,total return index,USD,,GREK ,,,,Global X MSCI Greece,,
 HK_Eqty_MSCI_ETF,iShares MSCI Hong Kong ETF,,,HK,HKG,Hong Kong,DM,eqty,index,etf,tick,,total return index,USD,,EWH,,,,iShares MSCI Hong Kong,,
 ID_Eqty_MSCI_ETF,iShares MSCI Indonesia ETF,,,ID,IDN,Indonesia,EM,eqty,index,etf,tick,,total return index,USD,,EIDO,,,,iShares MSCI Indonesia,,
 IN_Eqty_MSCI_ETF,iShares MSCI India ETF,,,IN,IND,India,EM,eqty,index,etf,tick,,total return index,USD,,INDA,,,,iShares MSCI India,,

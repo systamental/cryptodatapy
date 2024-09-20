@@ -120,7 +120,9 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq == "block":
+            if self.data_req.freq is None:
+                freq = "1d"
+            elif self.data_req.freq == "block":
                 freq = "1b"
             elif self.data_req.freq == "tick":
                 freq = "raw"
@@ -272,7 +274,9 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq[-3:] == "min":
+            if self.data_req.freq is None:
+                freq = "24h"
+            elif self.data_req.freq[-3:] == "min":
                 freq = "10m"
             elif self.data_req.freq[-1] == "h":
                 freq = "1h"
@@ -283,7 +287,7 @@ class ConvertParams:
             elif self.data_req.freq == "m":
                 freq = "1month"
             else:
-                freq = self.data_req.freq
+                freq = "24h"
         # convert quote ccy
         if self.data_req.quote_ccy is None:
             quote_ccy = "USD"
@@ -354,7 +358,9 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq[-3:] == "min":
+            if self.data_req.freq is None:
+                freq = "1day"
+            elif self.data_req.freq[-3:] == "min":
                 freq = self.data_req.freq
             elif self.data_req.freq[-1] == "h":
                 freq = "1hour"
@@ -446,12 +452,12 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq == "tick":
+            if self.data_req.freq is None:
+                freq = "1d"
+            elif self.data_req.freq == "tick":
                 freq = "tick"
             elif self.data_req.freq[-3:] == "min":
                 freq = self.data_req.freq.replace("min", "m")
-            elif self.data_req.freq == "d":
-                freq = "1d"
             elif self.data_req.freq == "w":
                 freq = "1w"
             elif self.data_req.freq == "m":
@@ -463,7 +469,7 @@ class ConvertParams:
             elif self.data_req.freq == "y":
                 freq = "1y"
             else:
-                freq = self.data_req.freq
+                freq = "1d"
         # convert quote ccy
         if self.data_req.quote_ccy is None:
             quote_ccy = "USDT"
@@ -508,7 +514,7 @@ class ConvertParams:
                     mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
                 elif self.data_req.mkt_type == "perpetual_future":
                     if exch == "binanceusdm":
-                        mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
+                        mkts_list.append(ticker.upper() + "/" + quote_ccy.upper() + ':' + quote_ccy.upper())
                     elif (
                         exch == "ftx"
                         or exch == "okx"

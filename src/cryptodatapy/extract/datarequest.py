@@ -197,7 +197,9 @@ class DataRequest:
             "y": "yearly",
         }
 
-        if frequency not in list(freq_dict.keys()):
+        if frequency is None:
+            self._frequency = frequency
+        elif frequency not in list(freq_dict.keys()):
             raise ValueError(
                 f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}"
             )
@@ -555,15 +557,59 @@ class DataRequest:
             # get request
             try:
                 resp = requests.get(url, params=params, headers=headers)
-                assert resp.status_code == 200
-            # exception
-            except AssertionError as e:
-                logging.warning(e)
+                # check for status code
+                resp.raise_for_status()
+
+                return resp.json()
+
+            # handle HTTP errors
+            except requests.exceptions.HTTPError as http_err:
+                status_code = resp.status_code
+
+                # Tailored handling for different status codes
+                if status_code == 400:
+                    logging.warning(f"Bad Request (400): {resp.text}")
+                elif status_code == 401:
+                    logging.warning("Unauthorized (401): Check the authentication credentials.")
+                elif status_code == 403:
+                    logging.warning("Forbidden (403): You do not have permission to access this resource.")
+                elif status_code == 404:
+                    logging.warning("Not Found (404): The requested resource could not be found.")
+                elif status_code == 500:
+                    logging.error("Internal Server Error (500): The server encountered an error.")
+                elif status_code == 503:
+                    logging.error("Service Unavailable (503): The server is temporarily unavailable.")
+                else:
+                    logging.error(f"HTTP error occurred: {http_err} (Status Code: {status_code})")
+                    logging.error(f"Response Content: {resp.text}")
+
+                # Increment attempts and log warning
                 attempts += 1
-                logging.warning(f"Failed to get data on attempt #{attempts}.")
-                sleep(self.pause)
-                if attempts == 3:
+                logging.warning(f"Attempt #{attempts}: Failed to get data due to: {http_err}")
+                sleep(self.pause)  # Pause before retrying
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data.")
                     break
 
-            else:
-                return resp.json()
+            # handle non-HTTP exceptions (e.g., network issues)
+            except requests.exceptions.RequestException as req_err:
+                attempts += 1
+                logging.warning(f"Request error on attempt #{attempts}: {req_err}. "
+                                f"Retrying after {self.pause} seconds...")
+                sleep(self.pause)
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data due to request errors.")
+                    break
+
+            # handle other exceptions
+            except Exception as e:
+                attempts += 1
+                logging.warning(f"An unexpected error occurred: {e}. "
+                                f"Retrying after {self.pause} seconds...")
+                sleep(self.pause)
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data due to request errors.")
+                    break
+
+        # return None if the API call fails
+        return None

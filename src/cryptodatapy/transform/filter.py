@@ -196,10 +196,6 @@ class Filter:
         else:
             self.filtered_df = self.df.loc[~unch_rows].reindex(self.df.index)
 
-        # # delisted tickers
-        # delisted_tickers = self.df[field].unstack()[self.df[field].unstack().pct_change().iloc[-n_unch_vals:] == 0].\
-        #     dropna(how='all', axis=0).dropna(thresh=n_unch_vals, axis=1).columns
-
         return self.filtered_df
 
     def tickers(self, tickers_list) -> pd.DataFrame:

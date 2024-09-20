@@ -361,8 +361,14 @@ class CoinMetrics(DataVendor):
         url = self.base_url + data_type
 
         # data request
-        try:
-            data_resp = DataRequest().get_req(url=url, params=params)
+        data_resp = DataRequest().get_req(url=url, params=params)
+
+        # raise error if data is None
+        if data_resp is None:
+            raise Exception("Failed to fetch data after multiple attempts.")
+        # retrieve data
+        else:
+            # data
             data, next_page_url = data_resp.get('data', []), data_resp.get('next_page_url')
 
             # while loop
@@ -378,14 +384,6 @@ class CoinMetrics(DataVendor):
                 # add data to list
                 data.extend(next_page_data)
 
-            # check data
-            assert (len(data) > 0)
-
-        except Exception as e:
-            logging.warning(f"Failed to fetch {data_type}.")
-            logging.warning(e)
-
-        else:
             # convert to df
             df = pd.DataFrame(data)
 
@@ -977,13 +975,13 @@ class CoinMetrics(DataVendor):
         # check if fields available
         self.get_fields_info(as_list=True)
         sleep(0.6)
-        if not all([field in self.fields for field in cm_data_req["fields"]]):
-            raise ValueError(
-                "Some selected fields are not available. Check available fields with"
-                " get_fields_info method and try again."
-            )
+        # if not all([field in self.fields for field in cm_data_req["fields"]]):
+        #     raise ValueError(
+        #         "Some selected fields are not available. Check available fields with"
+        #         " get_fields_info method and try again."
+        #     )
 
-        # ohlc fields list
+        # field lists
         ohlcv_list = ['price_open', 'price_close', 'price_high', 'price_low', 'vwap', 'volume',
                       'candle_usd_volume', 'candle_trades_count']
         oc_list = [field for field in self.fields if field not in ohlcv_list]

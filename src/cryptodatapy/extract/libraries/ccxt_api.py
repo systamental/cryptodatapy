@@ -273,6 +273,7 @@ class CCXT(Library):
                  data_type: str,
                  ticker: str,
                  start_date: str = None,
+                 end_date: str = None,
                  ) -> pd.DataFrame:
         """
         Sends data request to Python client.
@@ -287,6 +288,8 @@ class CCXT(Library):
             Ticker symbol to request data for.
         start_date: str
             Start date in 'YYYY-MM-DD' format.
+        end_date: str
+            End date in 'YYYY-MM-DD' format.
 
 
         Returns
@@ -298,6 +301,8 @@ class CCXT(Library):
         cx_data_req = ConvertParams(data_req).to_ccxt()
         if start_date is None:
             start_date = cx_data_req['start_date']
+        if end_date is None:
+            end_date = cx_data_req['end_date']
 
         # data types
         data_types = {'ohlcv': 'fetchOHLCV', 'funding_rates': 'fetchFundingRateHistory'}
@@ -313,12 +318,14 @@ class CCXT(Library):
                     cx_data_req["freq"],
                     since=start_date,
                     limit=self.max_obs_per_call,
+                    params={'until': end_date}
                 )
             elif data_type == 'funding_rates':
                 data_resp = getattr(exch, data_types[data_type])(
                     ticker,
                     since=start_date,
                     limit=1000,
+                    params={'until': end_date}
                 )
 
             return data_resp
@@ -349,6 +356,7 @@ class CCXT(Library):
         # convert data request parameters to CCXT format and set start date
         cx_data_req = ConvertParams(data_req).to_ccxt()
         start_date = cx_data_req['start_date']
+        end_date = cx_data_req['end_date']
 
         # create empty df
         df = pd.DataFrame()
@@ -362,7 +370,8 @@ class CCXT(Library):
             data_resp = self.req_data(data_req=data_req,
                                       data_type='ohlcv',
                                       ticker=ticker,
-                                      start_date=start_date)
+                                      start_date=start_date,
+                                      end_date=end_date)
 
             if data_resp is None:
                 attempts += 1
@@ -420,6 +429,7 @@ class CCXT(Library):
         # convert data request parameters to CCXT format and set start date
         cx_data_req = ConvertParams(data_req).to_ccxt()
         start_date = cx_data_req['start_date']
+        end_date = cx_data_req['end_date']
 
         # create empty df
         df = pd.DataFrame()
@@ -433,7 +443,8 @@ class CCXT(Library):
             data_resp = self.req_data(data_req=data_req,
                                       data_type='funding_rates',
                                       ticker=ticker,
-                                      start_date=start_date)
+                                      start_date=start_date,
+                                      end_date=end_date)
 
             if data_resp is None:
                 attempts += 1

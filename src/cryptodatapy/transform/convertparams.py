@@ -69,7 +69,7 @@ class ConvertParams:
             start_date = round(pd.Timestamp(self.data_req.start_date).timestamp())
         # convert end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp(datetime.utcnow()).timestamp())
+            end_date = round(pd.Timestamp.utcnow()).timestamp()
         else:
             end_date = round(pd.Timestamp(self.data_req.end_date).timestamp())
         # fields
@@ -401,7 +401,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # convert end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            end_date = pd.Timestamp.utcnow()
         else:
             end_date = self.data_req.end_date
         # convert fields
@@ -516,8 +516,7 @@ class ConvertParams:
                     if exch == "binanceusdm":
                         mkts_list.append(ticker.upper() + "/" + quote_ccy.upper() + ':' + quote_ccy.upper())
                     elif (
-                        exch == "ftx"
-                        or exch == "okx"
+                        exch == "okx"
                         or exch == "kucoinfutures"
                         or exch == "huobipro"
                         or exch == "cryptocom"
@@ -545,7 +544,7 @@ class ConvertParams:
             )
         # convert end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp(datetime.utcnow()).timestamp() * 1e3)
+            end_date = round(pd.Timestamp.utcnow().timestamp() * 1e3)
         else:
             end_date = round(pd.Timestamp(self.data_req.end_date).timestamp() * 1e3)
         # convert fields
@@ -694,7 +693,7 @@ class ConvertParams:
             start_date = pd.Timestamp(self.data_req.start_date).strftime("%d/%m/%Y")
         # convert end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().strftime("%d/%m/%Y")
+            end_date = pd.Timestamp.utcnow().strftime("%d/%m/%Y")
         else:
             end_date = pd.Timestamp(self.data_req.end_date).strftime("%d/%m/%Y")
         # convert fields
@@ -762,7 +761,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            end_date = pd.Timestamp.utcnow()
         else:
             end_date = self.data_req.end_date
         # fields
@@ -852,7 +851,7 @@ class ConvertParams:
             start_date = int(self.data_req.start_date.year)
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().year
+            end_date = pd.Timestamp.utcnow().year
         else:
             end_date = int(self.data_req.end_date.year)
         # fields
@@ -925,7 +924,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().strftime('%Y-%m-%d')
+            end_date = pd.Timestamp.utcnow().strftime('%Y-%m-%d')
         else:
             end_date = self.data_req.end_date
         # fields
@@ -998,7 +997,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().date()
+            end_date = pd.Timestamp.utcnow().date()
         else:
             end_date = self.data_req.end_date
 

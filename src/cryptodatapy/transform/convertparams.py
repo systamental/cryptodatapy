@@ -13,10 +13,7 @@ class ConvertParams:
     Converts data request parameters from CryptoDataPy to data source format.
     """
 
-    def __init__(
-        self,
-        data_req: DataRequest = None,
-    ):
+    def __init__(self, data_req: DataRequest):
         """
         Constructor
 
@@ -24,7 +21,6 @@ class ConvertParams:
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
-
         """
         self.data_req = data_req
 
@@ -437,148 +433,109 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_ccxt(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_ccxt(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to CCXT format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = [ticker.split('/')[0] for ticker in self.data_req.source_tickers]
-            self.data_req.tickers = tickers
-        else:
-            tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
             if self.data_req.freq is None:
-                freq = "1d"
+                self.data_req.source_freq = "1d"
             elif self.data_req.freq == "tick":
-                freq = "tick"
+                self.data_req.source_freq = "tick"
             elif self.data_req.freq[-3:] == "min":
-                freq = self.data_req.freq.replace("min", "m")
+                self.data_req.source_freq = self.data_req.freq.replace("min", "m")
+            elif self.data_req.freq[-1] == "h":
+                self.data_req.source_freq = self.data_req.freq
             elif self.data_req.freq == "w":
-                freq = "1w"
+                self.data_req.source_freq = "1w"
             elif self.data_req.freq == "m":
-                freq = "1M"
+                self.data_req.source_freq = "1M"
             elif self.data_req.freq[-1] == "m":
-                freq = self.data_req.freq.replace("m", "M")
+                self.data_req.source_freq = self.data_req.freq.replace("m", "M")
             elif self.data_req.freq == "q":
-                freq = "1q"
+                self.data_req.source_freq = "1q"
             elif self.data_req.freq == "y":
-                freq = "1y"
+                self.data_req.source_freq = "1y"
             else:
-                freq = "1d"
-        # convert quote ccy
+                self.data_req.source_freq = "1d"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "USDT"
+            self.data_req.quote_ccy = "USDT"
         else:
-            quote_ccy = self.data_req.quote_ccy.upper()
-        # convert exch
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
+        # exch
         if self.data_req.mkt_type == "perpetual_future" and (
             self.data_req.exch is None or self.data_req.exch == "binance"
         ):
-            exch = "binanceusdm"
+            self.data_req.exch = "binanceusdm"
         elif self.data_req.exch is None:
-            exch = "binance"
+            self.data_req.exch = "binance"
         elif (
             self.data_req.exch == "kucoin"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "kucoinfutures"
+            self.data_req.exch = "kucoinfutures"
         elif (
             self.data_req.exch == "huobi"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "huobipro"
+            self.data_req.exch = "huobipro"
         elif (
             self.data_req.exch == "bitfinex"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "bitfinex2"
+            self.data_req.exch = "bitfinex2"
         elif (
             self.data_req.exch == "mexc"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "mexc3"
+            self.data_req.exch = "mexc3"
         else:
-            exch = self.data_req.exch.lower()
-        # convert tickers to mkts
-        mkts_list = []
-        if self.data_req.source_tickers is not None:
-            mkts_list = self.data_req.source_tickers
+            self.data_req.exch = self.data_req.exch.lower()
+
+        # markets
+        if self.data_req.source_markets is None:
+            if self.data_req.mkt_type == "spot":
+                self.data_req.source_markets = [ticker + "/" + self.data_req.quote_ccy
+                                                for ticker in self.data_req.source_tickers]
+            elif self.data_req.mkt_type == "perpetual_future":
+                self.data_req.source_markets = [ticker + "/" + self.data_req.quote_ccy + ":" + self.data_req.quote_ccy
+                        for ticker in self.data_req.source_tickers]
         else:
-            for ticker in self.data_req.tickers:
-                if self.data_req.mkt_type == "spot":
-                    mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
-                elif self.data_req.mkt_type == "perpetual_future":
-                    if exch == "binanceusdm":
-                        mkts_list.append(ticker.upper() + "/" + quote_ccy.upper() + ':' + quote_ccy.upper())
-                    elif (
-                        exch == "okx"
-                        or exch == "kucoinfutures"
-                        or exch == "huobipro"
-                        or exch == "cryptocom"
-                        or exch == "bitfinex2"
-                        or exch == "bybit"
-                        or exch == "mexc3"
-                        or exch == "aax"
-                        or exch == "bitmex"
-                    ):
-                        mkts_list.append(
-                            ticker.upper()
-                            + "/"
-                            + quote_ccy.upper()
-                            + ":"
-                            + quote_ccy.upper()
-                        )
-        # convert start date
+            self.data_req.source_tickers = [market.split("/")[0] for market in self.data_req.source_markets]
+
+        # start date
         if self.data_req.start_date is None:
-            start_date = round(
+            self.data_req.source_start_date = round(
                 pd.Timestamp("2010-01-01 00:00:00").timestamp() * 1e3
             )
         else:
-            start_date = round(
+            self.data_req.source_start_date = round(
                 pd.Timestamp(self.data_req.start_date).timestamp() * 1e3
             )
-        # convert end date
+
+        # end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp.utcnow().timestamp() * 1e3)
+            self.data_req.source_end_date = round(pd.Timestamp.utcnow().timestamp() * 1e3)
         else:
-            end_date = round(pd.Timestamp(self.data_req.end_date).timestamp() * 1e3)
-        # convert fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='ccxt')
+            self.data_req.source_end_date = round(pd.Timestamp(self.data_req.end_date).timestamp() * 1e3)
+
+        # fields
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='ccxt')
+
         # tz
         if self.data_req.tz is None:
-            tz = "UTC"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "UTC"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": mkts_list,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": 'crypto',
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_dbnomics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """

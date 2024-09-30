@@ -469,7 +469,6 @@ class WrangleData:
     """
     Wrangles time series data responses from various APIs into tidy data format.
     """
-
     def __init__(self, data_req: DataRequest, data_resp: Union[Dict[str, pd.DataFrame], pd.DataFrame]):
         """
         Constructor
@@ -484,6 +483,7 @@ class WrangleData:
         """
         self.data_req = data_req
         self.data_resp = data_resp
+        self.tidy_data = pd.DataFrame()
 
     def cryptocompare(self) -> pd.DataFrame:
         """
@@ -734,7 +734,98 @@ class WrangleData:
 
         return self.data_resp
 
-    def ccxt(self) -> pd.DataFrame:
+    def ccxt_ohlcv(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT OHLCV data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # field cols
+        cols = ["date", "open", "high", "low", "close", "volume"]
+
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i], columns=cols)
+            df['ticker'] = self.data_req.source_markets[i]
+            self.tidy_data = pd.concat([self.tidy_data, df])
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data['date'], unit='ms')
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        return self.tidy_data
+
+    def ccxt_funding_rates(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT funding rates data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i])
+            self.tidy_data = pd.concat([self.tidy_data, df])
+        self.tidy_data = self.tidy_data[['symbol', 'fundingRate', 'datetime']]
+        self.data_resp = self.tidy_data
+
+        # convert to lib fields
+        self.convert_fields_to_lib(data_source='ccxt')
+        self.tidy_data = self.data_resp
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data.set_index('date').index).floor('s').tz_localize(None)
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        # resample
+        if self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
+            self.tidy_data = (
+                    (1 + self.tidy_data.funding_rate)
+                    .groupby('ticker')
+                    .resample('d', level='date')
+                    .prod() - 1
+            ).to_frame().swaplevel('ticker', 'date').sort_index()
+
+        return self.tidy_data
+
+    def ccxt_open_interest(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT open interest data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i])
+            self.tidy_data = pd.concat([self.tidy_data, df])
+        self.tidy_data = self.tidy_data[['symbol', 'openInterestAmount', 'datetime']]
+        self.data_resp = self.tidy_data
+
+        # convert to lib fields
+        self.convert_fields_to_lib(data_source='ccxt')
+        self.tidy_data = self.data_resp
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data.set_index('date').index).floor('s').tz_localize(None)
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        return self.tidy_data
+
+    def ccxt(self, data_type: str) -> pd.DataFrame:
         """
         Wrangles CCXT data response to dataframe with tidy data format.
 
@@ -744,26 +835,24 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
-        # convert fields to lib
-        self.convert_fields_to_lib(data_source='ccxt')
-        # convert to datetime
-        if 'close' in self.data_resp.columns:
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.date, unit='ms')
-        elif 'funding_rate' in self.data_resp.columns:
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.set_index('date').index).floor('s').tz_localize(None)
-        # set index
-        self.data_resp = self.data_resp.set_index('date').sort_index()
-        # resample
-        if 'funding_rate' in self.data_resp.columns and self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
-            self.data_resp = ((self.data_resp.funding_rate + 1).resample(self.data_req.freq).prod() - 1).to_frame()
-        # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        # remove bad data
-        self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
-        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
-        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+        if data_type == 'ohlcv':
+            self.tidy_data = self.ccxt_ohlcv()
+        elif data_type == 'funding_rates':
+            self.tidy_data = self.ccxt_funding_rates()
+        elif data_type == 'open_interest':
+            self.tidy_data = self.ccxt_open_interest()
+        else:
+            raise ValueError(f"Data type {data_type} not supported.")
 
-        return self.data_resp
+        # type conversion
+        self.tidy_data = self.tidy_data.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
+        # remove bad data
+        self.tidy_data = self.tidy_data[self.tidy_data != 0]  # 0 values
+        self.tidy_data = self.tidy_data[~self.tidy_data.index.duplicated()]  # duplicate rows
+        self.tidy_data = self.tidy_data.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
+        return self.tidy_data
 
     def fred(self) -> pd.DataFrame:
         """
@@ -1016,9 +1105,9 @@ class WrangleData:
 
         # loop through data resp cols
         for col in self.data_resp.columns:
-            if self.data_req.source_fields is not None and col in self.data_req.source_fields:
-                pass
-            elif col in fields_list or col.title() in fields_list or col.lower() in fields_list:
+            # if self.data_req.source_fields is not None and col in self.data_req.source_fields:
+            #     pass
+            if col in fields_list or col.title() in fields_list or col.lower() in fields_list:
                 self.data_resp.rename(columns={col: fields_df[(fields_df[str(data_source) + '_id']
                                       == col.title()) |
                                     (fields_df[str(data_source) + '_id'] == col.lower()) |

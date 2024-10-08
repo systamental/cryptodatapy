@@ -735,7 +735,7 @@ class CCXT(Library):
 
         return data
 
-    def convert_params(self, data_req: DataRequest) -> Dict[str, Any]:
+    def convert_params(self, data_req: DataRequest) -> DataRequest:
         """
         Converts data request parameters to CCXT format.
 
@@ -746,8 +746,8 @@ class CCXT(Library):
 
         Returns
         -------
-        cx_data_req: dict
-            Data request parameters in CCXT format.
+        data_req: DataRequest
+            Parameters of data request in CCXT format.
         """
         self.data_req = ConvertParams(data_req).to_ccxt()
 
@@ -834,15 +834,12 @@ class CCXT(Library):
 
         return self.data_req
 
-    @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame, data_type: str) -> pd.DataFrame:
+    def wrangle_data_resp(self, data_resp: pd.DataFrame, data_type: str) -> pd.DataFrame:
         """
         Wrangle data response.
 
         Parameters
         ----------
-        data_req: DataRequest
-            Parameters of data request in CryptoDataPy format.
         data_resp: pd.DataFrame
             Data response from GET request.
         data_type: str
@@ -854,7 +851,7 @@ class CCXT(Library):
             Wrangled dataframe with DatetimeIndex and values in tidy format.
         """
 
-        return WrangleData(data_req, data_resp).ccxt(data_type=data_type)
+        return WrangleData(self.data_req, data_resp).ccxt(data_type=data_type)
 
     async def fetch_tidy_ohlcv(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -871,7 +868,8 @@ class CCXT(Library):
             Dataframe with entire OHLCV data history retrieved and wrangled into tidy data format.
         """
         # convert data request parameters to CCXT format
-        self.convert_params(data_req)
+        if self.data_req is None:
+            self.convert_params(data_req)
 
         # get entire data history
         data_resp = await self.fetch_all_ohlcv(self.data_req.source_markets,
@@ -884,7 +882,7 @@ class CCXT(Library):
 
         # wrangle df
         if any(data_resp):
-            df = self.wrangle_data_resp(data_req, data_resp, data_type='ohlcv')
+            df = self.wrangle_data_resp(data_resp, data_type='ohlcv')
             return df
         else:
             logging.warning("Failed to get requested OHLCV data.")
@@ -904,7 +902,8 @@ class CCXT(Library):
             Dataframe with entire data history retrieved and wrangled into tidy data format.
         """
         # convert data request parameters to CCXT format
-        self.convert_params(data_req)
+        if self.data_req is None:
+            self.convert_params(data_req)
 
         # get entire data history
         data_resp = await self.fetch_all_funding_rates(self.data_req.source_markets,
@@ -916,7 +915,7 @@ class CCXT(Library):
 
         # wrangle df
         if any(data_resp):
-            df = self.wrangle_data_resp(data_req, data_resp, data_type='funding_rates')
+            df = self.wrangle_data_resp(data_resp, data_type='funding_rates')
             return df
         else:
             logging.warning("Failed to get requested funding rates.")
@@ -936,7 +935,8 @@ class CCXT(Library):
             Dataframe with entire data history retrieved and wrangled into tidy data format.
         """
         # convert data request parameters to CCXT format
-        self.convert_params(data_req)
+        if self.data_req is None:
+            self.convert_params(data_req)
 
         # get entire data history
         data_resp = await self.fetch_all_open_interest(self.data_req.source_markets,
@@ -949,7 +949,7 @@ class CCXT(Library):
 
         # wrangle df
         if any(data_resp):
-            df = self.wrangle_data_resp(data_req, data_resp, data_type='open_interest')
+            df = self.wrangle_data_resp(data_resp, data_type='open_interest')
             return df
         else:
             logging.warning("Failed to get requested open interest.")

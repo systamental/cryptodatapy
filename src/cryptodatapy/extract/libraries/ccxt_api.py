@@ -775,19 +775,19 @@ class CCXT(Library):
                     f"Use the '.assets' attribute to check supported currencies."
                 )
 
-        # mkt type
+        # check mkt type
         if self.data_req.mkt_type not in self.market_types:
             raise ValueError(
                 f"{self.data_req.mkt_type} is not available for {self.data_req.exch}."
             )
 
-        # start date
+        # check start date
         if not isinstance(self.data_req.source_start_date, int):
             raise ValueError(
                 f"Start date must be in integers in milliseconds since Unix epoch."
             )
 
-        # end date
+        # check end date
         if not isinstance(self.data_req.source_end_date, int):
             raise ValueError(
                 f"End date must be in integers in milliseconds since Unix epoch."

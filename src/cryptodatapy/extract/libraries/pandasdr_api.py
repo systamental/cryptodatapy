@@ -1,9 +1,9 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import yfinance as yf
-from pandas_datareader.data import DataReader as pdr_fetch
+import pandas_datareader.data as web
 from pandas_datareader import wb
 
 from cryptodatapy.extract.datarequest import DataRequest
@@ -20,19 +20,18 @@ class PandasDataReader(Library):
     """
     Retrieves data from Pandas Data Reader API.
     """
-
     def __init__(
             self,
-            categories=None,
+            categories: Union[str, List[str]] = ["fx", "rates", "eqty", "cmdty", "credit", "macro"],
             exchanges: Optional[List[str]] = None,
             indexes: Optional[Dict[str, List[str]]] = None,
             assets: Optional[Dict[str, List[str]]] = None,
             markets: Optional[Dict[str, List[str]]] = None,
-            market_types=None,
+            market_types: List[str] = ["spot", "future"],
             fields: Optional[Dict[str, List[str]]] = None,
-            frequencies=None,
+            frequencies: Optional[Dict[str, List[str]]] = ["d", "w", "m", "q", "y"],
             base_url: Optional[str] = None,
-            api_key=None,
+            api_key: Optional[str] = None,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
     ):
@@ -89,29 +88,8 @@ class PandasDataReader(Library):
             max_obs_per_call,
             rate_limit,
         )
-
-        if api_key is None:
-            self.api_key = {
-                "fred": None,
-                "yahoo": None,
-                "fama_french": None
-            }
-        if frequencies is None:
-            self.frequencies = {
-                "crypto": ["d", "w", "m", "q", "y"],
-                "fx": ["d", "w", "m", "q", "y"],
-                "rates": ["d", "w", "m", "q", "y"],
-                "cmdty": ["d", "w", "m", "q", "y"],
-                "eqty": ["d", "w", "m", "q", "y"],
-                "credit": ["d", "w", "m", "q", "y"],
-                "macro": ["d", "w", "m", "q", "y"],
-            }
-        if market_types is None:
-            self.market_types = ["spot"]
-        if categories is None:
-            self.categories = ["fx", "rates", "eqty", "cmdty", "credit", "macro"]
-        if fields is None:
-            self.fields = self.get_fields_info()
+        self.data_req = None
+        self.data = pd.DataFrame()
 
     @staticmethod
     def get_vendors_info():
@@ -122,7 +100,8 @@ class PandasDataReader(Library):
             f"See providers page to find available vendors: {data_cred.pdr_vendors_url} "
         )
 
-    def get_exchanges_info(self) -> None:
+    @staticmethod
+    def get_exchanges_info() -> None:
         """
         Get exchanges info.
         """
@@ -130,7 +109,8 @@ class PandasDataReader(Library):
             f"See specific data vendor for available exchanges: {data_cred.pdr_vendors_url}"
         )
 
-    def get_indexes_info(self) -> None:
+    @staticmethod
+    def get_indexes_info() -> None:
         """
         Get indexes info.
         """
@@ -138,7 +118,8 @@ class PandasDataReader(Library):
             f"See specific data vendor for available indexes: {data_cred.pdr_vendors_url}"
         )
 
-    def get_assets_info(self) -> None:
+    @staticmethod
+    def get_assets_info() -> None:
         """
         Get assets info.
         """
@@ -146,7 +127,8 @@ class PandasDataReader(Library):
             f"See specific data vendor for available assets: {data_cred.pdr_vendors_url} "
         )
 
-    def get_markets_info(self) -> None:
+    @staticmethod
+    def get_markets_info() -> None:
         """
         Get markets info.
         """
@@ -154,60 +136,114 @@ class PandasDataReader(Library):
             f"See specific data vendor for available markets: {data_cred.pdr_vendors_url}"
         )
 
-    @staticmethod
-    def get_fields_info(
-            data_type: Optional[str] = "market", cat: Optional[str] = None
-    ) -> Dict[str, List[str]]:
+    def get_fields_info(self) -> Dict[str, List[str]]:
         """
         Get fields info.
-
-        Parameters
-        ----------
-        data_type: str, {'market', 'on-chain', 'off-chain'}, default 'market'
-            Type of data.
-        cat: str, {'crypto', 'eqty', 'fx', 'rates', 'cmdty', 'macro'}, optional, default None
-            Asset class or time series category.
 
         Returns
         -------
         fields: dictionary
             Dictionary with info on available fields, by category.
         """
-        if data_type == "on-chain":
-            raise ValueError(
-                "Pandas Data Reader is a market data aggregator of market and off-chain data."
-            )
+        if self.fields is None:
+            self.fields = {
+                "fx": ["open", "high", "low", "close", "volume", "close_adj", "er"],
+                "rates": ["open", "high", "low", "close", "volume", "close_adj", "er"],
+                "eqty": ["open", "high", "low", "close", "volume", "close_adj", "er"],
+                "cmdty": ["open", "high", "low", "close", "volume", "close_adj", "er"],
+                "credit": ["open", "high", "low", "close", "volume", "close_adj", "er"],
+                "macro": ["actual"],
+            }
 
-        # list of fields
-        market_fields_list = ["open", "high", "low", "close", "volume", "close_adj", "er"]
-        macro_fields_list = ["actual"]
+        # fields cat
+        if self.data_req is not None:
+            self.fields = self.fields[self.data_req.cat]
 
-        # fields dict
-        fields = {
-            "fx": market_fields_list,
-            "rates": market_fields_list,
-            "eqty": market_fields_list,
-            "cmdty": market_fields_list,
-            "credit": market_fields_list,
-            "macro": macro_fields_list,
-        }
+        return self.fields
 
-        # fields obj
-        if cat is not None:
-            fields = fields[cat]
+    def get_frequencies_info(self) -> Dict[str, Union[str, int]]:
+        """
+        Get frequencies info.
 
-        return fields
+        Returns
+        -------
+        freq: dictionary
+            Dictionary with info on available frequencies.
+        """
+        if self.frequencies is None:
+            self.frequencies = {
+                "crypto": ["d", "w", "m", "q", "y"],
+                "fx": ["d", "w", "m", "q", "y"],
+                "rates": ["d", "w", "m", "q", "y"],
+                "cmdty": ["d", "w", "m", "q", "y"],
+                "eqty": ["d", "w", "m", "q", "y"],
+                "credit": ["d", "w", "m", "q", "y"],
+                "macro": ["d", "w", "m", "q", "y"],
+            }
 
-    def get_rate_limit_info(self) -> None:
+        return self.frequencies
+
+    @staticmethod
+    def get_rate_limit_info() -> None:
         """
         Get rate limit info.
         """
         print(f"See specific data vendor for rate limits: {data_cred.pdr_vendors_url}")
 
-    @staticmethod
-    def get_series(data_req: DataRequest) -> pd.DataFrame:
+    def convert_params(self, data_req: DataRequest) -> DataRequest:
         """
-        Gets series from DBnomics python client.
+        Converts data request parameters to source format.
+
+        Parameters
+        ----------
+        data_req: DataRequest
+            Parameters of data request in CryptoDataPy format.
+
+        Returns
+        -------
+        data_req: DataRequest
+            Parameters of data request in source format.
+        """
+        # convert params to source format
+        if self.data_req is None:
+            self.data_req = getattr(ConvertParams(data_req), f"to_{data_req.source}")()
+
+        # check cat
+        if self.data_req.cat not in self.categories:
+            raise ValueError(
+                f"Select a valid category. Valid categories are: {self.categories}."
+            )
+
+        # check tickers
+        if not self.data_req.source_tickers:
+            raise ValueError("No tickers provided for data request.")
+
+        # check freq
+        if self.data_req.source_freq not in self.frequencies:
+            raise ValueError(
+                f"{self.data_req.source_freq} frequency is not available. "
+                f"Use the '.frequencies' attribute to check available frequencies."
+            )
+
+        # mkt type
+        if self.data_req.mkt_type not in self.market_types:
+            raise ValueError(
+                f"{self.data_req.mkt_type} is not available for {self.data_req.exch}."
+            )
+
+        # check fields
+        if self.fields is None:
+            self.get_fields_info()
+        if not any(field in self.fields for field in self.data_req.fields):
+            raise ValueError(
+                f"{self.data_req.fields} fields are not available for {self.data_req.cat}."
+            )
+
+        return self.data_req
+
+    def get_series(self, data_req: DataRequest) -> pd.DataFrame:
+        """
+        Gets series from python client.
 
         Parameters
         ----------
@@ -220,55 +256,51 @@ class PandasDataReader(Library):
             Dataframe with DatetimeIndex and actual values (col) for requested series.
 
         """
-        # convert data request parameters to source format
-        conv_data_req = getattr(ConvertParams(data_req), f"to_{data_req.source}")()
+        # convert params to source format
+        if self.data_req is None:
+            self.convert_params(data_req)
 
         try:
-            # fetch yahoo data
-            if data_req.source == "yahoo":
+            # yahoo
+            if self.data_req.source == "yahoo":
                 # fetch yf data
-                df = yf.download(conv_data_req["tickers"],
-                                 conv_data_req["start_date"],
-                                 conv_data_req["end_date"])
+                self.data = yf.download(self.data_req.source_tickers,
+                                        self.data_req.source_start_date,
+                                        self.data_req.source_end_date)
 
-            # fetch fama-french data
+            # fama-french
             elif data_req.source == "famafrench":
-                df = pd.DataFrame()
-                for ticker in conv_data_req["tickers"]:
-                    df1 = pdr_fetch(ticker,
-                                    data_req.source,
-                                    conv_data_req["start_date"],
-                                    conv_data_req["end_date"])
-                    df = pd.concat([df, df1[0]], axis=1)
+                for ticker in self.data_req.source_tickers:
+                    df1 = web.DataReader(ticker,
+                                         self.data_req.source,
+                                         self.data_req.source_start_date,
+                                         self.data_req.source_end_date)
+                    self.data = pd.concat([self.data, df1[0]], axis=1)
 
-            # featch wb data
+            # world bank
             elif data_req.source == "wb":
-                df = pd.DataFrame()
-                for ticker in conv_data_req["tickers"]:
+                for ticker in self.data_req.source_tickers:
                     df1 = wb.download(indicator=ticker,
-                                      country=conv_data_req['ctys'],
-                                      start=conv_data_req["start_date"],
-                                      end=conv_data_req["end_date"])
-                    df = pd.concat([df, df1], axis=1)
+                                      country=self.data_req.countries,
+                                      start=self.data_req.source_start_date,
+                                      end=self.data_req.source_end_date)
+                    self.data = pd.concat([self.data, df1], axis=1)
 
-            # fetch pdr data
+            # other pdr data
             else:
-                df = pdr_fetch(conv_data_req["tickers"],
-                               data_req.source,
-                               conv_data_req["start_date"],
-                               conv_data_req["end_date"])
+                self.data = web.DataReader(self.data_req.source_tickers,
+                                           self.data_req.source,
+                                           self.data_req.source_start_date,
+                                           self.data_req.source_end_date)
 
         except Exception as e:
             logging.warning(e)
-            logging.warning(f"Failed to get data for: {conv_data_req['tickers']}.")
+            logging.warning(f"Failed to get data for source tickers: {self.data_req.source_tickers}.")
 
         else:
+            return self.data
 
-            return df
-
-    @staticmethod
-    def wrangle_data_resp(
-            data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
+    def wrangle_data_resp(self, data_req: DataRequest, data_resp: pd.DataFrame) -> pd.DataFrame:
         """
         Wrangle data response.
 
@@ -285,8 +317,11 @@ class PandasDataReader(Library):
             Wrangled dataframe with DatetimeIndex (level 0), ticker (level 1), and values for market or macro series
             for selected fields (cols), in tidy format.
         """
+        if self.data_req is None:
+            self.convert_params(data_req)
+
         # wrangle data resp
-        df = getattr(WrangleData(data_req, data_resp), data_req.source)()
+        df = getattr(WrangleData(self.data_req, data_resp), self.data_req.source)()
 
         return df
 
@@ -305,38 +340,17 @@ class PandasDataReader(Library):
             Dataframe with DatetimeIndex (level 0), tickers (level 1) and actual values (cols),
             in tidy data format.
         """
-        # change to get series
-        df = self.get_series(data_req)
+        # convert params to source format
+        if self.data_req is None:
+            self.convert_params(data_req)
+
+        # get series
+        data_resp = self.get_series(self.data_req)
+
         # wrangle data resp
-        df = self.wrangle_data_resp(data_req, df)
+        df = self.wrangle_data_resp(self.data_req, data_resp)
 
         return df
-
-    def check_params(self, data_req: DataRequest) -> None:
-        """
-        Checks the data request parameters before requesting data to reduce API calls
-        and improve efficiency.
-
-        """
-        # check data source
-        if data_req.source not in ['fred', 'yahoo', 'famafrench', 'wb']:
-            raise ValueError(
-                "Select a Pandas-datareader supported data source for the data request."
-            )
-
-        # check cat
-        if data_req.cat not in self.categories:
-            raise ValueError(
-                f"Select a valid category. Valid categories are: {self.categories}."
-            )
-        # check freq
-        if data_req.freq not in self.frequencies[data_req.cat]:
-            raise ValueError(
-                f"Invalid data frequency. Valid data frequencies are: {self.frequencies}."
-            )
-        # check fields
-        if not any(field in self.fields[data_req.cat] for field in data_req.fields):
-            raise ValueError(f"Invalid fields. Valid data fields are: {self.fields}.")
 
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
@@ -352,16 +366,17 @@ class PandasDataReader(Library):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols),
             in tidy format.
         """
-        # check params
-        self.check_params(data_req)
+        # convert params to source format
+        if self.data_req is None:
+            self.convert_params(data_req)
 
         # get tidy data
-        df = self.get_tidy_data(data_req)
+        self.data = self.get_tidy_data(self.data_req)
 
         # check if df empty
-        if df.empty:
+        if self.data.empty:
             raise Exception(
                 "No data returned. Check data request parameters and try again."
             )
 
-        return df.sort_index()
+        return self.data.sort_index()

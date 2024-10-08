@@ -10,6 +10,9 @@ from cryptodatapy.extract.libraries.ccxt_api import CCXT
 
 
 class TestCCXT:
+    """
+    Test CCXT class.
+    """
     @pytest.fixture(autouse=True)
     def setup(self):
         self.ccxt_instance = CCXT(
@@ -31,7 +34,7 @@ class TestCCXT:
             fields=['open', 'high', 'low', 'close', 'volume', 'funding_rate', 'oi'],
             freq='1h',
             mkt_type='perpetual_future',
-            start_date = pd.Timestamp.utcnow() - pd.Timedelta(days=1)
+            start_date=pd.Timestamp.utcnow() - pd.Timedelta(days=1)
         )
         self.data_req = ConvertParams(self.data_req).to_ccxt()
         self.ccxt_instance.exchange_async.fetchOHLCV.return_value = [
@@ -174,40 +177,6 @@ class TestCCXT:
         assert data[1]['openInterestAmount'] == 80985.684
         assert data[2]['timestamp'] == 1725149700000
         assert data[0]['datetime'] == '2024-09-01T00:05:00.000Z'
-
-    def test_wrangle_data_resp(self):
-        """
-        Test wrangling of data response from get_all_data_hist into tidy data format.
-        """
-        ohlcv_df = self.ccxt_instance.wrangle_data_resp(self.data_req,
-                                                  [self.ccxt_instance.exchange_async.fetchOHLCV.return_value],
-                                                  data_type='ohlcv')
-
-        assert not ohlcv_df.empty, "Dataframe was returned empty."
-        assert isinstance(ohlcv_df.index.get_level_values(0), pd.DatetimeIndex), "Index is not DatetimeIndex."
-        assert list(ohlcv_df.columns) == ["open", "high", "low", "close", "volume"], \
-            "Fields are missing from dataframe."
-        assert (ohlcv_df.dtypes == 'Float64').all(), "Data types are not float64."
-
-        funding_df = self.ccxt_instance.wrangle_data_resp(self.data_req,
-                                                    [self.ccxt_instance.exchange_async.fetchFundingRateHistory.
-                                                          return_value],
-                                                    data_type='funding_rates')
-
-        assert not funding_df.empty, "Dataframe was returned empty."
-        assert isinstance(funding_df.index.get_level_values(0), pd.DatetimeIndex), "Index is not DatetimeIndex."
-        assert list(funding_df.columns) == ["funding_rate"], "Fields are missing from dataframe."
-        assert (funding_df.dtypes == 'Float64').all(), "Data types are not float64."
-
-        oi_df = self.ccxt_instance.wrangle_data_resp(self.data_req,
-                                                  [self.ccxt_instance.exchange_async.fetchOpenInterestHistory.
-                                                     return_value],
-                                                  data_type='open_interest')
-
-        assert not oi_df.empty, "Dataframe was returned empty."
-        assert isinstance(oi_df.index.get_level_values(0), pd.DatetimeIndex), "Index is not DatetimeIndex."
-        assert list(oi_df.columns) == ["oi"], "Fields are missing from dataframe."
-        assert (oi_df.dtypes == 'Float64').all(), "Data types are not float64."
 
     @pytest.mark.asyncio
     async def test_fetch_tidy_ohlcv(self, exch='binance'):

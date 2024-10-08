@@ -21,6 +21,7 @@ class DataRequest:
         markets: Optional[Union[str, List[str]]] = None,
         freq: str = "d",
         exch: Optional[str] = None,
+        countries: Optional[Union[str, List[str]]] = None,
         mkt_type: Optional[str] = "spot",
         start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
         end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
@@ -55,6 +56,8 @@ class DataRequest:
             Frequency of data observations. Defaults to daily 'd' which includes weekends for cryptoassets.
         exch: str,  optional, default None
             Name of asset exchange, e.g. 'Binance', 'FTX', 'IEX', 'Nasdaq', etc.
+        countries: list or str, optional, default None
+            Country codes for which to pull data, e.g. 'US', 'GB', 'CN', 'JP', etc.
         mkt_type: str, optional, default 'spot'
             Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option'.
         start_date: str, datetime or pd.Timestamp, optional, default None
@@ -99,6 +102,7 @@ class DataRequest:
         self.markets = markets  # markets
         self.freq = freq  # frequency
         self.exch = exch  # exchange
+        self.countries = countries  # country codes
         self.mkt_type = mkt_type  # market type
         self.start_date = start_date  # start date
         self.end_date = end_date  # end date
@@ -281,6 +285,27 @@ class DataRequest:
             self._exch = exch
         else:
             raise TypeError("Exchange must be a string.")
+
+    @property
+    def countries(self):
+        """
+        Returns country codes for data request.
+        """
+        return self._countries
+
+    @countries.setter
+    def countries(self, countries):
+        """
+        Sets country codes for data request.
+        """
+        if countries is None:
+            self._countries = countries
+        elif isinstance(countries, str):
+            self._countries = [countries]
+        elif isinstance(countries, list):
+            self._countries = countries
+        else:
+            raise TypeError("Country codes must be a string or list of strings.")
 
     @property
     def mkt_type(self):
@@ -665,7 +690,8 @@ class DataRequest:
             Data response in JSON format.
         """
         # set number of attempts
-        attempts = 0
+        attempts, resp = 0, None
+
         # run a while loop in case the attempt fails
         while attempts < self.trials:
 

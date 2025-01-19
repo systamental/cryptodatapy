@@ -46,6 +46,11 @@ class Web(ABC):
     def categories(self, categories: Union[str, List[str]]):
         """
         Sets a list of available categories for the data vendor.
+
+        Parameters
+        ----------
+        categories : Union[str, List[str]]
+            A string or list of strings containing the categories to filter the data vendor's data.
         """
         valid_categories = [
             None,
@@ -89,6 +94,11 @@ class Web(ABC):
     def indexes(self, indexes: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available indexes for the web page.
+
+        Parameters
+        ----------
+        indexes : Optional[Union[str, List[str], Dict[str, List[str]]]
+            A string, list of strings, or dict containing the indexes to filter the web page's data.
         """
         if indexes is None or isinstance(indexes, list) or isinstance(indexes, dict):
             self._indexes = indexes
@@ -118,6 +128,11 @@ class Web(ABC):
     def assets(self, assets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available assets for the data vendor.
+
+        Parameters
+        ----------
+        assets : Optional[Union[str, List[str], Dict[str, List[str]]]
+            A string, list of strings, or dict containing the assets to filter the data vendor's data.
         """
         if assets is None or isinstance(assets, list) or isinstance(assets, dict):
             self._assets = assets
@@ -147,6 +162,11 @@ class Web(ABC):
     def markets(self, markets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available markets for the data vendor.
+
+        Parameters
+        ----------
+        markets : Optional[Union[str, List[str], Dict[str, List[str]]]
+            A string, list of strings, or dict containing the markets to filter the data vendor's data.
         """
         if markets is None or isinstance(markets, list) or isinstance(markets, dict):
             self._markets = markets
@@ -176,6 +196,11 @@ class Web(ABC):
     def market_types(self, market_types: Optional[Union[str, List[str]]]):
         """
         Sets a list of available market types for the data vendor.
+
+        Parameters
+        ----------
+        market_types : Optional[Union[str, List[str]]
+            A string or list of strings containing the market types to filter the data vendor's data.
         """
         valid_mkt_types, mkt_types_list = [
             None,
@@ -214,6 +239,11 @@ class Web(ABC):
     def fields(self, fields: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available fields for the data vendor.
+
+        Parameters
+        ----------
+        fields : Optional[Union[str, List[str], Dict[str, List[str]]]
+            A string, list of strings, or dict containing the fields to filter the data vendor's data.
         """
         if fields is None or isinstance(fields, list) or isinstance(fields, dict):
             self._fields = fields
@@ -229,6 +259,11 @@ class Web(ABC):
     def get_fields_info(self, data_type: Optional[str]):
         """
         Gets info for available fields from the data vendor.
+
+        Parameters
+        ----------
+        data_type : Optional[str]
+            A string containing the data type to filter the data vendor's fields
         """
         # to be implemented by subclasses
 
@@ -245,6 +280,11 @@ class Web(ABC):
     ):
         """
         Sets a list of available data frequencies for the data vendor.
+
+        Parameters
+        ----------
+        frequencies : Optional[Union[str, List[str], Dict[str, List[str]]]
+            A string, list of strings, or dict containing the frequencies to filter the data vendor's data.
         """
         if (
             frequencies is None
@@ -271,6 +311,11 @@ class Web(ABC):
     def base_url(self, url: Optional[str]):
         """
         Sets the base url for the data vendor.
+
+        Parameters
+        ----------
+        url : Optional[str]
+            A string containing the data vendor's base URL to which endpoint paths are appended.
         """
         if url is None or isinstance(url, str):
             self._base_url = url
@@ -291,6 +336,11 @@ class Web(ABC):
     def file_formats(self, formats: Optional[Union[str, List[str]]]):
         """
         Sets the file formats for the files on the web page.
+
+        Parameters
+        ----------
+        formats : Optional[Union[str, List[str]]
+            A string or list of strings containing the file formats for the web page's data files.
         """
         if formats is None or isinstance(formats, list):
             self._file_formats = formats
@@ -305,6 +355,11 @@ class Web(ABC):
     def get_data(self, data_req: DataRequest) -> pd.DataFrame:
         """
         Submits get data request to API.
+
+        Parameters
+        ----------
+        data_req : DataRequest
+            A DataRequest object containing the request parameters.
         """
         # to be implemented by subclasses
 
@@ -313,5 +368,12 @@ class Web(ABC):
     def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
+
+        Parameters
+        ----------
+        data_req : DataRequest
+            A DataRequest object containing the request parameters.
+        data_resp : Union[Dict[str, Any], pd.DataFrame]
+            A dictionary or DataFrame containing the data response from the data vendor API.
         """
         # to be implemented by subclasses

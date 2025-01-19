@@ -11,7 +11,6 @@ class Library(ABC):
     Library is an abstract base class which provides a blueprint for properties and methods for the
     library subclass.
     """
-
     def __init__(
         self,
         categories,
@@ -400,8 +399,7 @@ class Library(ABC):
 
     @staticmethod
     @abstractmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) \
-            -> pd.DataFrame:
+    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
         """

@@ -3,9 +3,6 @@ from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 import asyncio
-import ccxt
-import ccxt.async_support as ccxt_async
-from tqdm.asyncio import tqdm  # Progress bar for async
 
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.exchanges.exchange import Exchange

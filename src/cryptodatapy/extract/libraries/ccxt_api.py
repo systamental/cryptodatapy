@@ -5,7 +5,7 @@ import pandas as pd
 import asyncio
 import ccxt
 import ccxt.async_support as ccxt_async
-from tqdm.asyncio import tqdm  # Progress bar for async
+from tqdm.asyncio import tqdm
 
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.library import Library
@@ -766,14 +766,6 @@ class CCXT(Library):
                 f"{self.data_req.source_freq} frequency is not available. "
                 f"Use the '.frequencies' attribute to check available frequencies."
             )
-
-        # check quote ccy
-        if self.data_req.quote_ccy is not None:
-            if self.data_req.quote_ccy not in self.assets:
-                raise ValueError(
-                    f"{self.data_req.quote_ccy} is not supported. "
-                    f"Use the '.assets' attribute to check supported currencies."
-                )
 
         # check mkt type
         if self.data_req.mkt_type not in self.market_types:

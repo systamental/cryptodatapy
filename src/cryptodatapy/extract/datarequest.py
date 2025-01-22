@@ -12,7 +12,6 @@ class DataRequest:
     """
     Data request class which contains parameters for data retrieval.
     """
-
     def __init__(
         self,
         source: str = "ccxt",

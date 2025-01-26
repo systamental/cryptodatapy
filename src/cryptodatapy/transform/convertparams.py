@@ -13,10 +13,7 @@ class ConvertParams:
     Converts data request parameters from CryptoDataPy to data source format.
     """
 
-    def __init__(
-        self,
-        data_req: DataRequest = None,
-    ):
+    def __init__(self, data_req: DataRequest):
         """
         Constructor
 
@@ -24,7 +21,6 @@ class ConvertParams:
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
-
         """
         self.data_req = data_req
 
@@ -69,7 +65,7 @@ class ConvertParams:
             start_date = round(pd.Timestamp(self.data_req.start_date).timestamp())
         # convert end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp(datetime.utcnow()).timestamp())
+            end_date = round(pd.Timestamp.utcnow().timestamp())
         else:
             end_date = round(pd.Timestamp(self.data_req.end_date).timestamp())
         # fields
@@ -108,7 +104,6 @@ class ConvertParams:
     def to_coinmetrics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to CoinMetrics format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -121,10 +116,12 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq == "block":
+            if self.data_req.freq is None:
+                freq = "1d"
+            elif self.data_req.freq == "block":
                 freq = "1b"
             elif self.data_req.freq == "tick":
-                freq = "tick"
+                freq = "raw"
             elif self.data_req.freq[-1] == "s":
                 freq = "1s"
             elif self.data_req.freq[-3:] == "min":
@@ -226,6 +223,16 @@ class ConvertParams:
                         + "-"
                         + "future"
                     )
+        # start date
+        if self.data_req.start_date is not None:
+            start_date = self.data_req.start_date.strftime('%Y-%m-%d')
+        else:
+            start_date = None
+        # end date
+        if self.data_req.end_date is not None:
+            end_date = self.data_req.end_date.strftime('%Y-%m-%d')
+        else:
+            end_date = None
 
         return {
             "tickers": tickers,
@@ -235,8 +242,8 @@ class ConvertParams:
             "ctys": None,
             "mkt_type": self.data_req.mkt_type,
             "mkts": mkts_list,
-            "start_date": self.data_req.start_date,
-            "end_date": self.data_req.end_date,
+            "start_date": start_date,
+            "end_date": end_date,
             "fields": fields,
             "tz": tz,
             "inst": inst,
@@ -251,7 +258,6 @@ class ConvertParams:
     def to_glassnode(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to Glassnode format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -264,7 +270,9 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq[-3:] == "min":
+            if self.data_req.freq is None:
+                freq = "24h"
+            elif self.data_req.freq[-3:] == "min":
                 freq = "10m"
             elif self.data_req.freq[-1] == "h":
                 freq = "1h"
@@ -275,7 +283,7 @@ class ConvertParams:
             elif self.data_req.freq == "m":
                 freq = "1month"
             else:
-                freq = self.data_req.freq
+                freq = "24h"
         # convert quote ccy
         if self.data_req.quote_ccy is None:
             quote_ccy = "USD"
@@ -334,7 +342,6 @@ class ConvertParams:
     def to_tiingo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Tiingo format.
-
         """
         # convert tickers
         if self.data_req.source_tickers is not None:
@@ -347,7 +354,9 @@ class ConvertParams:
             freq = self.data_req.source_freq
             self.data_req.freq = self.data_req.source_freq
         else:
-            if self.data_req.freq[-3:] == "min":
+            if self.data_req.freq is None:
+                freq = "1day"
+            elif self.data_req.freq[-3:] == "min":
                 freq = self.data_req.freq
             elif self.data_req.freq[-1] == "h":
                 freq = "1hour"
@@ -388,7 +397,7 @@ class ConvertParams:
             start_date = self.data_req.start_date
         # convert end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            end_date = pd.Timestamp.utcnow()
         else:
             end_date = self.data_req.end_date
         # convert fields
@@ -424,154 +433,113 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_ccxt(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_ccxt(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to CCXT format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = [ticker.split('/')[0] for ticker in self.data_req.source_tickers]
-            self.data_req.tickers = tickers
-        else:
-            tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            if self.data_req.freq == "tick":
-                freq = "tick"
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "1d"
+            elif self.data_req.freq == "tick":
+                self.data_req.source_freq = "tick"
             elif self.data_req.freq[-3:] == "min":
-                freq = self.data_req.freq.replace("min", "m")
-            elif self.data_req.freq == "d":
-                freq = "1d"
+                self.data_req.source_freq = self.data_req.freq.replace("min", "m")
+            elif self.data_req.freq[-1] == "h":
+                self.data_req.source_freq = self.data_req.freq
             elif self.data_req.freq == "w":
-                freq = "1w"
+                self.data_req.source_freq = "1w"
             elif self.data_req.freq == "m":
-                freq = "1M"
+                self.data_req.source_freq = "1M"
             elif self.data_req.freq[-1] == "m":
-                freq = self.data_req.freq.replace("m", "M")
+                self.data_req.source_freq = self.data_req.freq.replace("m", "M")
             elif self.data_req.freq == "q":
-                freq = "1q"
+                self.data_req.source_freq = "1q"
             elif self.data_req.freq == "y":
-                freq = "1y"
+                self.data_req.source_freq = "1y"
             else:
-                freq = self.data_req.freq
-        # convert quote ccy
+                self.data_req.source_freq = "1d"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "USDT"
+            self.data_req.quote_ccy = "USDT"
         else:
-            quote_ccy = self.data_req.quote_ccy.upper()
-        # convert exch
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
+        # exch
         if self.data_req.mkt_type == "perpetual_future" and (
             self.data_req.exch is None or self.data_req.exch == "binance"
         ):
-            exch = "binanceusdm"
+            self.data_req.exch = "binanceusdm"
         elif self.data_req.exch is None:
-            exch = "binance"
+            self.data_req.exch = "binance"
         elif (
             self.data_req.exch == "kucoin"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "kucoinfutures"
+            self.data_req.exch = "kucoinfutures"
         elif (
             self.data_req.exch == "huobi"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "huobipro"
+            self.data_req.exch = "huobipro"
         elif (
             self.data_req.exch == "bitfinex"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "bitfinex2"
+            self.data_req.exch = "bitfinex2"
         elif (
             self.data_req.exch == "mexc"
             and self.data_req.mkt_type == "perpetual_future"
         ):
-            exch = "mexc3"
+            self.data_req.exch = "mexc3"
         else:
-            exch = self.data_req.exch.lower()
-        # convert tickers to mkts
-        mkts_list = []
-        if self.data_req.source_tickers is not None:
-            mkts_list = self.data_req.source_tickers
+            self.data_req.exch = self.data_req.exch.lower()
+
+        # markets
+        if self.data_req.source_markets is None:
+            if self.data_req.mkt_type == "spot":
+                self.data_req.source_markets = [ticker + "/" + self.data_req.quote_ccy
+                                                for ticker in self.data_req.source_tickers]
+            elif self.data_req.mkt_type == "perpetual_future":
+                self.data_req.source_markets = [ticker + "/" + self.data_req.quote_ccy + ":" + self.data_req.quote_ccy
+                        for ticker in self.data_req.source_tickers]
         else:
-            for ticker in self.data_req.tickers:
-                if self.data_req.mkt_type == "spot":
-                    mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
-                elif self.data_req.mkt_type == "perpetual_future":
-                    if exch == "binanceusdm":
-                        mkts_list.append(ticker.upper() + "/" + quote_ccy.upper())
-                    elif (
-                        exch == "ftx"
-                        or exch == "okx"
-                        or exch == "kucoinfutures"
-                        or exch == "huobipro"
-                        or exch == "cryptocom"
-                        or exch == "bitfinex2"
-                        or exch == "bybit"
-                        or exch == "mexc3"
-                        or exch == "aax"
-                        or exch == "bitmex"
-                    ):
-                        mkts_list.append(
-                            ticker.upper()
-                            + "/"
-                            + quote_ccy.upper()
-                            + ":"
-                            + quote_ccy.upper()
-                        )
-        # convert start date
+            self.data_req.source_tickers = [market.split("/")[0] for market in self.data_req.source_markets]
+
+        # start date
         if self.data_req.start_date is None:
-            start_date = round(
+            self.data_req.source_start_date = round(
                 pd.Timestamp("2010-01-01 00:00:00").timestamp() * 1e3
             )
         else:
-            start_date = round(
+            self.data_req.source_start_date = round(
                 pd.Timestamp(self.data_req.start_date).timestamp() * 1e3
             )
-        # convert end date
+
+        # end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp(datetime.utcnow()).timestamp() * 1e3)
+            self.data_req.source_end_date = round(pd.Timestamp.utcnow().timestamp() * 1e3)
         else:
-            end_date = round(pd.Timestamp(self.data_req.end_date).timestamp() * 1e3)
-        # convert fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='ccxt')
+            self.data_req.source_end_date = round(pd.Timestamp(self.data_req.end_date).timestamp() * 1e3)
+
+        # fields
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='ccxt')
+
         # tz
         if self.data_req.tz is None:
-            tz = "UTC"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "UTC"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": mkts_list,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": 'crypto',
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_dbnomics(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert tickers from CryptoDataPy to DBnomics format.
-
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -682,7 +650,7 @@ class ConvertParams:
             start_date = pd.Timestamp(self.data_req.start_date).strftime("%d/%m/%Y")
         # convert end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().strftime("%d/%m/%Y")
+            end_date = pd.Timestamp.utcnow().strftime("%d/%m/%Y")
         else:
             end_date = pd.Timestamp(self.data_req.end_date).strftime("%d/%m/%Y")
         # convert fields
@@ -716,114 +684,82 @@ class ConvertParams:
     def to_fred(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Fred format.
-
         """
         # convert tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = []
             for ticker in self.data_req.tickers:
                 try:
-                    tickers.append(tickers_df.loc[ticker, "fred_id"])
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "fred_id"])
                 except KeyError:
                     logging.warning(
-                        f"{ticker} not found for Fred data source. Check tickers in"
+                        f"{ticker} not found for Fred source. Check tickers in"
                         f" data catalog and try again."
                     )
-                    self.data_req.tickers.remove(ticker)
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            freq = self.data_req.freq
-        # convert quote ccy
-        quote_ccy = self.data_req.quote_ccy
+
+        # freq
+        if self.data_req.source_freq is None:
+            self.data_req.source_freq = self.data_req.freq
+
         # start date
-        if self.data_req.start_date is None:
-            start_date = datetime(1920, 1, 1)
+        if self.data_req.source_start_date is None:
+            self.data_req.source_start_date = pd.Timestamp('1920-01-01')
         else:
-            start_date = self.data_req.start_date
+            self.data_req.source_start_date = self.data_req.start_date
+
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow()
+            self.data_req.source_end_date = pd.Timestamp.utcnow().tz_localize(None)
         else:
-            end_date = self.data_req.end_date
+            self.data_req.source_end_date = self.data_req.end_date
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='fred')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='fred')
+
         # tz
         if self.data_req.tz is None:
-            tz = "America/New_York"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "America/New_York"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": self.data_req.exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_wb(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
-
         """
-        # convert tickers
+        # tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = []
             for ticker in self.data_req.tickers:
                 try:
-                    tickers.append(tickers_df.loc[ticker, "wb_id"])
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "wb_id"])
                 except KeyError:
                     logging.warning(
-                        f"{ticker} not found for World Bank data source. Check tickers in"
+                        f"{ticker} not found for World Bank source. Check tickers in"
                         f" data catalog and try again."
                     )
-                    self.data_req.tickers.remove(ticker)
         # drop dupes
-        tickers = list(set(tickers))
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            freq = self.data_req.freq
+        self.data_req.source_tickers = list(set(self.data_req.source_tickers))
+
+        # freq
+        if self.data_req.source_freq is None:
+            self.data_req.source_freq = self.data_req.freq
+
         # convert quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "USD"
+            self.data_req.quote_ccy = "USD"
         else:
-            quote_ccy = self.data_req.quote_ccy.upper()
-        # convert ctys
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
+        # ctys
         ctys_list = []
         if self.data_req.cat == "macro":
             for ticker in self.data_req.tickers:
@@ -834,184 +770,115 @@ class ConvertParams:
                         f"{ticker} not found for {self.data_req.source} source. Check tickers in "
                         f"data catalog and try again."
                     )
-        ctys_list = list(set(ctys_list))
+        self.data_req.ctys = list(set(ctys_list))
+
         # start date
         if self.data_req.start_date is None:
-            start_date = 1920
+            self.data_req.source_start_date = 1920
         else:
-            start_date = int(self.data_req.start_date.year)
+            self.data_req.source_start_date = int(self.data_req.start_date.year)
+
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().year
+            self.data_req.source_end_date = pd.Timestamp.utcnow().year
         else:
-            end_date = int(self.data_req.end_date.year)
+            self.data_req.source_end_date = int(self.data_req.end_date.year)
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='wb')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='wb')
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": self.data_req.exch,
-            "ctys": ctys_list,
-            "mkt_type": None,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": self.data_req.tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
-    def to_yahoo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
+    def to_yahoo(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to Yahoo Finance format.
-
         """
-        # convert tickers
+        # tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        elif self.data_req.cat != 'eqty':
-            for ticker in self.data_req.tickers:
+        if self.data_req.source_tickers is None:
+            if self.data_req.cat == 'eqty':
+                self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+                self.data_req.tickers = self.data_req.source_tickers
+            else:
+                self.data_req.source_tickers = []
                 if self.data_req.cat == 'fx':
-                    ticker = ticker.upper()
-                try:
-                    tickers.append(tickers_df.loc[ticker, "yahoo_id"])
-                except KeyError:
-                    logging.warning(
-                        f"{ticker} not found for Yahoo Finance data source. Check tickers in"
-                        f" data catalog and try again."
-                    )
-                    self.data_req.tickers.remove(ticker)
-        else:
-            tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            freq = self.data_req.freq
-        # convert quote ccy
-        quote_ccy = self.data_req.quote_ccy
+                    self.data_req.tickers = [ticker.upper() for ticker in self.data_req.tickers]
+                for ticker in self.data_req.tickers:
+                    try:
+                        self.data_req.source_tickers.append(tickers_df.loc[ticker, "yahoo_id"])
+                    except KeyError:
+                        logging.warning(
+                            f"{ticker} not found for Yahoo Finance data source. Check tickers in"
+                            f" data catalog and try again."
+                        )
+
+        # freq
+        if self.data_req.source_freq is None:
+            self.data_req.source_freq = self.data_req.freq
+
         # start date
         if self.data_req.start_date is None:
-            start_date = '1920-01-01'
+            self.data_req.source_start_date = '1920-01-01'
         else:
-            start_date = self.data_req.start_date
+            self.data_req.source_start_date = self.data_req.start_date
+
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().strftime('%Y-%m-%d')
+            self.data_req.source_end_date = pd.Timestamp.utcnow().strftime('%Y-%m-%d')
         else:
-            end_date = self.data_req.end_date
+            self.data_req.source_end_date = self.data_req.end_date
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='yahoo')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='yahoo')
+
         # tz
         if self.data_req.tz is None:
-            tz = "America/New_York"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "America/New_York"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": self.data_req.exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
-    def to_famafrench(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
+    def to_famafrench(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to Fama-French format.
         """
-        # convert tickers
+        # tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
-        tickers_df, tickers = pd.read_csv(tickers_path, index_col=0, encoding="latin1"), []
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
 
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = []
             for ticker in self.data_req.tickers:
                 try:
-                    tickers.append(tickers_df.loc[ticker, "famafrench_id"])
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "famafrench_id"])
                 except KeyError:
                     logging.warning(
                         f"{ticker} not found for Fama-French source. Check tickers in"
                         f" data catalog and try again."
                     )
-                    self.data_req.tickers.remove(ticker)
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            freq = self.data_req.freq
-        # convert quote ccy
-        quote_ccy = self.data_req.quote_ccy
+
+        # freq
+        if self.data_req.source_freq is None:
+            self.data_req.source_freq = self.data_req.freq
+
         # start date
         if self.data_req.start_date is None:
-            start_date = datetime(1920, 1, 1)
+            self.data_req.source_start_date = datetime(1920, 1, 1)
         else:
-            start_date = self.data_req.start_date
+            self.data_req.source_start_date = self.data_req.start_date
+
         # end date
         if self.data_req.end_date is None:
-            end_date = datetime.utcnow().date()
+            self.data_req.source_end_date = datetime.now()
         else:
-            end_date = self.data_req.end_date
+            self.data_req.source_end_date = self.data_req.end_date
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": self.data_req.exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": self.data_req.fields,
-            "tz": self.data_req.tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_aqr(self) -> Dict[str, Union[list, str, int, dict, float, datetime, None]]:
         """
@@ -1154,7 +1021,7 @@ class ConvertParams:
             List of fields in data source format.
 
         """
-        # get fields
+        # x fields
         with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_dict_path = f
         fields_df, fields_list = (
@@ -1179,3 +1046,122 @@ class ConvertParams:
                     )
 
         return fields_list
+    
+
+    def to_dydx_dict(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert parameters from CryptoDataPy to dYdX format.
+        """
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        else:
+            tickers = [ticker.upper() for ticker in self.data_req.tickers]
+        
+        # convert markets (if needed)
+        markets = [f"{ticker}-USD" for ticker in tickers]
+        
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            if self.data_req.freq is None:
+                freq = "1DAY"
+            elif self.data_req.freq == "1min":
+                freq = "1MIN"
+            elif self.data_req.freq == "5min":
+                freq = "5MINS"
+            elif self.data_req.freq == "15min":
+                freq = "15MINS"
+            elif self.data_req.freq == "30min":
+                freq = "30MINS"
+            elif self.data_req.freq == "1h":
+                freq = "1HOUR"
+            elif self.data_req.freq == "4h":
+                freq = "4HOURS"
+            elif self.data_req.freq in ["1d", "d"]:
+                freq = "1DAY"
+            else:
+                freq = "1DAY"  # Default to daily
+            
+        # convert fields
+        if self.data_req.source_fields is not None:
+            fields = self.data_req.source_fields
+            self.data_req.fields = self.data_req.source_fields
+        else:
+            # Map our standard fields to dYdX field names
+            field_mapping = {
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'baseTokenVolume',
+                'funding_rate': 'nextFundingRate',
+                'oi': 'openInterest'
+            }
+            
+            fields = []
+            for field in self.data_req.fields:
+                if field in field_mapping:
+                    fields.append(field_mapping[field])
+                else:
+                    logging.warning(f"Field {field} not available in dYdX API")
+            return {
+            "tickers": tickers,  # List of market tickers
+            "freq": freq,        # Converted frequency
+            "quote_ccy": self.data_req.quote_ccy,
+            "exch": "dydx",
+            "mkt_type": self.data_req.mkt_type,
+            "mkts": markets,     # Market identifiers
+            "start_date": self.data_req.start_date,
+            "end_date": self.data_req.end_date,
+            "fields": fields,    # Converted field names
+            "tz": self.data_req.tz or "UTC",
+            "cat": "crypto",
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
+    def to_dydx(self) -> DataRequest:
+
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # markets 
+        if self.data_req.source_markets is None:
+            self.data_req.source_markets = [f"{ticker}-USD" 
+                                            for ticker in self.data_req.source_tickers]
+        
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "1DAY"
+            elif self.data_req.freq == "1min":
+                self.data_req.source_freq = "1MIN"
+            elif self.data_req.freq == "5min":
+                self.data_req.source_freq = "5MINS"
+            elif self.data_req.freq == "15min":
+                self.data_req.source_freq = "15MINS"
+            elif self.data_req.freq == "30min":
+                self.data_req.source_freq = "30MINS"
+            elif self.data_req.freq == "1h":
+                self.data_req.source_freq = "1HOUR"
+            elif self.data_req.freq == "4h":
+                self.data_req.source_freq = "4HOURS"
+            elif self.data_req.freq in ["1d", "d"]:
+                self.data_req.source_freq = "1DAY"
+
+        field_mapping = {
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'baseTokenVolume',
+                'funding_rate': 'nextFundingRate',
+                'oi': 'openInterest'
+            }
+        return self.data_req

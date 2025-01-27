@@ -1020,7 +1020,7 @@ class ConvertParams:
             List of fields in data source format.
 
         """
-        # get fields
+        # x fields
         with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_dict_path = f
         fields_df, fields_list = (
@@ -1045,3 +1045,122 @@ class ConvertParams:
                     )
 
         return fields_list
+    
+
+    def to_dydx_dict(self) -> Dict[str, Union[list, str, int, float, None]]:
+        """
+        Convert parameters from CryptoDataPy to dYdX format.
+        """
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        else:
+            tickers = [ticker.upper() for ticker in self.data_req.tickers]
+        
+        # convert markets (if needed)
+        markets = [f"{ticker}-USD" for ticker in tickers]
+        
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            if self.data_req.freq is None:
+                freq = "1DAY"
+            elif self.data_req.freq == "1min":
+                freq = "1MIN"
+            elif self.data_req.freq == "5min":
+                freq = "5MINS"
+            elif self.data_req.freq == "15min":
+                freq = "15MINS"
+            elif self.data_req.freq == "30min":
+                freq = "30MINS"
+            elif self.data_req.freq == "1h":
+                freq = "1HOUR"
+            elif self.data_req.freq == "4h":
+                freq = "4HOURS"
+            elif self.data_req.freq in ["1d", "d"]:
+                freq = "1DAY"
+            else:
+                freq = "1DAY"  # Default to daily
+            
+        # convert fields
+        if self.data_req.source_fields is not None:
+            fields = self.data_req.source_fields
+            self.data_req.fields = self.data_req.source_fields
+        else:
+            # Map our standard fields to dYdX field names
+            field_mapping = {
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'baseTokenVolume',
+                'funding_rate': 'nextFundingRate',
+                'oi': 'openInterest'
+            }
+            
+            fields = []
+            for field in self.data_req.fields:
+                if field in field_mapping:
+                    fields.append(field_mapping[field])
+                else:
+                    logging.warning(f"Field {field} not available in dYdX API")
+            return {
+            "tickers": tickers,  # List of market tickers
+            "freq": freq,        # Converted frequency
+            "quote_ccy": self.data_req.quote_ccy,
+            "exch": "dydx",
+            "mkt_type": self.data_req.mkt_type,
+            "mkts": markets,     # Market identifiers
+            "start_date": self.data_req.start_date,
+            "end_date": self.data_req.end_date,
+            "fields": fields,    # Converted field names
+            "tz": self.data_req.tz or "UTC",
+            "cat": "crypto",
+            "trials": self.data_req.trials,
+            "pause": self.data_req.pause,
+            "source_tickers": self.data_req.source_tickers,
+            "source_freq": self.data_req.source_freq,
+            "source_fields": self.data_req.source_fields,
+        }
+
+    def to_dydx(self) -> DataRequest:
+
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # markets 
+        if self.data_req.source_markets is None:
+            self.data_req.source_markets = [f"{ticker}-USD" 
+                                            for ticker in self.data_req.source_tickers]
+        
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "1DAY"
+            elif self.data_req.freq == "1min":
+                self.data_req.source_freq = "1MIN"
+            elif self.data_req.freq == "5min":
+                self.data_req.source_freq = "5MINS"
+            elif self.data_req.freq == "15min":
+                self.data_req.source_freq = "15MINS"
+            elif self.data_req.freq == "30min":
+                self.data_req.source_freq = "30MINS"
+            elif self.data_req.freq == "1h":
+                self.data_req.source_freq = "1HOUR"
+            elif self.data_req.freq == "4h":
+                self.data_req.source_freq = "4HOURS"
+            elif self.data_req.freq in ["1d", "d"]:
+                self.data_req.source_freq = "1DAY"
+
+        field_mapping = {
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'baseTokenVolume',
+                'funding_rate': 'nextFundingRate',
+                'oi': 'openInterest'
+            }
+        return self.data_req

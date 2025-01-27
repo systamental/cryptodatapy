@@ -2,6 +2,7 @@ import logging
 from typing import Any, Dict, List, Optional, Union
 import pandas as pd
 import asyncio
+import random
 from time import sleep
 import ccxt
 import ccxt.async_support as ccxt_async
@@ -76,7 +77,7 @@ class CCXT(Library):
             fields, frequencies, base_url, api_key, max_obs_per_call, rate_limit
         )
         self.exchange = None
-        # self.exchange_async = None
+        self.exchange_async = None
         self.data_req = None
         self.data = pd.DataFrame()
 
@@ -311,13 +312,26 @@ class CCXT(Library):
         if self.rate_limit is None:
             self.rate_limit = self.exchange.rateLimit
 
+    @staticmethod
+    def exponential_backoff_with_jitter(base_delay: float, max_delay: int, attempts: int) -> None:
+        delay = min(max_delay, base_delay * (2 ** attempts))
+        delay_with_jitter = delay + random.uniform(0, delay * 0.5)
+        sleep(delay_with_jitter)
+
+    @staticmethod
+    async def exponential_backoff_with_jitter_async(base_delay: float, max_delay: int, attempts: int) -> None:
+        delay = min(max_delay, base_delay * (2 ** attempts))
+        delay_with_jitter = delay + random.uniform(0, delay * 0.5)
+        await asyncio.sleep(delay_with_jitter)
+
     async def _fetch_ohlcv_async(self,
                                  ticker: str,
                                  freq: str,
                                  start_date: str,
                                  end_date: str,
                                  exch: str,
-                                 trials: int = 3
+                                 trials: int = 3,
+                                 pause: int = 1
                                  ) -> List:
         """
         Fetches OHLCV data for a specific ticker.
@@ -336,6 +350,8 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 60
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -346,16 +362,17 @@ class CCXT(Library):
         data = []
 
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         # fetch data
-        if self.exchange.has['fetchOHLCV']:
+        if self.exchange_async.has['fetchOHLCV']:
 
             # while loop to fetch all data
             while start_date < end_date and attempts < trials:
 
                 try:
-                    data_resp = await self.exchange.fetch_ohlcv(
+                    data_resp = await self.exchange_async.fetch_ohlcv(
                         ticker,
                         freq,
                         since=start_date,
@@ -368,29 +385,33 @@ class CCXT(Library):
                         start_date = data_resp[-1][0] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No OHLCV data available for {ticker}.")
                         break
 
                 except Exception as e:
                     logging.warning(
-                        f"Failed to get OHLCV data from {self.exchange.id} for {ticker} "
+                        f"Failed to get OHLCV data from {self.exchange_async.id} for {ticker} "
                         f"on attempt #{attempts + 1}: {e}."
                     )
                     attempts += 1
                     if attempts >= trials:
                         logging.warning(
-                            f"Failed to get OHLCV data from {self.exchange.id} "
+                            f"Failed to get OHLCV data from {self.exchange_async.id} "
                             f"for {ticker} after {trials} attempts."
                         )
                         break
 
                 finally:
-                    await asyncio.sleep(self.exchange.rateLimit / 1000)
+                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
+                                                                     pause,
+                                                                     attempts)
 
-            await self.exchange.close()
+            await self.exchange_async.close()
             return data
 
         else:
-            logging.warning(f"OHLCV data is not available for {self.exchange.id}.")
+            logging.warning(f"OHLCV data is not available for {self.exchange_async.id}.")
             return None
 
     def _fetch_ohlcv(self,
@@ -399,7 +420,8 @@ class CCXT(Library):
                      start_date: str,
                      end_date: str,
                      exch: str,
-                     trials: int = 3
+                     trials: int = 3,
+                     pause: int = 1
                      ) -> List:
         """
         Fetches OHLCV data for a specific ticker.
@@ -418,6 +440,8 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 60
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -428,7 +452,8 @@ class CCXT(Library):
         data = []
 
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange is None:
+            self.exchange = getattr(ccxt, exch)()
 
         # fetch data
         if self.exchange.has['fetchOHLCV']:
@@ -442,7 +467,10 @@ class CCXT(Library):
                         freq,
                         since=start_date,
                         limit=self.max_obs_per_call,
-                        params={'until': end_date}
+                        params={
+                            'until': end_date,
+                            'paginate': True
+                        }
                     )
 
                     # add data to list
@@ -450,6 +478,8 @@ class CCXT(Library):
                         start_date = data_resp[-1][0] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No OHLCV data available for {ticker}.")
                         break
 
                 except Exception as e:
@@ -466,7 +496,7 @@ class CCXT(Library):
                         break
 
                 finally:
-                    sleep(self.exchange.rateLimit / 1000)
+                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
 
             return data
 
@@ -481,7 +511,7 @@ class CCXT(Library):
                                      end_date: str,
                                      exch: str,
                                      trials: int = 3,
-                                     pause: int = 0.5
+                                     pause: int = 1
                                      ):
         """
         Fetches OHLCV data for a list of tickers.
@@ -509,7 +539,8 @@ class CCXT(Library):
             List of lists of timestamps and OHLCV data for each ticker.
         """
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         data = []
 
@@ -523,7 +554,7 @@ class CCXT(Library):
             data.append(data_resp)
             pbar.update(1)
 
-        await self.exchange.close()
+        await self.exchange_async.close()
 
         return data
 
@@ -534,7 +565,7 @@ class CCXT(Library):
                          end_date: str,
                          exch: str,
                          trials: int = 3,
-                         pause: int = 0.5
+                         pause: int = 1
                          ):
         """
         Fetches OHLCV data for a list of tickers.
@@ -557,7 +588,8 @@ class CCXT(Library):
             Pause in seconds to respect the rate limit.
         """
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange is None:
+            self.exchange = getattr(ccxt, exch)()
 
         data = []
 
@@ -578,7 +610,8 @@ class CCXT(Library):
                                          start_date: str,
                                          end_date: str,
                                          exch: str,
-                                         trials: int = 3
+                                         trials: int = 3,
+                                         pause: int = 1
                                          ) -> List:
         """
         Fetches funding rates data for a specific ticker.
@@ -593,6 +626,8 @@ class CCXT(Library):
             End date in integers in milliseconds since Unix epoch.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 1
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -603,16 +638,17 @@ class CCXT(Library):
         data = []
 
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         # fetch data
-        if self.exchange.has['fetchFundingRateHistory']:
+        if self.exchange_async.has['fetchFundingRateHistory']:
 
             # while loop to get all data
             while start_date < end_date and attempts < trials:
 
                 try:
-                    data_resp = await self.exchange.fetch_funding_rate_history(
+                    data_resp = await self.exchange_async.fetch_funding_rate_history(
                         ticker,
                         since=start_date,
                         limit=self.max_obs_per_call,
@@ -624,29 +660,33 @@ class CCXT(Library):
                         start_date = data_resp[-1]['timestamp'] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No funding rates data available for {ticker}.")
                         break
 
                 except Exception as e:
                     logging.warning(
-                        f"Failed to get funding rates from {self.exchange.id} for {ticker} "
+                        f"Failed to get funding rates from {self.exchange_async.id} for {ticker} "
                         f"on attempt #{attempts + 1}: {e}."
                     )
                     attempts += 1
                     if attempts >= trials:
                         logging.warning(
-                            f"Failed to get funding rates from {self.exchange.id} "
+                            f"Failed to get funding rates from {self.exchange_async.id} "
                             f"for {ticker} after {trials} attempts."
                         )
                         break
 
                 finally:
-                    await asyncio.sleep(self.exchange.rateLimit / 1000)
+                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
+                                                                     pause,
+                                                                     attempts)
 
-            await self.exchange.close()
+            await self.exchange_async.close()
             return data
 
         else:
-            logging.warning(f"Funding rates are not available for {self.exchange.id}.")
+            logging.warning(f"Funding rates are not available for {self.exchange_async.id}.")
             return None
 
     def _fetch_funding_rates(self,
@@ -654,7 +694,8 @@ class CCXT(Library):
                              start_date: str,
                              end_date: str,
                              exch: str,
-                             trials: int = 3
+                             trials: int = 3,
+                             pause: int = 1
                              ) -> List:
         """
         Fetches funding rates data for a specific ticker.
@@ -669,6 +710,8 @@ class CCXT(Library):
             End date in integers in milliseconds since Unix epoch.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 1
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -679,7 +722,8 @@ class CCXT(Library):
         data = []
 
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange is None:
+            self.exchange = getattr(ccxt, exch)()
 
         # fetch data
         if self.exchange.has['fetchFundingRateHistory']:
@@ -700,6 +744,8 @@ class CCXT(Library):
                         start_date = data_resp[-1]['timestamp'] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No funding rates data available for {ticker}.")
                         break
 
                 except Exception as e:
@@ -716,7 +762,7 @@ class CCXT(Library):
                         break
 
                 finally:
-                    sleep(self.exchange.rateLimit / 1000)
+                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
 
             return data
 
@@ -730,7 +776,7 @@ class CCXT(Library):
                                              end_date: str,
                                              exch: str,
                                              trials: int = 3,
-                                             pause: int = 0.5
+                                             pause: int = 1
                                              ):
         """
         Fetches funding rates data for a list of tickers.
@@ -756,7 +802,8 @@ class CCXT(Library):
             List of lists of dictionaries with timestamps and funding rates data for each ticker.
         """
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         data = []
 
@@ -770,7 +817,7 @@ class CCXT(Library):
             pbar.update(1)
             await asyncio.sleep(pause)
 
-        await self.exchange.close()
+        await self.exchange_async.close()
 
         return data
 
@@ -780,7 +827,7 @@ class CCXT(Library):
                                  end_date: str,
                                  exch: str,
                                  trials: int = 3,
-                                 pause: int = 0.5
+                                 pause: int = 1
                                  ):
         """
         Fetches funding rates data for a list of tickers.
@@ -807,7 +854,8 @@ class CCXT(Library):
         """
 
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange is None:
+            self.exchange = getattr(ccxt, exch)()
 
         data = []
 
@@ -829,7 +877,8 @@ class CCXT(Library):
                                          start_date: str,
                                          end_date: str,
                                          exch: str,
-                                         trials: int = 3
+                                         trials: int = 3,
+                                         pause: int = 1
                                          ) -> List:
         """
         Fetches open interest data for a specific ticker.
@@ -848,6 +897,8 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 1
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -859,16 +910,17 @@ class CCXT(Library):
         data = []
 
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         # fetch data
-        if self.exchange.has['fetchOpenInterestHistory']:
+        if self.exchange_async.has['fetchOpenInterestHistory']:
 
             # while loop to get all data
             while start_date < end_date and attempts < trials:
 
                 try:
-                    data_resp = await self.exchange.fetch_open_interest_history(
+                    data_resp = await self.exchange_async.fetch_open_interest_history(
                         ticker,
                         freq,
                         since=start_date,
@@ -881,29 +933,34 @@ class CCXT(Library):
                         start_date = data_resp[-1]['timestamp'] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No open interest data available for {ticker}.")
                         break
 
                 except Exception as e:
                     logging.warning(
-                        f"Failed to get open interest from {self.exchange.id} for {ticker} "
+                        f"Failed to get open interest from {self.exchange_async.id} for {ticker} "
                         f"on attempt #{attempts + 1}: {e}."
                     )
                     attempts += 1
                     if attempts >= trials:
                         logging.warning(
-                            f"Failed to get open interest from {self.exchange.id} "
+                            f"Failed to get open interest from {self.exchange_async.id} "
                             f"for {ticker} after {trials} attempts."
                         )
                         break
 
                 finally:
-                    await asyncio.sleep(self.exchange.rateLimit / 1000)
+                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
+                                                                     pause,
+                                                                     attempts)
+                    # await asyncio.sleep(self.exchange_async.rateLimit / 1000)
 
-            await self.exchange.close()
+            await self.exchange_async.close()
             return data
 
         else:
-            logging.warning(f"Open interest is not available for {self.exchange.id}.")
+            logging.warning(f"Open interest is not available for {self.exchange_async.id}.")
             return None
 
     def _fetch_open_interest(self,
@@ -912,7 +969,8 @@ class CCXT(Library):
                              start_date: str,
                              end_date: str,
                              exch: str,
-                             trials: int = 3
+                             trials: int = 3,
+                             pause: int = 1
                              ) -> List:
         """
         Fetches open interest data for a specific ticker.
@@ -931,6 +989,8 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
+        pause: int, default 1
+            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -964,6 +1024,8 @@ class CCXT(Library):
                         start_date = data_resp[-1]['timestamp'] + 1
                         data.extend(data_resp)
                     else:
+                        if not data:
+                            logging.warning(f"No open interest data available for {ticker}.")
                         break
 
                 except Exception as e:
@@ -980,7 +1042,8 @@ class CCXT(Library):
                         break
 
                 finally:
-                    sleep(self.exchange.rateLimit / 1000)
+                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
+                    # sleep(self.exchange.rateLimit / 1000)
 
             return data
 
@@ -995,7 +1058,7 @@ class CCXT(Library):
                                              end_date: str,
                                              exch: str,
                                              trials: int = 3,
-                                             pause: int = 0.5
+                                             pause: int = 1
                                              ):
         """
         Fetches open interest data for a list of tickers.
@@ -1023,7 +1086,8 @@ class CCXT(Library):
             List of lists of dictionaries with timestamps and open interest data for each ticker.
         """
         # inst exch
-        self.exchange = getattr(ccxt_async, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
 
         data = []
 
@@ -1038,7 +1102,7 @@ class CCXT(Library):
             pbar.update(1)
             await asyncio.sleep(pause)
 
-        await self.exchange.close()
+        await self.exchange_async.close()
 
         return data
 
@@ -1049,7 +1113,7 @@ class CCXT(Library):
                                  end_date: str,
                                  exch: str,
                                  trials: int = 3,
-                                 pause: int = 0.5
+                                 pause: int = 1
                                  ):
         """
         Fetches open interest data for a list of tickers.
@@ -1077,7 +1141,8 @@ class CCXT(Library):
             List of lists of dictionaries with timestamps and open interest data for each ticker.
         """
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange is None:
+            self.exchange = getattr(ccxt, exch)()
 
         data = []
 
@@ -1111,10 +1176,6 @@ class CCXT(Library):
 
         # get metadata
         self.get_metadata(self.data_req.exch)
-
-        print(self.data_req.exch)
-
-        print(self.exchange)
 
         # check markets
         if not any([market in self.markets for market in self.data_req.source_markets]):

@@ -78,7 +78,18 @@ Ready to contribute? Here's how to set up `cryptodatapy` for local development.
 
 4. When you're done making changes, check that your changes conform to any code formatting requirements and pass any tests.
 
-5. Commit your changes and open a pull request.
+5. Commit your changes:
+    
+        ```console
+        $ git add .
+        $ git commit -m "Your detailed description of your changes."
+        ```
+6. Push to the branch:
+
+    ```console
+    $ git push origin name-of-your-bugfix-or-feature
+    ```
+7. Create a pull request.
 
 ## Pull Request Guidelines
 

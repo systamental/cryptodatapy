@@ -854,7 +854,8 @@ class WrangleData:
         self.tidy_data = self.tidy_data.apply(pd.to_numeric, errors='coerce').convert_dtypes()
 
         # remove bad data
-        self.tidy_data = self.tidy_data[self.tidy_data != 0]  # 0 values
+        if data_type != 'funding_rates':
+            self.tidy_data = self.tidy_data[self.tidy_data != 0]  # 0 values
         self.tidy_data = self.tidy_data[~self.tidy_data.index.duplicated()]  # duplicate rows
         self.tidy_data = self.tidy_data.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
 

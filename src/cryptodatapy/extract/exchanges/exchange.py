@@ -6,34 +6,105 @@ import pandas as pd
 from cryptodatapy.extract.datarequest import DataRequest
 
 
-class Web(ABC):
+class Exchange(ABC):
     """
-    Web is an abstract base class which provides a blueprint for properties and methods for the
-    web subclass.
-    """
+    Abstract base class for crypto exchanges (CEX or DEX).
 
+    This class provides a blueprint for interacting with crypto exchanges,
+    including authentication, data retrieval, and trading functionality.
+    """
     def __init__(
-        self,
-        categories,
-        assets,
-        indexes,
-        markets,
-        market_types,
-        fields,
-        frequencies,
-        base_url,
-        file_formats
-
+            self,
+            name,
+            exch_type,
+            is_active,
+            categories,
+            assets,
+            markets,
+            market_types,
+            fields,
+            frequencies,
+            fees,
+            base_url,
+            api_key,
+            max_obs_per_call,
+            rate_limit
     ):
+        self.name = name
+        self.exch_type = exch_type
+        self.is_active = is_active
         self.categories = categories
         self.assets = assets
-        self.indexes = indexes
         self.markets = markets
         self.market_types = market_types
         self.fields = fields
         self.frequencies = frequencies
+        self.fees = fees
         self.base_url = base_url
-        self.file_formats = file_formats
+        self.api_key = api_key
+        self.max_obs_per_call = max_obs_per_call
+        self.rate_limit = rate_limit
+
+    @property
+    def name(self):
+        """
+        Returns the type of exchange.
+        """
+        return self._name
+
+    @name.setter
+    def name(self, name: str):
+        """
+        Sets the name of the exchange.
+        """
+        if name is None:
+            self._name = name
+        elif not isinstance(name, str):
+            raise TypeError("Exchange name must be a string.")
+        else:
+            self._name = name
+
+    @property
+    def exch_type(self):
+        """
+        Returns the type of exchange.
+        """
+        return self._exch_type
+
+    @exch_type.setter
+    def exch_type(self, exch_type: str):
+        """
+        Sets the type of exchange.
+        """
+        valid_exch_types = ['cex', 'dex']
+
+        if exch_type is None:
+            self._exch_type = exch_type
+        elif not isinstance(exch_type, str):
+            raise TypeError("Exchange type must be a string.")
+        elif exch_type not in valid_exch_types:
+            raise ValueError(f"{exch_type} is invalid. Valid exchange types are: {valid_exch_types}")
+        else:
+            self._exch_type = exch_type
+
+    @property
+    def is_active(self):
+        """
+        Returns whether the exchange is active.
+        """
+        return self._is_active
+
+    @is_active.setter
+    def is_active(self, is_active: bool):
+        """
+        Sets whether the exchange is active.
+        """
+        if is_active is None:
+            self._is_active = is_active
+        elif not isinstance(is_active, bool):
+            raise TypeError("is_active must be a boolean.")
+        else:
+            self._is_active = is_active
 
     @property
     def categories(self):
@@ -46,14 +117,8 @@ class Web(ABC):
     def categories(self, categories: Union[str, List[str]]):
         """
         Sets a list of available categories for the data vendor.
-
-        Parameters
-        ----------
-        categories : Union[str, List[str]]
-            A string or list of strings containing the categories to filter the data vendor's data.
         """
         valid_categories = [
-            None,
             "crypto",
             "fx",
             "eqty",
@@ -84,40 +149,6 @@ class Web(ABC):
             self._categories = cat
 
     @property
-    def indexes(self):
-        """
-        Returns a list of available indices from the web page.
-        """
-        return self._indexes
-
-    @indexes.setter
-    def indexes(self, indexes: Optional[Union[str, List[str], Dict[str, List[str]]]]):
-        """
-        Sets a list of available indexes for the web page.
-
-        Parameters
-        ----------
-        indexes : Optional[Union[str, List[str], Dict[str, List[str]]]
-            A string, list of strings, or dict containing the indexes to filter the web page's data.
-        """
-        if indexes is None or isinstance(indexes, list) or isinstance(indexes, dict):
-            self._indexes = indexes
-        elif isinstance(indexes, str):
-            self._indexes = [indexes]
-        else:
-            raise TypeError(
-                "Indexes must be a string (ticker), list of strings (tickers) or"
-                " a dict with {cat: List[str]} key-value pairs."
-            )
-
-    @abstractmethod
-    def get_indexes_info(self):
-        """
-        Gets info for available indexes from the data vendor.
-        """
-        # to be implemented by subclasses
-
-    @property
     def assets(self):
         """
         Returns a list of available assets for the data vendor.
@@ -128,20 +159,20 @@ class Web(ABC):
     def assets(self, assets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available assets for the data vendor.
-
-        Parameters
-        ----------
-        assets : Optional[Union[str, List[str], Dict[str, List[str]]]
-            A string, list of strings, or dict containing the assets to filter the data vendor's data.
         """
-        if assets is None or isinstance(assets, list) or isinstance(assets, dict):
+        if (
+            assets is None
+            or isinstance(assets, list)
+            or isinstance(assets, dict)
+            or isinstance(assets, pd.DataFrame)
+        ):
             self._assets = assets
         elif isinstance(assets, str):
             self._assets = [assets]
         else:
             raise TypeError(
-                "Assets must be a string (ticker), list of strings (tickers) or"
-                " a dict with {cat: List[str]} key-value pairs."
+                "Assets must be a string (ticker), list of strings (tickers),"
+                " a dict with {cat: List[str]} key-value pairs or dataframe."
             )
 
     @abstractmethod
@@ -162,20 +193,20 @@ class Web(ABC):
     def markets(self, markets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available markets for the data vendor.
-
-        Parameters
-        ----------
-        markets : Optional[Union[str, List[str], Dict[str, List[str]]]
-            A string, list of strings, or dict containing the markets to filter the data vendor's data.
         """
-        if markets is None or isinstance(markets, list) or isinstance(markets, dict):
+        if (
+            markets is None
+            or isinstance(markets, list)
+            or isinstance(markets, dict)
+            or isinstance(markets, pd.DataFrame)
+        ):
             self._markets = markets
         elif isinstance(markets, str):
             self._markets = [markets]
         else:
             raise TypeError(
-                "Markets must be a string (ticker), list of strings (tickers) or"
-                " a dict with {cat: List[str]} key-value pairs."
+                "Markets must be a string (ticker), list of strings (tickers),"
+                " a dict with {cat: List[str]} key-value pairs or dataframe."
             )
 
     @abstractmethod
@@ -196,11 +227,6 @@ class Web(ABC):
     def market_types(self, market_types: Optional[Union[str, List[str]]]):
         """
         Sets a list of available market types for the data vendor.
-
-        Parameters
-        ----------
-        market_types : Optional[Union[str, List[str]]
-            A string or list of strings containing the market types to filter the data vendor's data.
         """
         valid_mkt_types, mkt_types_list = [
             None,
@@ -239,11 +265,6 @@ class Web(ABC):
     def fields(self, fields: Optional[Union[str, List[str], Dict[str, List[str]]]]):
         """
         Sets a list of available fields for the data vendor.
-
-        Parameters
-        ----------
-        fields : Optional[Union[str, List[str], Dict[str, List[str]]]
-            A string, list of strings, or dict containing the fields to filter the data vendor's data.
         """
         if fields is None or isinstance(fields, list) or isinstance(fields, dict):
             self._fields = fields
@@ -259,11 +280,6 @@ class Web(ABC):
     def get_fields_info(self, data_type: Optional[str]):
         """
         Gets info for available fields from the data vendor.
-
-        Parameters
-        ----------
-        data_type : Optional[str]
-            A string containing the data type to filter the data vendor's fields
         """
         # to be implemented by subclasses
 
@@ -280,11 +296,6 @@ class Web(ABC):
     ):
         """
         Sets a list of available data frequencies for the data vendor.
-
-        Parameters
-        ----------
-        frequencies : Optional[Union[str, List[str], Dict[str, List[str]]]
-            A string, list of strings, or dict containing the frequencies to filter the data vendor's data.
         """
         if (
             frequencies is None
@@ -300,6 +311,30 @@ class Web(ABC):
                 " a dict with {cat: List[str]} key-value pairs."
             )
 
+    @abstractmethod
+    def get_frequencies_info(self, data_type: Optional[str]):
+        """
+        Gets info for available frequencies from the exchange.
+        """
+        # to be implemented by subclasses
+
+    @property
+    def fees(self):
+        """
+        Returns a list of fees for the data vendor.
+        """
+        return self._fees
+
+    @fees.setter
+    def fees(self, fees: Optional[Union[float, Dict[str, float]]]):
+        """
+        Sets a list of fees for the data vendor.
+        """
+        if fees is None or isinstance(fees, float) or isinstance(fees, dict):
+            self._fees = fees
+        else:
+            raise TypeError("Fees must be a float or dict with {cat: float} key-value pairs.")
+
     @property
     def base_url(self):
         """
@@ -311,11 +346,6 @@ class Web(ABC):
     def base_url(self, url: Optional[str]):
         """
         Sets the base url for the data vendor.
-
-        Parameters
-        ----------
-        url : Optional[str]
-            A string containing the data vendor's base URL to which endpoint paths are appended.
         """
         if url is None or isinstance(url, str):
             self._base_url = url
@@ -326,54 +356,84 @@ class Web(ABC):
             )
 
     @property
-    def file_formats(self):
+    def api_key(self):
         """
-        Returns the file formats for the files on the web page.
+        Returns the api key for the data vendor.
         """
-        return self._file_formats
+        return self._api_key
 
-    @file_formats.setter
-    def file_formats(self, formats: Optional[Union[str, List[str]]]):
+    @api_key.setter
+    def api_key(self, api_key: Optional[str]):
         """
-        Sets the file formats for the files on the web page.
-
-        Parameters
-        ----------
-        formats : Optional[Union[str, List[str]]
-            A string or list of strings containing the file formats for the web page's data files.
+        Sets the api key for the data vendor.
         """
-        if formats is None or isinstance(formats, list):
-            self._file_formats = formats
-        elif isinstance(formats, str):
-            self._file_formats = [formats]
+        if api_key is None or isinstance(api_key, str) or isinstance(api_key, dict):
+            self._api_key = api_key
         else:
             raise TypeError(
-                "File format must be a string or list containing the file formats for the web page's data files"
+                "Api key must be a string or dict with data source-api key key-value pairs."
             )
 
+    @property
+    def max_obs_per_call(self):
+        """
+        Returns the maximum observations per API call for the data vendor.
+        """
+        return self._max_obs_per_call
+
+    @max_obs_per_call.setter
+    def max_obs_per_call(self, limit: Optional[Union[int, str]]):
+        """
+        Sets the maximum number of observations per API call for the data vendor.
+        """
+        if limit is None:
+            self._max_obs_per_call = limit
+        elif isinstance(limit, int) or isinstance(limit, str):
+            self._max_obs_per_call = int(limit)
+        else:
+            raise TypeError(
+                "Maximum number of observations per API call must be an integer or string."
+            )
+
+    @property
+    def rate_limit(self):
+        """
+        Returns the number of API calls made and remaining.
+        """
+        return self._rate_limit
+
+    @rate_limit.setter
+    def rate_limit(self, limit: Optional[Any]):
+        """
+        Sets the number of API calls made and remaining.
+        """
+        self._rate_limit = limit
+
     @abstractmethod
-    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+    def get_rate_limit_info(self):
+        """
+        Gets the number of API calls made and remaining.
+        """
+        # to be implemented by subclasses
+
+    @abstractmethod
+    def get_metadata(self) -> None:
+        """
+        Get exchange metadata.
+        """
+        # to be implemented by subclasses
+
+    @abstractmethod
+    def get_data(self, data_req) -> pd.DataFrame:
         """
         Submits get data request to API.
-
-        Parameters
-        ----------
-        data_req : DataRequest
-            A DataRequest object containing the request parameters.
         """
         # to be implemented by subclasses
 
     @staticmethod
     @abstractmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
+    def _wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame]) -> pd.DataFrame:
         """
         Wrangles data response from data vendor API into tidy format.
-
-        Parameters
-        ----------
-        data_req : DataRequest
-            A DataRequest object containing the request parameters.
-        data_resp : Union[Dict[str, Any], pd.DataFrame]
-            A dictionary or DataFrame containing the data response from the data vendor API.
         """
         # to be implemented by subclasses

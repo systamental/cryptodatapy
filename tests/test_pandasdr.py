@@ -7,30 +7,10 @@ from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
 
 
 @pytest.fixture
-def pdr():
-    return PandasDataReader()
-
-
-@pytest.fixture
 def fred_data_resp():
     df = pd.read_csv('data/fred_df.csv', index_col='DATE')
     df.index = pd.to_datetime(df.index)
     return df
-
-
-def test_wrangle_fred_data_resp(pdr, fred_data_resp) -> None:
-    """
-    Tests wrangling of Fred data response.
-    """
-    data_req = DataRequest(source='fred', tickers=['US_CB_MB', 'US_UE_Rate'], cat='macro')
-    df = pdr.wrangle_data_resp(data_req, fred_data_resp)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
-    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
-    assert set(df.index.droplevel(0).unique()) == {'US_CB_MB', 'US_UE_Rate'}, "Columns are missing or incorrect."
-    assert list(df.columns) == ['actual'], "Missing columns."  # fields
-    assert isinstance(df.actual.iloc[-1], np.float64), "Actual should be a numpy float."  # dtypes
-
 
 @pytest.fixture
 def yahoo_data_resp():
@@ -38,82 +18,86 @@ def yahoo_data_resp():
     return df
 
 
-def test_wrangle_yahoo_data_resp(pdr, yahoo_data_resp) -> None:
+class TestPandasDataReader:
     """
-    Tests wrangling of Yahoo data response.
+    Test PandasDataReader class.
     """
-    data_req = DataRequest(source='yahoo', tickers=['spy', 'tlt', 'gld'],
-                           fields=['open', 'high', 'low', 'close', 'close_adj', 'volume'])
-    df = pdr.wrangle_data_resp(data_req, yahoo_data_resp)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
-    assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."  # multiindex
-    assert set(df.index.droplevel(0).unique()) == {'GLD', 'SPY', 'TLT'}, "Columns are missing or incorrect."
-    assert set(df.columns) == {'close', 'close_adj', 'high', 'low', 'open', 'volume'}, "Missing columns."  # fields
-    assert isinstance(df.close.iloc[-1], np.float64), "Actual should be a numpy float."  # dtypes
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.pdr_instance = PandasDataReader()
 
+    def test_init(self) -> None:
+        """
+        Test PandasDataReader initialization.
+        """
+        assert isinstance(self.pdr_instance, PandasDataReader), "Object is not PandasDataReader."
 
-def test_check_params(pdr) -> None:
-    """
-    Test parameter values before calling API.
-    """
-    data_req = DataRequest()
-    with pytest.raises(ValueError):
-        pdr.check_params(data_req)
-    data_req = DataRequest(source='yahoo', cat='crypto')
-    with pytest.raises(ValueError):
-        pdr.check_params(data_req)
-    data_req = DataRequest(source='fred', cat='rates', freq='1h')
-    with pytest.raises(ValueError):
-        pdr.check_params(data_req)
-    data_req = DataRequest(source='yahoo', cat='eqty', fields='trades')
-    with pytest.raises(ValueError):
-        pdr.check_params(data_req)
+    def test_get_fields_info(self) -> None:
+        """
+        Test get fields info method.
+        """
+        self.pdr_instance.get_fields_info()
 
+        assert isinstance(self.pdr_instance.fields, dict), "Fields info is not a dictionary."
 
-def test_integration_get_data_fred(pdr) -> None:
-    """
-    Test integration of get data method.
-    """
-    data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_MB'], fields='actual')
-    df = pdr.get_data(data_req)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {'US_MB', 'US_UE_Rate'}, \
-        "Tickers are missing from dataframe."  # tickers
-    assert list(df.columns) == [
-        "actual"
-    ], "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('1948-01-01 00:00:00'), "Wrong start date."  # start date
-    assert isinstance(
-        df.actual.dropna().iloc[-1], np.float64
-    ), "Actual is not a numpy float."  # dtypes
+    def test_get_frequencies_info(self) -> None:
+        """
+        Test get frequencies info method.
+        """
+        self.pdr_instance.get_frequencies_info()
 
+        assert isinstance(self.pdr_instance.frequencies, list), "Frequencies info is not a list."
+        assert self.pdr_instance.frequencies == ["d", "w", "m", "q", "y"], "Frequencies are incorrect."
 
-def test_integration_get_data_yahoo(pdr) -> None:
-    """
-    Test integration of get data method.
-    """
-    data_req = DataRequest(source='yahoo', cat='eqty', tickers=['spy', 'tlt', 'gld'], fields=['close', 'volume'])
-    df = pdr.get_data(data_req)
-    assert not df.empty, "Dataframe was returned empty."  # non empty
-    assert isinstance(
-        df.index, pd.MultiIndex
-    ), "Dataframe should be MultiIndex."  # multiindex
-    assert isinstance(
-        df.index.droplevel(1), pd.DatetimeIndex
-    ), "Index is not DatetimeIndex."  # datetimeindex
-    assert set(df.index.droplevel(0).unique()) == {'SPY', 'TLT', 'GLD'}, \
-        "Tickers are missing from dataframe."  # tickers
-    assert set(df.columns) == {'close', 'volume'}, "Fields are missing from dataframe."  # fields
-    assert df.index[0][0] == pd.Timestamp('1993-01-29 00:00:00'), "Wrong start date."  # start date
-    assert isinstance(df.close.dropna().iloc[-1], np.float64), "Close is not a numpy float."  # dtypes
-    assert isinstance(df.volume.dropna().iloc[-1], np.int64), "Volume is not a numpy int."  # dtypes
+    def test_convert_params_error(self) -> None:
+        """
+        Test convert params method with incorrect parameters.
+        """
+        data_req = DataRequest(source='yahoo', cat='crypto', tickers=['btc'], fields='close')
+        with pytest.raises(ValueError):
+            self.pdr_instance.convert_params(data_req)
+
+    def test_get_series(self):
+        """
+        Test get series method.
+        """
+        data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_MB'], fields='actual')
+        df = self.pdr_instance.get_series(data_req)
+
+        assert not df.empty, "Dataframe was returned empty."
+        assert isinstance(df.index, pd.DatetimeIndex), "Index is not DatetimeIndex."
+        assert (df.dtypes == 'float64').all(), "Dataframe should have float64 dtype."
+
+    def test_wrangle_data_resp(self, yahoo_data_resp):
+        """
+        Test wrangle data response method.
+        """
+        data_req = DataRequest(source='yahoo', tickers=['SPY', 'TLT', 'GLD'],
+                               fields=['open', 'high', 'low', 'close', 'close_adj', 'volume'], cat='eqty')
+        df = self.pdr_instance.wrangle_data_resp(data_req, yahoo_data_resp)
+
+        assert not df.empty, "Dataframe was returned empty."
+        assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
+        assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."
+        assert set(df.index.droplevel(0).unique()) == {'GLD', 'SPY', 'TLT'}, "Columns are missing or incorrect."
+        assert set(df.columns) == {'close', 'close_adj', 'high', 'low', 'open', 'volume'}, "Missing columns."
+        assert (df[['open', 'high', 'low', 'close', 'close_adj']].dtypes == 'Float64').all(), \
+            "Dataframe should have Float64 dtype."
+        assert (df['volume'].dtypes == 'Int64'), "Dataframe should have Int64 dtype."
+
+    def test_get_data(self):
+        """
+        Test get data method.
+        """
+        data_req = DataRequest(source='fred', cat='macro', tickers=['US_UE_Rate', 'US_MB'], fields='actual')
+        df = self.pdr_instance.get_data(data_req)
+
+        assert not df.empty, "Dataframe was returned empty."
+        assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."
+        assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index is not DatetimeIndex."
+        assert set(df.index.droplevel(0).unique()) == {'US_MB', 'US_UE_Rate'}, "Columns are missing or incorrect."
+        assert list(df.columns) == ['actual'], "Missing columns."
+        assert (df.dtypes == 'Float64').all(), "Dataframe should have Float64 dtype."
 
 
 if __name__ == "__main__":

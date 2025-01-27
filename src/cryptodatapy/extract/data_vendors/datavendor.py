@@ -92,7 +92,7 @@ class DataVendor(ABC):
 
     @exchanges.setter
     def exchanges(
-        self, exchanges: Optional[Union[str, List[str], Dict[str, List[str]]]]
+        self, exchanges: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]
     ):
         """
         Sets a list of available exchanges for the data vendor.
@@ -101,6 +101,7 @@ class DataVendor(ABC):
             exchanges is None
             or isinstance(exchanges, list)
             or isinstance(exchanges, dict)
+            or isinstance(exchanges, pd.DataFrame)
         ):
             self._exchanges = exchanges
         elif isinstance(exchanges, str):
@@ -126,11 +127,16 @@ class DataVendor(ABC):
         return self._indexes
 
     @indexes.setter
-    def indexes(self, indexes: Optional[Union[str, List[str], Dict[str, List[str]]]]):
+    def indexes(self, indexes: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]):
         """
         Sets a list of available indexes for the data vendor.
         """
-        if indexes is None or isinstance(indexes, list) or isinstance(indexes, dict):
+        if (
+            indexes is None
+            or isinstance(indexes, list)
+            or isinstance(indexes, dict)
+            or isinstance(indexes, pd.DataFrame)
+        ):
             self._indexes = indexes
         elif isinstance(indexes, str):
             self._indexes = [indexes]
@@ -155,11 +161,16 @@ class DataVendor(ABC):
         return self._assets
 
     @assets.setter
-    def assets(self, assets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
+    def assets(self, assets: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]):
         """
         Sets a list of available assets for the data vendor.
         """
-        if assets is None or isinstance(assets, list) or isinstance(assets, dict):
+        if (
+            assets is None
+            or isinstance(assets, list)
+            or isinstance(assets, dict)
+            or isinstance(assets, pd.DataFrame)
+        ):
             self._assets = assets
         elif isinstance(assets, str):
             self._assets = [assets]
@@ -184,11 +195,16 @@ class DataVendor(ABC):
         return self._markets
 
     @markets.setter
-    def markets(self, markets: Optional[Union[str, List[str], Dict[str, List[str]]]]):
+    def markets(self, markets: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]):
         """
         Sets a list of available markets for the data vendor.
         """
-        if markets is None or isinstance(markets, list) or isinstance(markets, dict):
+        if (
+            markets is None
+            or isinstance(markets, list)
+            or isinstance(markets, dict)
+            or isinstance(markets, pd.DataFrame)
+        ):
             self._markets = markets
         elif isinstance(markets, str):
             self._markets = [markets]
@@ -251,11 +267,16 @@ class DataVendor(ABC):
         return self._fields
 
     @fields.setter
-    def fields(self, fields: Optional[Union[str, List[str], Dict[str, List[str]]]]):
+    def fields(self, fields: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]):
         """
         Sets a list of available fields for the data vendor.
         """
-        if fields is None or isinstance(fields, list) or isinstance(fields, dict):
+        if (
+            fields is None
+            or isinstance(fields, list)
+            or isinstance(fields, dict)
+            or isinstance(fields, pd.DataFrame)
+        ):
             self._fields = fields
         elif isinstance(fields, str):
             self._fields = [fields]
@@ -280,9 +301,7 @@ class DataVendor(ABC):
         return self._frequencies
 
     @frequencies.setter
-    def frequencies(
-        self, frequencies: Optional[Union[str, List[str], Dict[str, List[str]]]]
-    ):
+    def frequencies(self, frequencies: Optional[Union[str, List[str], Dict[str, List[str]], pd.DataFrame]]):
         """
         Sets a list of available data frequencies for the data vendor.
         """
@@ -290,6 +309,7 @@ class DataVendor(ABC):
             frequencies is None
             or isinstance(frequencies, list)
             or isinstance(frequencies, dict)
+            or isinstance(frequencies, pd.DataFrame)
         ):
             self._frequencies = frequencies
         elif isinstance(frequencies, str):

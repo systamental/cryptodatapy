@@ -469,7 +469,6 @@ class WrangleData:
     """
     Wrangles time series data responses from various APIs into tidy data format.
     """
-
     def __init__(self, data_req: DataRequest, data_resp: Union[Dict[str, pd.DataFrame], pd.DataFrame]):
         """
         Constructor
@@ -484,6 +483,7 @@ class WrangleData:
         """
         self.data_req = data_req
         self.data_resp = data_resp
+        self.tidy_data = pd.DataFrame()
 
     def cryptocompare(self) -> pd.DataFrame:
         """
@@ -717,16 +717,22 @@ class WrangleData:
         """
         # convert fields to lib
         self.convert_fields_to_lib(data_source='dbnomics')
+
         # convert to datetime
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
+
         # set index
         self.data_resp = self.data_resp.set_index('date').sort_index()
+
         # resample
         self.data_resp = self.data_resp.resample(self.data_req.freq).last().ffill()
+
         # filter dates
         self.filter_dates()
+
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
@@ -734,7 +740,98 @@ class WrangleData:
 
         return self.data_resp
 
-    def ccxt(self) -> pd.DataFrame:
+    def ccxt_ohlcv(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT OHLCV data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # field cols
+        cols = ["date", "open", "high", "low", "close", "volume"]
+
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i], columns=cols)
+            df['ticker'] = self.data_req.source_markets[i]
+            self.tidy_data = pd.concat([self.tidy_data, df])
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data['date'], unit='ms')
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        return self.tidy_data
+
+    def ccxt_funding_rates(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT funding rates data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i])
+            self.tidy_data = pd.concat([self.tidy_data, df])
+        self.tidy_data = self.tidy_data[['symbol', 'fundingRate', 'datetime']]
+        self.data_resp = self.tidy_data
+
+        # convert to lib fields
+        self.convert_fields_to_lib(data_source='ccxt')
+        self.tidy_data = self.data_resp
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data.set_index('date').index).floor('s').tz_localize(None)
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        # resample
+        if self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
+            self.tidy_data = (
+                    (1 + self.tidy_data.funding_rate)
+                    .groupby('ticker')
+                    .resample('d', level='date')
+                    .prod() - 1
+            ).to_frame().swaplevel('ticker', 'date').sort_index()
+
+        return self.tidy_data
+
+    def ccxt_open_interest(self) -> pd.DataFrame:
+        """
+        Wrangles CCXT open interest data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with tidy data format.
+        """
+        # add tickers
+        for i in range(len(self.data_req.source_markets)):
+            df = pd.DataFrame(self.data_resp[i])
+            self.tidy_data = pd.concat([self.tidy_data, df])
+        self.tidy_data = self.tidy_data[['symbol', 'openInterestAmount', 'datetime']]
+        self.data_resp = self.tidy_data
+
+        # convert to lib fields
+        self.convert_fields_to_lib(data_source='ccxt')
+        self.tidy_data = self.data_resp
+
+        # convert to datetime
+        self.tidy_data['date'] = pd.to_datetime(self.tidy_data.set_index('date').index).floor('s').tz_localize(None)
+
+        # set index
+        self.tidy_data = self.tidy_data.set_index(['date', 'ticker']).sort_index()
+
+        return self.tidy_data
+
+    def ccxt(self, data_type: str) -> pd.DataFrame:
         """
         Wrangles CCXT data response to dataframe with tidy data format.
 
@@ -744,26 +841,25 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
-        # convert fields to lib
-        self.convert_fields_to_lib(data_source='ccxt')
-        # convert to datetime
-        if 'close' in self.data_resp.columns:
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.date, unit='ms')
-        elif 'funding_rate' in self.data_resp.columns:
-            self.data_resp['date'] = pd.to_datetime(self.data_resp.set_index('date').index).floor('s').tz_localize(None)
-        # set index
-        self.data_resp = self.data_resp.set_index('date').sort_index()
-        # resample
-        if 'funding_rate' in self.data_resp.columns and self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
-            self.data_resp = ((self.data_resp.funding_rate + 1).resample(self.data_req.freq).prod() - 1).to_frame()
-        # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        # remove bad data
-        self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
-        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
-        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+        if data_type == 'ohlcv':
+            self.tidy_data = self.ccxt_ohlcv()
+        elif data_type == 'funding_rates':
+            self.tidy_data = self.ccxt_funding_rates()
+        elif data_type == 'open_interest':
+            self.tidy_data = self.ccxt_open_interest()
+        else:
+            raise ValueError(f"Data type {data_type} not supported.")
 
-        return self.data_resp
+        # type conversion
+        self.tidy_data = self.tidy_data.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
+        # remove bad data
+        if data_type != 'funding_rates':
+            self.tidy_data = self.tidy_data[self.tidy_data != 0]  # 0 values
+        self.tidy_data = self.tidy_data[~self.tidy_data.index.duplicated()]  # duplicate rows
+        self.tidy_data = self.tidy_data.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
+        return self.tidy_data
 
     def fred(self) -> pd.DataFrame:
         """
@@ -773,24 +869,29 @@ class WrangleData:
         -------
         pd.DataFrame
             Wrangled dataframe into tidy data format.
-
         """
-        # convert tickers to cryptodatapy format
+        # tickers
         self.data_resp.columns = self.data_req.tickers  # convert tickers to cryptodatapy format
+
         # resample to match end of reporting period, not beginning
         self.data_resp = self.data_resp.resample('d').last().ffill().resample(self.data_req.freq).last().stack(). \
             to_frame().reset_index()
+
         # convert cols
         if self.data_req.cat == 'macro':
             self.data_resp.columns = ['DATE', 'symbol', 'actual']
         else:
             self.data_resp.columns = ['DATE', 'symbol', 'close']
-        # convert fields to lib
+
+        # fields
         self.convert_fields_to_lib(data_source='fred')
-        # set index
+
+        # index
         self.data_resp.set_index(['date', 'ticker'], inplace=True)
+
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
@@ -807,37 +908,41 @@ class WrangleData:
         pd.DataFrame
             Wrangled dataframe into tidy data format.
         """
-        # convert tickers
-        if len(self.data_req.tickers) == 1:  # add ticker
-            if self.data_req.cat == 'eqty' or self.data_req.cat == 'fx':
-                self.data_resp['Ticker'] = self.data_req.tickers[0].upper()
-            else:
-                self.data_resp['Ticker'] = self.data_req.tickers[0]
-        else:   # convert tickers to cryptodatapy format
-            self.data_resp = self.data_resp.stack()  # stack to multi-index
+        # tickers
+        tickers_dict = {source_ticker: ticker for source_ticker, ticker in zip(self.data_req.source_tickers,
+                        self.data_req.tickers)}
+        if len(self.data_req.tickers) == 1:
+            self.data_resp['Ticker'] = self.data_req.tickers[0]
+        else:
+            self.data_resp = self.data_resp.stack()
             self.data_resp.index.names = ['Date', 'Ticker']
-            if self.data_req.cat == 'eqty' or self.data_req.cat == 'fx':
-                self.data_resp.index = self.data_resp.index.set_levels([ticker.upper() for ticker in
-                                                                        self.data_req.tickers], level=1)
-            else:
-                self.data_resp.index = self.data_resp.index.set_levels([ticker for ticker in self.data_req.tickers],
-                                                                       level=1)
+            self.data_resp.index = self.data_resp.index.set_levels(self.data_resp.index.levels[1].map(tickers_dict),
+                                                                   level=1)
         self.data_resp.reset_index(inplace=True)
-        # convert fields
+
+        #  fields
         self.convert_fields_to_lib(data_source='yahoo')
-        # convert to datetime
+
+        # index
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
+        self.data_resp.set_index(['date', 'ticker'], inplace=True)
+
         # resample
-        self.data_resp = self.data_resp.set_index('date').groupby('ticker').resample(self.data_req.freq).last().\
-            droplevel(0).reset_index().set_index(['date', 'ticker'])
+        self.data_resp = self.data_resp.groupby('ticker').\
+            resample(self.data_req.freq, level='date').\
+            last().swaplevel('ticker', 'date').sort_index()
+
         # re-order cols
         self.data_resp = self.data_resp.loc[:, ['open', 'high', 'low', 'close', 'close_adj', 'volume']]
+
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
         # keep only requested fields and sort index
         self.data_resp = self.data_resp[self.data_req.fields].sort_index()
 
@@ -853,7 +958,7 @@ class WrangleData:
             Wrangled dataframe into tidy data format.
 
         """
-        # convert tickers to cryptodatapy format
+        # ticker
         ff_tickers_dict = {'RF': 'US_Rates_1M_RF',
                            'Mkt-RF': 'US_Eqty_CSRP_ER',
                            'HML': 'US_Eqty_Val',
@@ -862,6 +967,7 @@ class WrangleData:
                            'CMA': 'US_Eqty_Inv',
                            'Mom': 'US_Eqty_Mom',
                            'ST_Rev': 'US_Eqty_STRev'}
+
         # remove white space from cols str
         self.data_resp.columns = [col.strip() for col in self.data_resp.columns]
         # keep cols in data req tickers
@@ -870,14 +976,18 @@ class WrangleData:
         drop_cols = [col for col in self.data_resp.columns if col not in self.data_req.tickers]
         self.data_resp.drop(columns=drop_cols, inplace=True)
         self.data_resp = self.data_resp.loc[:, ~self.data_resp.columns.duplicated()]  # drop dup cols
+
         # resample freq
         self.data_resp = self.data_resp.resample(self.data_req.freq).sum()
+
         # format index
         self.data_resp.index.name = 'date'  # rename
         self.data_resp = self.data_resp.stack().to_frame('er')
         self.data_resp.index.names = ['date', 'ticker']
+
         # type and conversion to decimals
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes() / 100
+
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
@@ -1016,9 +1126,9 @@ class WrangleData:
 
         # loop through data resp cols
         for col in self.data_resp.columns:
-            if self.data_req.source_fields is not None and col in self.data_req.source_fields:
-                pass
-            elif col in fields_list or col.title() in fields_list or col.lower() in fields_list:
+            # if self.data_req.source_fields is not None and col in self.data_req.source_fields:
+            #     pass
+            if col in fields_list or col.title() in fields_list or col.lower() in fields_list:
                 self.data_resp.rename(columns={col: fields_df[(fields_df[str(data_source) + '_id']
                                       == col.title()) |
                                     (fields_df[str(data_source) + '_id'] == col.lower()) |

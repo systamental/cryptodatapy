@@ -12,14 +12,15 @@ class DataRequest:
     """
     Data request class which contains parameters for data retrieval.
     """
-
     def __init__(
         self,
         source: str = "ccxt",
         tickers: Union[str, List[str]] = "btc",
-        freq: str = "d",
         quote_ccy: Optional[str] = None,
+        markets: Optional[Union[str, List[str]]] = None,
+        freq: str = "d",
         exch: Optional[str] = None,
+        countries: Optional[Union[str, List[str]]] = None,
         mkt_type: Optional[str] = "spot",
         start_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
         end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
@@ -30,8 +31,11 @@ class DataRequest:
         trials: Optional[int] = 3,
         pause: Optional[float] = 0.1,
         source_tickers: Optional[Union[str, List[str]]] = None,
+        source_markets: Optional[Union[str, List[str]]] = None,
         source_freq: Optional[str] = None,
-        source_fields: Optional[Union[str, List[str]]] = None,
+        source_start_date: Optional[Union[str, int, datetime, pd.Timestamp]] = None,
+        source_end_date: Optional[Union[str, int, datetime, pd.Timestamp]] = None,
+        source_fields: Optional[Union[str, List[str]]] = None
     ):
         """
         Constructor
@@ -41,14 +45,18 @@ class DataRequest:
         source: str, default 'ccxt'
             Name of data source.
         tickers: list or str, default 'btc'
-            Ticker symbols for assets or time series.
-            e.g. 'BTC', 'EURUSD', 'SPY', 'US_Manuf_PMI', 'EZ_Rates_10Y', etc.
+            Ticker symbols for base assets.
+            e.g. 'BTC', 'EUR', 'SPY', 'US_Manuf_PMI', 'EZ_Rates_10Y', etc.
+        quote_ccy: str,  optional, default None
+            Ticker symbol for quote asset, e.g. 'USDT' for BTCUSDT (bitcoin in Tether USD), 'GBP' for EURGBP, etc.
+        markets: list or str, optional, default None
+            Markets/traded pairs of base assets vs quote assets, e.g. 'BTC/USDT', 'EUR/USD', 'SPY/USD', etc.
         freq: str, default 'd'
             Frequency of data observations. Defaults to daily 'd' which includes weekends for cryptoassets.
-        quote_ccy: str,  optional, default None
-            Quote currency for base asset, e.g. 'GBP' for EURGBP, 'USD' for BTCUSD (bitcoin in dollars), etc.
         exch: str,  optional, default None
             Name of asset exchange, e.g. 'Binance', 'FTX', 'IEX', 'Nasdaq', etc.
+        countries: list or str, optional, default None
+            Country codes for which to pull data, e.g. 'US', 'GB', 'CN', 'JP', etc.
         mkt_type: str, optional, default 'spot'
             Market type, e.g. 'spot ', 'future', 'perpetual_future', 'option'.
         start_date: str, datetime or pd.Timestamp, optional, default None
@@ -72,19 +80,28 @@ class DataRequest:
         source_tickers: list or str, optional, default None
             List or string of ticker symbols for assets or time series in the format used by the
             data source. If None, tickers will be converted from CryptoDataPy to data source format.
+        source_markets: list or str, optional, default None
+            List or string of markets/traded pairs of base assets vs quote assets in the format used by the
+            data source. If None, markets will be converted from CryptoDataPy to data source format.
         source_freq: str, optional, default None
             Frequency of observations for assets or time series in format used by data source. If None,
             frequency will be converted from CryptoDataPy to data source format.
+        source_start_date: str, int, datetime or pd.Timestamp, optional, default None
+            Start date for data request in format used by data source.
+        source_end_date: str, int, datetime or pd.Timestamp, optional, default None
+            End date for data request in format used by data source.
         source_fields: list or str, optional, default None
             List or string of fields for assets or time series in format used by data source. If None,
             fields will be converted from CryptoDataPy to data source format.
         """
         # params
-        self.source = source  # specific data source
+        self.source = source  # name of data source
         self.tickers = tickers  # tickers
-        self.freq = freq  # frequency
         self.quote_ccy = quote_ccy  # quote ccy
+        self.markets = markets  # markets
+        self.freq = freq  # frequency
         self.exch = exch  # exchange
+        self.countries = countries  # country codes
         self.mkt_type = mkt_type  # market type
         self.start_date = start_date  # start date
         self.end_date = end_date  # end date
@@ -95,7 +112,10 @@ class DataRequest:
         self.trials = trials  # number of times to try query request
         self.pause = pause  # number of seconds to pause between query request trials
         self.source_tickers = source_tickers  # tickers used by data source
+        self.source_markets = source_markets
         self.source_freq = source_freq  # frequency used by data source
+        self.source_start_date = source_start_date  # start date used by data source
+        self.source_end_date = source_end_date  # end date used by data source
         self.source_fields = source_fields  # fields used by data source
 
     @property
@@ -152,6 +172,46 @@ class DataRequest:
             raise TypeError("Tickers must be a string or list of strings (tickers).")
 
     @property
+    def quote_ccy(self):
+        """
+        Returns quote currency for data request.
+        """
+        return self._quote_ccy
+
+    @quote_ccy.setter
+    def quote_ccy(self, quote):
+        """
+        Sets quote currency for data request.
+        """
+        if quote is None:
+            self._quote_ccy = quote
+        elif isinstance(quote, str):
+            self._quote_ccy = quote
+        else:
+            raise TypeError("Quote currency must be a string.")
+
+    @property
+    def markets(self):
+        """
+        Returns markets for data request.
+        """
+        return self._markets
+
+    @markets.setter
+    def markets(self, markets):
+        """
+        Sets markets for data request.
+        """
+        if markets is None:
+            self._markets = markets
+        elif isinstance(markets, str):
+            self._markets = [markets]
+        elif isinstance(markets, list):
+            self._markets = markets
+        else:
+            raise TypeError("Markets must be a string or list of strings (markets).")
+
+    @property
     def freq(self):
         """
         Returns frequency of observations for data request.
@@ -197,31 +257,14 @@ class DataRequest:
             "y": "yearly",
         }
 
-        if frequency not in list(freq_dict.keys()):
+        if frequency is None:
+            self._frequency = frequency
+        elif frequency not in list(freq_dict.keys()):
             raise ValueError(
                 f"{frequency} is an invalid data frequency. Valid frequencies are: {freq_dict}"
             )
         else:
             self._frequency = frequency
-
-    @property
-    def quote_ccy(self):
-        """
-        Returns quote currency for data request.
-        """
-        return self._quote_ccy
-
-    @quote_ccy.setter
-    def quote_ccy(self, quote):
-        """
-        Sets quote currency for data request.
-        """
-        if quote is None:
-            self._quote_ccy = quote
-        elif isinstance(quote, str):
-            self._quote_ccy = quote
-        else:
-            raise TypeError("Quote currency must be a string.")
 
     @property
     def exch(self):
@@ -241,6 +284,27 @@ class DataRequest:
             self._exch = exch
         else:
             raise TypeError("Exchange must be a string.")
+
+    @property
+    def countries(self):
+        """
+        Returns country codes for data request.
+        """
+        return self._countries
+
+    @countries.setter
+    def countries(self, countries):
+        """
+        Sets country codes for data request.
+        """
+        if countries is None:
+            self._countries = countries
+        elif isinstance(countries, str):
+            self._countries = [countries]
+        elif isinstance(countries, list):
+            self._countries = countries
+        else:
+            raise TypeError("Country codes must be a string or list of strings.")
 
     @property
     def mkt_type(self):
@@ -485,6 +549,29 @@ class DataRequest:
             )
 
     @property
+    def source_markets(self):
+        """
+        Returns markets for data request in data source format.
+        """
+        return self._source_markets
+
+    @source_markets.setter
+    def source_markets(self, markets):
+        """
+        Sets markets for data request in data source format.
+        """
+        if markets is None:
+            self._source_markets = markets
+        elif isinstance(markets, str):
+            self._source_markets = [markets]
+        elif isinstance(markets, list):
+            self._source_markets = markets
+        else:
+            raise TypeError(
+                "Source markets must be a string or list of strings (markets) in data source's format."
+            )
+
+    @property
     def source_freq(self):
         """
         Returns frequency of data request in data source format.
@@ -503,6 +590,60 @@ class DataRequest:
         else:
             raise TypeError(
                 "Source data frequency must be a string in data source's format."
+            )
+
+    @property
+    def source_start_date(self):
+        """
+        Returns start date for data request in data source format.
+        """
+        return self._source_start_date
+
+    @source_start_date.setter
+    def source_start_date(self, start_date):
+        """
+        Sets start date for data request in data source format.
+        """
+        if start_date is None:
+            self._source_start_date = start_date
+        elif isinstance(start_date, str):
+            self._source_start_date = start_date
+        elif isinstance(start_date, int):
+            self._source_start_date = start_date
+        elif isinstance(start_date, datetime):
+            self._source_start_date = start_date
+        elif isinstance(start_date, pd.Timestamp):
+            self._source_start_date = start_date
+        else:
+            raise ValueError(
+                'Start date must be in "YYYY-MM-DD" string, integer, datetime or pd.Timestamp format.'
+            )
+
+    @property
+    def source_end_date(self):
+        """
+        Returns end date for data request in data source format.
+        """
+        return self._source_end_date
+
+    @source_end_date.setter
+    def source_end_date(self, end_date):
+        """
+        Sets end date for data request in data source format.
+        """
+        if end_date is None:
+            self._source_end_date = end_date
+        elif isinstance(end_date, str):
+            self._source_end_date = end_date
+        elif isinstance(end_date, int):
+            self._source_end_date = end_date
+        elif isinstance(end_date, datetime):
+            self._source_end_date = end_date
+        elif isinstance(end_date, pd.Timestamp):
+            self._source_end_date = end_date
+        else:
+            raise ValueError(
+                'End date must be in "YYYY-MM-DD" string, integer, datetime or pd.Timestamp format.'
             )
 
     @property
@@ -548,22 +689,67 @@ class DataRequest:
             Data response in JSON format.
         """
         # set number of attempts
-        attempts = 0
+        attempts, resp = 0, None
+
         # run a while loop in case the attempt fails
         while attempts < self.trials:
 
             # get request
             try:
                 resp = requests.get(url, params=params, headers=headers)
-                assert resp.status_code == 200
-            # exception
-            except AssertionError as e:
-                logging.warning(e)
+                # check for status code
+                resp.raise_for_status()
+
+                return resp.json()
+
+            # handle HTTP errors
+            except requests.exceptions.HTTPError as http_err:
+                status_code = resp.status_code
+
+                # Tailored handling for different status codes
+                if status_code == 400:
+                    logging.warning(f"Bad Request (400): {resp.text}")
+                elif status_code == 401:
+                    logging.warning("Unauthorized (401): Check the authentication credentials.")
+                elif status_code == 403:
+                    logging.warning("Forbidden (403): You do not have permission to access this resource.")
+                elif status_code == 404:
+                    logging.warning("Not Found (404): The requested resource could not be found.")
+                elif status_code == 500:
+                    logging.error("Internal Server Error (500): The server encountered an error.")
+                elif status_code == 503:
+                    logging.error("Service Unavailable (503): The server is temporarily unavailable.")
+                else:
+                    logging.error(f"HTTP error occurred: {http_err} (Status Code: {status_code})")
+                    logging.error(f"Response Content: {resp.text}")
+
+                # Increment attempts and log warning
                 attempts += 1
-                logging.warning(f"Failed to get data on attempt #{attempts}.")
-                sleep(self.pause)
-                if attempts == 3:
+                logging.warning(f"Attempt #{attempts}: Failed to get data due to: {http_err}")
+                sleep(self.pause)  # Pause before retrying
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data.")
                     break
 
-            else:
-                return resp.json()
+            # handle non-HTTP exceptions (e.g., network issues)
+            except requests.exceptions.RequestException as req_err:
+                attempts += 1
+                logging.warning(f"Request error on attempt #{attempts}: {req_err}. "
+                                f"Retrying after {self.pause} seconds...")
+                sleep(self.pause)
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data due to request errors.")
+                    break
+
+            # handle other exceptions
+            except Exception as e:
+                attempts += 1
+                logging.warning(f"An unexpected error occurred: {e}. "
+                                f"Retrying after {self.pause} seconds...")
+                sleep(self.pause)
+                if attempts == self.trials:
+                    logging.error("Max attempts reached. Unable to fetch data due to request errors.")
+                    break
+
+        # return None if the API call fails
+        return None

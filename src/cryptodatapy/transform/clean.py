@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Optional, Union
 import pandas as pd
-
 from cryptodatapy.transform.od import OutlierDetection
 from cryptodatapy.transform.impute import Impute
 from cryptodatapy.transform.filter import Filter
@@ -264,16 +263,14 @@ class CleanData:
 
         return self
 
-    def filter_delisted_tickers(self, field: str = 'close', n_unch_vals: int = 30) -> CleanData:
+    def filter_delisted_tickers(self, method: str = 'replace') -> CleanData:
         """
         Removes delisted tickers from dataframe.
 
         Parameters
         ----------
-        field: str, default 'close'
-            Field/column to use for detecting delisted tickers.
-        n_unch_vals: int, default 30
-            Number of consecutive unchanged values to consider a ticker as delisted.
+        method: str, {'replace', 'remove'}, default 'replace'
+            Method to use for handling delisted tickers.
 
         Returns
         -------
@@ -281,7 +278,7 @@ class CleanData:
             CleanData object
         """
         # filter tickers
-        self.filtered_df = Filter(self.df).remove_delisted(field=field, n_unch_vals=n_unch_vals)
+        self.filtered_df = Filter(self.df).delisted_tickers(method=method)
 
         # tickers < min obs
         self.filtered_tickers = list(
@@ -291,6 +288,12 @@ class CleanData:
         )
 
         # add to summary
+        filtered_vals = (
+            self.df.unstack().notna().sum() - self.filtered_df.unstack().notna().sum()
+        )
+        self.summary.loc["%_delisted_ticker_vals", self.df.unstack().columns] = (
+            filtered_vals / self.df.unstack().notna().sum()
+        ).values * 100
         self.summary.loc["n_filtered_tickers", self.df.unstack().columns] = len(self.filtered_tickers)
 
         # filtered df

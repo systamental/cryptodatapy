@@ -57,17 +57,17 @@ class ConvertParams:
             exch = self.data_req.exch
         # convert start date
         if self.data_req.freq[-3:] == "min":  # limit to higher frequency data responses
-            start_date = round((datetime.now() - timedelta(days=7)).timestamp())
+            start_date = int((datetime.now() - timedelta(days=7)).timestamp())
         # no start date
         elif self.data_req.start_date is None:
-            start_date = round(pd.Timestamp("2009-01-03 00:00:00").timestamp())
+            start_date = int(pd.Timestamp("2009-01-03 00:00:00").timestamp())
         else:
-            start_date = round(pd.Timestamp(self.data_req.start_date).timestamp())
+            start_date = int(pd.Timestamp(self.data_req.start_date).timestamp())
         # convert end date
         if self.data_req.end_date is None:
-            end_date = round(pd.Timestamp.utcnow().timestamp())
+            end_date = int(pd.Timestamp.utcnow().timestamp())
         else:
-            end_date = round(pd.Timestamp(self.data_req.end_date).timestamp())
+            end_date = int(pd.Timestamp(self.data_req.end_date).timestamp())
         # fields
         if self.data_req.source_fields is not None:
             fields = self.data_req.source_fields
@@ -986,7 +986,6 @@ class ConvertParams:
         -------
         quote_ccy: str
             Quote currency.
-
         """
         mkts = []  # fx pairs list
         # fx groups

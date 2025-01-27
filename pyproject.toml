@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.2.5"
+version = "0.2.10"
 description = "Cryptoasset data library"
 authors = ["Systamental"]
 license = "Apache License 2.0"
@@ -27,7 +27,8 @@ openpyxl = ">=3.1.2"
 xlrd = ">=2.0.1"
 fsspec = ">=2024.6.1"
 pyarrow = ">=17.0.0"
-s3fs = "^2024.6.1"
+s3fs = ">=2024.6.1"
+tdqm = ">=0.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"
@@ -38,6 +39,12 @@ isort = ">=5.10.1"
 myst-nb = {version = ">=0.16.0", python = ">=3.8, <4.0"}
 sphinx-autoapi = ">=1.9.0"
 sphinx-rtd-theme = ">=1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest-asyncio = ">=0.24.0"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

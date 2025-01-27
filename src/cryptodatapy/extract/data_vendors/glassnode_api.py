@@ -79,8 +79,9 @@ class Glassnode(DataVendor):
         if categories is None:
             self.categories = ['crypto']
         if api_key is None:
-            raise TypeError("Set your api key. We recommend setting your api key in environment variables as"
-                            "'GLASSNODE_API_KEY', will allow DataCredentials to automatically load it.")
+            raise TypeError("Set your Glassnode api key in environment variables as 'GLASSNODE_API_KEY' or "
+                            "add it as an argument when instantiating the class. To get an api key, visit: "
+                            "https://docs.glassnode.com/basic-api/api-key")
         if assets is None:
             self.assets = self.get_assets_info(as_list=True)
         if fields is None:

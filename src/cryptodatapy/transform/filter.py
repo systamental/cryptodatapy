@@ -159,12 +159,12 @@ class Filter:
             and fields (cols).
         """
         # drop tickers with nobs < ts_obs
-        obs = self.df.groupby(level=1).count().min(axis=1)
+        obs = self.df.groupby(level=1).count().median(axis=1)
         drop_tickers_list = obs[obs < ts_obs].index.to_list()
         self.filtered_df = self.df.drop(drop_tickers_list, level=1, axis=0)
 
         # drop tickers with nobs < cs_obs
-        obs = self.filtered_df.groupby(level=0).count().min(axis=1)
+        obs = self.filtered_df.groupby(level=0).count().median(axis=1)
         idx_start = obs[obs > cs_obs].index[0]
         self.filtered_df = self.filtered_df.loc[idx_start:]
 
@@ -185,16 +185,15 @@ class Filter:
             Filtered dataFrame with DatetimeIndex (level 0), tickers (level 1) and fields (cols).
         """
         # unchanged rows
-        unch_rows = (self.df.subtract(self.df.iloc[:, :4].mean(axis=1), axis=0) == 0).any(axis=1)
+        unch_rows: object = (self.df.subtract(self.df.iloc[:, :4].mean(axis=1), axis=0) == 0).any(axis=1)
 
-        # delisted tickers
-        delisted_tickers = unch_rows.unstack().iloc[-1][unch_rows.unstack().iloc[-1]].index.to_list()
+        # replace delisted with NaNs
+        self.filtered_df = self.df.loc[~unch_rows].reindex(self.df.index)
 
         # repair
         if method == 'remove':
-            self.filtered_df = self.df.drop(delisted_tickers, level=1)
-        else:
-            self.filtered_df = self.df.loc[~unch_rows].reindex(self.df.index)
+            self.filtered_df = list(self.filtered_df.unstack().columns[self.filtered_df.unstack().iloc[-1].isna()].
+                                    droplevel(0).unique())
 
         return self.filtered_df
 

@@ -911,13 +911,10 @@ class WrangleData:
         # tickers
         tickers_dict = {source_ticker: ticker for source_ticker, ticker in zip(self.data_req.source_tickers,
                         self.data_req.tickers)}
-        if len(self.data_req.tickers) == 1:
-            self.data_resp['Ticker'] = self.data_req.tickers[0]
-        else:
-            self.data_resp = self.data_resp.stack()
-            self.data_resp.index.names = ['Date', 'Ticker']
-            self.data_resp.index = self.data_resp.index.set_levels(self.data_resp.index.levels[1].map(tickers_dict),
-                                                                   level=1)
+        self.data_resp = self.data_resp.stack(future_stack=True)
+        self.data_resp.columns.name = None
+        self.data_resp.index = self.data_resp.index.set_levels(self.data_resp.index.levels[1].map(tickers_dict),
+                                                               level=1)
         self.data_resp.reset_index(inplace=True)
 
         #  fields
@@ -931,9 +928,6 @@ class WrangleData:
         self.data_resp = self.data_resp.groupby('ticker').\
             resample(self.data_req.freq, level='date').\
             last().swaplevel('ticker', 'date').sort_index()
-
-        # re-order cols
-        self.data_resp = self.data_resp.loc[:, ['open', 'high', 'low', 'close', 'close_adj', 'volume']]
 
         # type conversion
         self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()

@@ -121,7 +121,8 @@ class Impute:
         self.imputed_df = pd.DataFrame(imp_yhat, index=self.filtered_df.index, columns=self.filtered_df.columns)
 
         # type conversion
-        self.imputed_df = self.imputed_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        self.imputed_df = self.imputed_df.convert_dtypes()
+
 
         # plot
         if self.plot:

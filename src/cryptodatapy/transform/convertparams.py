@@ -1045,7 +1045,6 @@ class ConvertParams:
                     )
 
         return fields_list
-    
 
     def to_dydx_dict(self) -> Dict[str, Union[list, str, int, float, None]]:
         """

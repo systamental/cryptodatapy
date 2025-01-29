@@ -549,7 +549,7 @@ class Tiingo(DataVendor):
                     df = pd.concat([df, df0])
 
         else:
-            for ticker in self.data_req.tickers:
+            for ticker in self.data_req.source_tickers:
                 try:
                     df0 = self.get_tidy_data(self.data_req, data_type, ticker)
                 except Exception as e:
@@ -679,7 +679,7 @@ class Tiingo(DataVendor):
         """
         self.data_req = ConvertParams(data_req).to_tiingo()
 
-        # get metada
+        # get metadata
         self.get_assets_info(as_list=True)
         self.get_fields_info()
 
@@ -690,11 +690,16 @@ class Tiingo(DataVendor):
             )
 
         # check assets
-        if not any([ticker.upper() in self.assets[self.data_req.cat] for ticker in self.data_req.tickers]) and \
-                data_req.cat != 'fx':
-            raise ValueError(
-                f"Selected tickers are not available. Use assets attribute to see available tickers."
-            )
+        if self.data_req.cat == 'eqty':
+            if not any([ticker.upper() in self.assets[self.data_req.cat] for ticker in self.data_req.source_tickers]):
+                raise ValueError(
+                    f"Selected eqty tickers are not available. Use assets attribute to see available eqty tickers."
+                )
+        elif self.data_req.cat == 'crypto':
+            if not any([ticker in self.assets[self.data_req.cat] for ticker in self.data_req.source_markets]):
+                raise ValueError(
+                    f"Selected crypto tickers are not available. Use assets attribute to see available crypto tickers."
+                )
 
         # check fields
         if not any([field in self.fields[data_req.cat] for field in self.data_req.fields]):

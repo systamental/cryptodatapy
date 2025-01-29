@@ -344,8 +344,20 @@ class ConvertParams:
         Convert tickers from CryptoDataPy to Tiingo format.
         """
         # tickers
-        if self.data_req.source_tickers is None:
-            self.data_req.source_tickers = [ticker.lower() for ticker in self.data_req.tickers]
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
+
+        if self.data_req.source_tickers is None and self.data_req.cat == 'eqty':
+            self.data_req.source_tickers = []
+            for ticker in self.data_req.tickers:
+                try:
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "tiingo_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for Tiingo source. Check tickers in"
+                        f" data catalog and try again."
+                    )
 
         # freq
         if self.data_req.source_freq is None:

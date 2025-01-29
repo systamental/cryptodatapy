@@ -1483,6 +1483,8 @@ class CCXT(Library):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols).
         """
+        logging.info("Retrieving data request from CCXT...")
+
         # get OHLCV
         if any([field in ["open", "high", "low", "close", "volume"] for field in data_req.fields]):
             df = await self.fetch_tidy_ohlcv_async(data_req)
@@ -1523,6 +1525,8 @@ class CCXT(Library):
         df: pd.DataFrame - MultiIndex
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for selected fields (cols).
         """
+        logging.info("Retrieving data request from CCXT...")
+
         # get OHLCV
         if any([field in ["open", "high", "low", "close", "volume"] for field in data_req.fields]):
             df = self.fetch_tidy_ohlcv(data_req)

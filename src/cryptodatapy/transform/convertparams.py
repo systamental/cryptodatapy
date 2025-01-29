@@ -339,34 +339,31 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_tiingo(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
+    def to_tiingo(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to Tiingo format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            tickers = [ticker.lower() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.lower() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
             if self.data_req.freq is None:
-                freq = "1day"
+                self.data_req.source_freq = "1day"
             elif self.data_req.freq[-3:] == "min":
-                freq = self.data_req.freq
+                self.data_req.source_freq = self.data_req.freq
             elif self.data_req.freq[-1] == "h":
-                freq = "1hour"
+                self.data_req.source_freq = "1hour"
             else:
-                freq = "1day"
-        # convert quote ccy
+                self.data_req.source_freq = "1day"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "usd"
+            self.data_req.quote_ccy = "usd"
         else:
-            quote_ccy = self.data_req.quote_ccy.lower()
+            self.data_req.quote_ccy = self.data_req.quote_ccy.lower()
+
         # convert exch
         if (
             self.data_req.exch is None
@@ -374,64 +371,40 @@ class ConvertParams:
             and self.data_req.freq
             in ["1min", "5min", "10min", "15min", "30min", "1h", "2h", "4h", "8h"]
         ):
-            exch = "iex"
+            self.data_req.exch = "iex"
+
+        # markets
+        if self.data_req.source_markets is None:
+            if self.data_req.cat == 'fx':
+                fx_list = self.convert_fx_tickers(quote_ccy=self.data_req.quote_ccy)
+                self.data_req.source_markets = [ticker.lower().replace("/", "") for ticker in fx_list]
+            elif self.data_req.cat == 'crypto':
+                self.data_req.source_markets = [ticker.lower() +
+                                                self.data_req.quote_ccy for ticker in self.data_req.tickers]
+
+        # start date
+        if self.data_req.start_date is None:
+            self.data_req.source_start_date = '1990-01-01'
         else:
-            exch = self.data_req.exch
-        # convert tickers to mkts
-        mkts_list = []
-        if self.data_req.source_tickers is not None:
-            mkts_list = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            if self.data_req.cat == "fx":
-                fx_list = self.convert_fx_tickers(quote_ccy=quote_ccy)
-                mkts_list = [ticker.lower().replace("/", "") for ticker in fx_list]
-            elif self.data_req.cat == "crypto":
-                mkts_list = [
-                    ticker.lower() + quote_ccy for ticker in self.data_req.tickers
-                ]
-        # convert start date
-        if self.data_req.start_date is None and self.data_req.cat == 'crypto':
-            start_date = datetime(2010, 1, 1, 0, 0)
-        else:
-            start_date = self.data_req.start_date
-        # convert end date
+            self.data_req.source_start_date = self.data_req.start_date
+
+        # end date
         if self.data_req.end_date is None:
-            end_date = pd.Timestamp.utcnow()
+            self.data_req.source_end_date = str(pd.Timestamp.utcnow().date())
         else:
-            end_date = self.data_req.end_date
-        # convert fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='tiingo')
+            self.data_req.source_end_date = self.data_req.end_date
+
+        # fields
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='tiingo')
+
         # tz
         if self.data_req.cat == 'eqty' or self.data_req.cat == 'fx':
-            tz = "America/New_York"
+            self.data_req.tz = "America/New_York"
         else:
-            tz = "UTC"
+            self.data_req.tz = "UTC"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": mkts_list,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": self.data_req.cat,
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_ccxt(self) -> DataRequest:
         """

@@ -640,27 +640,34 @@ class WrangleData:
 
         """
         # create df
-        if data_type == 'eqty' or data_type == 'crypto':
+        if data_type == 'crypto':
             self.data_resp = pd.DataFrame(self.data_resp[0]['priceData'])
         else:
             self.data_resp = pd.DataFrame(self.data_resp)
+
         # convert fields to lib
         self.convert_fields_to_lib(data_source='tiingo')
+
         # convert to datetime
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
+
         # set index
         self.data_resp = self.data_resp.set_index('date').sort_index()
         self.data_resp.index = self.data_resp.index.tz_localize(None)
+
         # resample
         self.data_resp = self.data_resp.resample(self.data_req.freq).last()
+
         # reformat index
         if self.data_req.freq in ['d', 'w', 'm', 'q']:
             self.data_resp.reset_index(inplace=True)
             self.data_resp.date = pd.to_datetime(self.data_resp.date.dt.date)
             # reset index
             self.data_resp.set_index('date', inplace=True)
+
         # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        self.data_resp = self.data_resp.convert_dtypes()
+
         # remove bad data
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
@@ -930,7 +937,7 @@ class WrangleData:
             last().swaplevel('ticker', 'date').sort_index()
 
         # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        self.data_resp = self.data_resp.convert_dtypes()
 
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values

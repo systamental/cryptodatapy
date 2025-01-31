@@ -528,7 +528,6 @@ class WrangleData:
         -------
         pd.DataFrame
             Wrangled dataframe into tidy data format.
-
         """
         # convert fields to lib
         self.convert_fields_to_lib(data_source='coinmetrics')

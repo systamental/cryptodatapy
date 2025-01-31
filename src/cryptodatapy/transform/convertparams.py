@@ -101,159 +101,134 @@ class ConvertParams:
             "source_fields": self.data_req.source_fields,
         }
 
-    def to_coinmetrics(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_coinmetrics(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to CoinMetrics format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            tickers = [ticker.lower() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.lower() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
             if self.data_req.freq is None:
-                freq = "1d"
+                self.data_req.source_freq = "1d"
             elif self.data_req.freq == "block":
-                freq = "1b"
+                self.data_req.source_freq = "1b"
             elif self.data_req.freq == "tick":
-                freq = "raw"
+                self.data_req.source_freq = "raw"
             elif self.data_req.freq[-1] == "s":
-                freq = "1s"
+                self.data_req.source_freq = "1s"
             elif self.data_req.freq[-3:] == "min":
-                freq = "1m"
+                self.data_req.source_freq = "1m"
             elif self.data_req.freq[-1] == "h":
-                freq = "1h"
+                self.data_req.source_freq = "1h"
             else:
-                freq = "1d"
-        # convert quote ccy
+                self.data_req.source_freq = "1d"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "usdt"
+            self.data_req.quote_ccy = "usdt"
         else:
-            quote_ccy = self.data_req.quote_ccy.lower()
-        # convert inst
-        if self.data_req.inst is None:
-            inst = "grayscale"
-        else:
-            inst = self.data_req.inst.lower()
-        # convert to exch
+            self.data_req.quote_ccy = self.data_req.quote_ccy.lower()
+
+        # exchange
         if self.data_req.exch is None:
-            exch = "binance"
+            self.data_req.exch = "binance"
         else:
-            exch = self.data_req.exch.lower()
+            self.data_req.exch = self.data_req.exch.lower()
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='coinmetrics')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='coinmetrics')
+
         # convert tz
         if self.data_req.tz is None:
-            tz = "UTC"
+            self.data_req.tz = "UTC"
         else:
-            tz = self.data_req.tz
-        # convert tickers to markets
+            self.data_req.tz = self.data_req.tz
+
+        # markets
         mkts_list = []
 
-        if self.data_req.source_tickers is not None:
-            mkts_list = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-
-        for ticker in self.data_req.tickers:
-            if self.data_req.mkt_type == "spot":
-                mkts_list.append(
-                    exch
-                    + "-"
-                    + ticker.lower()
-                    + "-"
-                    + quote_ccy.lower()
-                    + "-"
-                    + self.data_req.mkt_type.lower()
-                )
-            elif self.data_req.mkt_type == "perpetual_future":
-                if exch == "binance" or exch == "bybit" or exch == "bitmex":
+        if self.data_req.source_markets is None:
+            # loop through tickers
+            for ticker in self.data_req.tickers:
+                if self.data_req.mkt_type == "spot":
                     mkts_list.append(
-                        exch
+                        self.data_req.exch
                         + "-"
-                        + ticker.upper()
-                        + quote_ccy.upper()
+                        + ticker.lower()
                         + "-"
-                        + "future"
+                        + self.data_req.quote_ccy.lower()
+                        + "-"
+                        + self.data_req.mkt_type.lower()
                     )
-                elif exch == "ftx":
-                    mkts_list.append(
-                        exch + "-" + ticker.upper() + "-" + "PERP" + "-" + "future"
+                elif self.data_req.mkt_type == "perpetual_future":
+                    if (self.data_req.exch == "binance" or self.data_req.exch == "bybit" or
+                            self.data_req.exch == "bitmex"):
+                        mkts_list.append(
+                            self.data_req.exch
+                            + "-"
+                            + ticker.upper()
+                            + self.data_req.quote_ccy.upper()
+                            + "-"
+                            + "future"
                         )
-                elif exch == "okex":
-                    mkts_list.append(
-                        exch
-                        + "-"
-                        + ticker.upper()
-                        + "-"
-                        + quote_ccy.upper()
-                        + "-"
-                        + "SWAP"
-                        + "-"
-                        + "future"
-                    )
-                elif exch == "huobi":
-                    mkts_list.append(
-                        exch
-                        + "-"
-                        + ticker.upper()
-                        + "-"
-                        + quote_ccy.upper()
-                        + "_"
-                        + "SWAP"
-                        + "-"
-                        + "future"
-                    )
-                elif exch == "hitbtc":
-                    mkts_list.append(
-                        exch
-                        + "-"
-                        + ticker.upper()
-                        + quote_ccy.upper()
-                        + "_"
-                        + "PERP"
-                        + "-"
-                        + "future"
-                    )
+                    elif self.data_req.exch == "ftx":
+                        mkts_list.append(
+                            self.data_req.exch + "-" + ticker.upper() + "-" + "PERP" + "-" + "future"
+                            )
+                    elif self.data_req.exch == "okex":
+                        mkts_list.append(
+                            self.data_req.exch
+                            + "-"
+                            + ticker.upper()
+                            + "-"
+                            + self.data_req.quote_ccy.upper()
+                            + "-"
+                            + "SWAP"
+                            + "-"
+                            + "future"
+                        )
+                    elif self.data_req.exch == "huobi":
+                        mkts_list.append(
+                            self.data_req.exch
+                            + "-"
+                            + ticker.upper()
+                            + "-"
+                            + self.data_req.quote_ccy.upper()
+                            + "_"
+                            + "SWAP"
+                            + "-"
+                            + "future"
+                        )
+                    elif self.data_req.exch == "hitbtc":
+                        mkts_list.append(
+                            self.data_req.exch
+                            + "-"
+                            + ticker.upper()
+                            + self.data_req.quote_ccy.upper()
+                            + "_"
+                            + "PERP"
+                            + "-"
+                            + "future"
+                        )
+            self.data_req.source_markets = mkts_list
+
         # start date
         if self.data_req.start_date is not None:
-            start_date = self.data_req.start_date.strftime('%Y-%m-%d')
+            self.data_req.source_start_date = self.data_req.start_date.strftime('%Y-%m-%d')
         else:
-            start_date = None
+            self.data_req.source_start_date = None
+
         # end date
         if self.data_req.end_date is not None:
-            end_date = self.data_req.end_date.strftime('%Y-%m-%d')
+            self.data_req.source_end_date = self.data_req.end_date.strftime('%Y-%m-%d')
         else:
-            end_date = None
+            self.data_req.source_end_date = None
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": mkts_list,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": inst,
-            "cat": 'crypto',
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_glassnode(self) -> Dict[str, Union[list, str, int, float, None]]:
         """

@@ -26,7 +26,6 @@ class DataRequest:
         end_date: Optional[Union[str, datetime, pd.Timestamp]] = None,
         fields: Union[str, List[str]] = ["close"],
         tz: Optional[str] = None,
-        inst: Optional[str] = None,
         cat: Optional[str] = None,
         trials: Optional[int] = 3,
         pause: Optional[float] = 0.1,
@@ -69,8 +68,6 @@ class DataRequest:
             Fields for data request. OHLC bars/fields are the most common fields for market data.
         tz: str, optional, default None
             Timezone for the start/end dates in tz database format.
-        inst: str, optional, default None
-            Name of institution from which to pull fund data, e.g. 'grayscale', 'purpose', etc.
         cat: str, optional, {'crypto', 'fx', 'cmdty', 'eqty', 'rates', 'bonds', 'credit', 'macro', 'alt'}, default None
             Category of data, e.g. crypto, fx, rates, or macro.
         trials: int, optional, default 3
@@ -107,7 +104,6 @@ class DataRequest:
         self.end_date = end_date  # end date
         self.fields = fields  # fields
         self.tz = tz  # tz
-        self.inst = inst  # institution
         self.cat = cat  # category of asset class or time series
         self.trials = trials  # number of times to try query request
         self.pause = pause  # number of seconds to pause between query request trials
@@ -411,25 +407,6 @@ class DataRequest:
             self._fields = fields
         else:
             raise TypeError("Fields must be a string or list of strings.")
-
-    @property
-    def inst(self):
-        """
-        Returns institution name for data request.
-        """
-        return self._inst
-
-    @inst.setter
-    def inst(self, inst):
-        """
-        Sets institution's name for data request.
-        """
-        if inst is None:
-            self._inst = inst
-        elif isinstance(inst, str):
-            self._inst = inst
-        else:
-            raise TypeError("Institution must be a string.")
 
     @property
     def tz(self):

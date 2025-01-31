@@ -26,7 +26,7 @@ class TestCoinMetrics:
         Test get_exchanges_info method.
         """
         exch_info = self.cm.get_exchanges_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(exch_info, pd.DataFrame), "Exchanges info should be a dataframe."
@@ -44,7 +44,7 @@ class TestCoinMetrics:
         Test get_indexes_info method.
         """
         idx_info = self.cm.get_indexes_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(idx_info, pd.DataFrame), "Indexes info should be a dataframe."
@@ -61,7 +61,7 @@ class TestCoinMetrics:
         Test get_assets_info method.
         """
         assets_info = self.cm.get_assets_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(assets_info, pd.DataFrame), "Assets info should be a dataframe."
@@ -78,7 +78,7 @@ class TestCoinMetrics:
         Test get_markets_info method.
         """
         markets_info = self.cm.get_markets_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(markets_info, pd.DataFrame), "Markets info should be a dataframe."
@@ -95,7 +95,7 @@ class TestCoinMetrics:
         Test get_fields_info method.
         """
         fields_info = self.cm.get_fields_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(fields_info, pd.DataFrame), "Fields info should be a dataframe."
@@ -107,27 +107,12 @@ class TestCoinMetrics:
         assert fields_info.index.name == 'fields', "Fields info should have 'fields' as index name."
         assert 'AdrActCnt' in fields_info.index, "Fields info should have 'AdrActCnt' as index."
 
-    def test_get_inst_info(self):
-        """
-        Test get_inst_info method.
-        """
-        inst_info = self.cm.get_inst_info()
-        sleep(0.6)
-
-        # data type
-        assert isinstance(inst_info, pd.DataFrame), "Institutions info should be a dataframe."
-        # shape
-        assert inst_info.shape[1] == 2, "Institutions info should have 2 columns."
-        # columns
-        assert 'metrics' in inst_info.columns, "Institutions info should have 'metrics' column."
-        assert inst_info.institution.iloc[0] == 'grayscale', "Institutions info should have 'grayscale'."
-
     def test_get_onchain_fields_info(self):
         """
         Test get_onchain_fields_info method.
         """
         onchain_fields_info = self.cm.get_onchain_fields_info()
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(onchain_fields_info, pd.DataFrame), "Onchain fields info should be a dataframe."
@@ -144,7 +129,7 @@ class TestCoinMetrics:
         Test get_onchain_tickers_list method.
         """
         onchain_tickers_list = self.cm.get_onchain_tickers_list(data_req)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(onchain_tickers_list, list), "Onchain tickers list should be a list."
@@ -167,13 +152,16 @@ class TestCoinMetrics:
         assert isinstance(self.cm.frequencies, list), "Frequencies should be a list."
         assert isinstance(self.cm.market_types, list), "Market types should be a list."
 
-    def test_req_data(self):
+    def test_req_data(self, data_req):
         """
         Test req_data method.
         """
-        df = self.cm.req_data(data_type='/timeseries/market-candles',
-                              params={'markets': ['binance-btc-usdt-spot']})
-        sleep(0.6)
+        df = self.cm.req_data(
+            data_req,
+            data_type='/timeseries/market-candles',
+            params={'markets': ['binance-btc-usdt-spot']}
+        )
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -193,10 +181,14 @@ class TestCoinMetrics:
         """
         Test wrangle_data_resp method.
         """
-        df = self.cm.req_data(data_type='/timeseries/market-candles',
-                              params={'markets': ['binance-btc-usdt-spot']})
+        df = self.cm.req_data(
+            data_req,
+            data_type='/timeseries/market-candles',
+            params={'markets': ['binance-btc-usdt-spot']}
+        )
+        sleep(1)
+
         df = self.cm.wrangle_data_resp(data_req, df)
-        sleep(0.6)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -215,9 +207,12 @@ class TestCoinMetrics:
         """
         Test get_tidy_data method.
         """
-        df = self.cm.get_tidy_data(data_req, data_type='/timeseries/market-candles',
-                                   params={'markets': ['binance-btc-usdt-spot']})
-        sleep(0.6)
+        df = self.cm.get_tidy_data(
+            data_req,
+            data_type='/timeseries/market-candles',
+            params={'markets': ['binance-btc-usdt-spot']}
+        )
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -238,25 +233,25 @@ class TestCoinMetrics:
         """
         Test check_tickers method.
         """
-        tickers = self.cm.check_tickers(data_req, data_type='asset_metrics')
-        sleep(0.6)
+        dr = self.cm.check_tickers(data_req, data_type='asset_metrics')
+        sleep(1)
 
         # data type
-        assert isinstance(tickers, list), "Tickers should be a list."
+        assert isinstance(dr.source_tickers, list), "Tickers should be a list."
         # elements
-        assert tickers == ['btc', 'eth', 'sol'], "Tickers should be 'btc', 'eth', 'sol'."
+        assert dr.source_tickers == ['btc', 'eth', 'sol'], "Tickers should be 'btc', 'eth', 'sol'."
 
     def test_check_fields(self, data_req):
         """
         Test check_fields method.
         """
-        fields = self.cm.check_fields(data_req, data_type='asset_metrics')
-        sleep(0.6)
+        dr = self.cm.check_fields(data_req, data_type='asset_metrics')
+        sleep(1)
 
         # data type
-        assert isinstance(fields, list), "Fields should be a list."
+        assert isinstance(dr.source_fields, list), "Fields should be a list."
         # elements
-        assert fields == ['AdrActCnt', 'TxCnt'], "Fields should be ['AdrActCnt', 'TxCnt']."
+        assert dr.source_fields == ['AdrActCnt', 'TxCnt'], "Fields should be ['AdrActCnt', 'TxCnt']."
 
     def test_check_params(self):
         """
@@ -277,7 +272,7 @@ class TestCoinMetrics:
         """
         dr = DataRequest(tickers=['btc', 'eth', 'cmbi10', 'cmbi10m'])
         df = self.cm.get_indexes(dr)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -293,35 +288,12 @@ class TestCoinMetrics:
         # shape
         assert df.shape[1] == 1, "Dataframe should have 1 column."
 
-    def test_get_institutions(self):
-        """
-        Test get_institutions method.
-        """
-        dr = DataRequest(inst="grayscale", source_fields=["btc_shares_outstanding"])
-        df = self.cm.get_institutions(dr)
-        sleep(0.6)
-
-        # data type
-        assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
-        assert (df.dtypes == 'Int64').all(), "Dataframe should have Int64 dtype."
-        # columns
-        assert list(df.columns) == ["btc_shares_outstanding"], "Columns should be 'btc_shares_outstanding'."
-        # index
-        assert isinstance(df.index, pd.MultiIndex), "Index should be MultiIndex."
-        assert isinstance(df.index.droplevel(1), pd.DatetimeIndex), "Index should be DatetimeIndex."
-        assert pd.Timestamp.utcnow().date() - df.index.droplevel(1)[-1].date() < pd.Timedelta(days=7), \
-            "End date should be less than 7 days ago."
-        # vals
-        assert list(df.index.droplevel(0).unique()) == ['grayscale'], "Institutions are missing from dataframe."
-        # shape
-        assert df.shape[1] == 1, "Dataframe should have 1 column."
-
     def test_get_ohlcv(self, data_req):
         """
         Test get_ohlcv method.
         """
         df = self.cm.get_ohlcv(data_req)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -344,7 +316,7 @@ class TestCoinMetrics:
         Test get_onchain method.
         """
         df = self.cm.get_onchain(data_req)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -366,7 +338,7 @@ class TestCoinMetrics:
         """
         dr = DataRequest(tickers=['btc', 'eth'], mkt_type="perpetual_future")
         df = self.cm.get_open_interest(dr)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -388,7 +360,7 @@ class TestCoinMetrics:
         """
         dr = DataRequest(tickers=['btc', 'eth'], mkt_type="perpetual_future")
         df = self.cm.get_funding_rates(dr)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -408,9 +380,12 @@ class TestCoinMetrics:
         """
         Test get_trades method.
         """
-        dr = DataRequest(tickers=['btc', 'eth'], freq='tick', start_date=datetime.utcnow() - pd.Timedelta(seconds=30))
+        dr = DataRequest(tickers=['btc', 'eth'],
+                         freq='tick',
+                         start_date=pd.Timestamp.utcnow() - pd.Timedelta(seconds=60)
+                         )
         df = self.cm.get_trades(dr)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -425,15 +400,18 @@ class TestCoinMetrics:
         assert pd.Timestamp.utcnow().date() - df.index.droplevel(1)[-1].date() < pd.Timedelta(days=3), \
             "End date should be less than 3 days ago."
         # tickers
-        assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."
+        assert set(df.index.droplevel(0).unique()) == {'BTC', 'ETH'}, "Tickers are missing from dataframe."
 
     def test_get_quotes(self):
         """
         Test get_quotes method.
         """
-        dr = DataRequest(tickers=['btc', 'eth'], freq='tick', start_date=datetime.utcnow() - pd.Timedelta(seconds=30))
+        dr = DataRequest(tickers=['btc', 'eth'],
+                         freq='tick',
+                         start_date=pd.Timestamp.utcnow() - pd.Timedelta(seconds=60)
+                         )
         df = self.cm.get_quotes(dr)
-        sleep(0.6)
+        sleep(1)
 
         # data type
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."
@@ -448,14 +426,14 @@ class TestCoinMetrics:
         assert pd.Timestamp.utcnow().date() - df.index.droplevel(1)[-1].date() < pd.Timedelta(days=3), \
             "End date should be less than 3 days ago."
         # tickers
-        assert list(df.index.droplevel(0).unique()) == ['BTC', 'ETH'], "Tickers are missing from dataframe."
+        assert set(df.index.droplevel(0).unique()) == {'BTC', 'ETH'}, "Tickers are missing from dataframe."
 
     def test_get_data(self, data_req):
         """
         Test get_data method.
         """
         df = self.cm.get_data(data_req)
-        sleep(0.6)
+        sleep(1)
 
         # data types
         assert isinstance(df, pd.DataFrame), "Dataframe should be returned."

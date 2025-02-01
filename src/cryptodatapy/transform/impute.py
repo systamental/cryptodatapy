@@ -79,11 +79,18 @@ class Impute:
             order = 3
 
         # interpolate
-        self.imputed_df = self.filtered_df.unstack().interpolate(method=method, order=order, axis=axis,
-                                                                 limit=limit).stack().reindex(self.filtered_df.index)
+        self.imputed_df = (
+            self.filtered_df
+            .unstack()
+            .interpolate(method=method,
+                         order=order,
+                         axis=axis,
+                         limit=limit)
+            .stack(future_stack=True)
+            .reindex(self.filtered_df.index))
 
         # type conversion
-        self.imputed_df = self.imputed_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        self.imputed_df = self.imputed_df.convert_dtypes()
 
         # plot
         if self.plot:
@@ -122,7 +129,6 @@ class Impute:
 
         # type conversion
         self.imputed_df = self.imputed_df.convert_dtypes()
-
 
         # plot
         if self.plot:

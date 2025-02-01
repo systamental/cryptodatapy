@@ -205,9 +205,9 @@ class OutlierDetection:
             med = np.exp(med)
 
         # type conversion
-        self.yhat = med.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
-        self.outliers = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
-        self.filtered_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes().sort_index()
+        self.yhat = med.convert_dtypes().sort_index()
+        self.outliers = out_df.convert_dtypes().sort_index()
+        self.filtered_df = filt_df.convert_dtypes().sort_index()
 
         # plot
         if self.plot:
@@ -260,9 +260,9 @@ class OutlierDetection:
             med = np.exp(med)
 
         # type conversion
-        med = med.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        med = med.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = med.sort_index()
         self.outliers = out_df.sort_index()
@@ -334,9 +334,9 @@ class OutlierDetection:
             roll_mean = np.exp(roll_mean)
 
         # type conversion
-        roll_mean = roll_mean.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        roll_mean = roll_mean.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = roll_mean.sort_index()
         self.outliers = out_df.sort_index()
@@ -382,9 +382,9 @@ class OutlierDetection:
             ewma = np.exp(ewma)
 
         # type conversion
-        ewma = ewma.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        ewma = ewma.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = ewma.sort_index()
         self.outliers = out_df.sort_index()
@@ -491,14 +491,14 @@ class OutlierDetection:
         filt_df = self.df.unstack()[resid_df.abs() < self.thresh_val]
 
         # stack and reindex
-        out_df = out_df.stack().reindex(mult_idx)
-        filt_df = filt_df.stack().reindex(mult_idx)
-        yhat_df = yhat_df.stack().reindex(mult_idx)
+        out_df = out_df.stack(future_stack=True).reindex(mult_idx)
+        filt_df = filt_df.stack(future_stack=True).reindex(mult_idx)
+        yhat_df = yhat_df.stack(future_stack=True).reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        yhat_df = yhat_df.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = yhat_df.sort_index()
         self.outliers = out_df.sort_index()
@@ -634,14 +634,14 @@ class OutlierDetection:
         filt_df = self.df.unstack()[resid_df.abs() < self.thresh_val]
 
         # stack and reindex
-        out_df = out_df.stack().reindex(mult_idx)
-        filt_df = filt_df.stack().reindex(mult_idx)
-        yhat_df = yhat_df.stack().reindex(mult_idx)
+        out_df = out_df.stack(future_stack=True).reindex(mult_idx)
+        filt_df = filt_df.stack(future_stack=True).reindex(mult_idx)
+        yhat_df = yhat_df.stack(future_stack=True).reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        yhat_df = yhat_df.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = yhat_df.sort_index()
         self.outliers = out_df.sort_index()
@@ -744,14 +744,14 @@ class OutlierDetection:
         filt_df = self.df.unstack()[self.df.unstack().lt(yhat_upper) & self.df.unstack().gt(yhat_lower)]
 
         # stack and reindex
-        yhat_df = yhat_df.stack().reindex(mult_idx)
-        out_df = out_df.stack().reindex(mult_idx)
-        filt_df = filt_df.stack().reindex(mult_idx)
+        yhat_df = yhat_df.stack(future_stack=True).reindex(mult_idx)
+        out_df = out_df.stack(future_stack=True).reindex(mult_idx)
+        filt_df = filt_df.stack(future_stack=True).reindex(mult_idx)
 
         # convert dtypes
-        yhat_df = yhat_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        out_df = out_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
-        filt_df = filt_df.apply(pd.to_numeric, errors="ignore").convert_dtypes()
+        yhat_df = yhat_df.convert_dtypes()
+        out_df = out_df.convert_dtypes()
+        filt_df = filt_df.convert_dtypes()
 
         self.yhat = yhat_df.sort_index()
         self.outliers = out_df.sort_index()

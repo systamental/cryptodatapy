@@ -880,8 +880,17 @@ class WrangleData:
         self.data_resp.columns = self.data_req.tickers  # convert tickers to cryptodatapy format
 
         # resample to match end of reporting period, not beginning
-        self.data_resp = self.data_resp.resample('d').last().ffill().resample(self.data_req.freq).last().stack(). \
-            to_frame().reset_index()
+        self.data_resp = (
+            self.data_resp
+            .resample('d')
+            .last()
+            .ffill()
+            .resample(self.data_req.freq)
+            .last()
+            .stack(future_stack=True)
+            .to_frame()
+            .reset_index()
+        )
 
         # convert cols
         if self.data_req.cat == 'macro':
@@ -982,7 +991,7 @@ class WrangleData:
 
         # format index
         self.data_resp.index.name = 'date'  # rename
-        self.data_resp = self.data_resp.stack().to_frame('er')
+        self.data_resp = self.data_resp.stack(future_stack=True).to_frame('er')
         self.data_resp.index.names = ['date', 'ticker']
 
         # type and conversion to decimals
@@ -1009,7 +1018,7 @@ class WrangleData:
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
             tickers_path = f
         tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
-        self.data_resp = self.data_resp.stack().to_frame()  # stack df
+        self.data_resp = self.data_resp.stack(future_stack=True).to_frame()  # stack df
         # create list of tickers using tickers csv
         tickers = []
         for row in self.data_resp.iterrows():
@@ -1091,11 +1100,11 @@ class WrangleData:
         self.data_resp = df
         self.filter_dates()
         # stack df
-        self.data_resp = self.data_resp.stack().to_frame('er')
+        self.data_resp = self.data_resp.stack(future_stack=True).to_frame('er')
         # create multi index
         self.data_resp.index.names = ['date', 'ticker']
         # type and conversion to decimals
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+        self.data_resp = self.data_resp.convert_dtypes()
         # remove bad data
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs

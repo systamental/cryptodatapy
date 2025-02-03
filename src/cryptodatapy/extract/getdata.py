@@ -123,6 +123,8 @@ class GetData:
             "get_assets_info",
             "get_markets_info",
             "get_fields_info",
+            "get_onchain_tickers_info",
+            "get_onchain_info",
             "get_frequencies_info",
             "get_rate_limit_info",
             "get_news_sources",

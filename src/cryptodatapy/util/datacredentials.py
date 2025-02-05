@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -23,7 +23,6 @@ class DataCredentials:
     mongo_db_name: str = None
 
     # API keys
-    # cryptocompare api key
     try:
         cryptocompare_api_key: str = os.environ['CRYPTOCOMPARE_API_KEY']
     except KeyError:
@@ -44,7 +43,7 @@ class DataCredentials:
     except KeyError:
         coinmetrics_api_key: str = None
 
-    # base URLs
+    # API base URLs
     cryptocompare_base_url: str = 'https://min-api.cryptocompare.com/data/'
     glassnode_base_url: str = 'https://api.glassnode.com/v1/metrics/'
     tiingo_base_url: str = 'https://api.tiingo.com/tiingo/'
@@ -53,6 +52,22 @@ class DataCredentials:
         coinmetrics_base_url: str = 'https://api.coinmetrics.io/v4'
     else:
         coinmetrics_base_url: str = 'https://community-api.coinmetrics.io/v4'
+
+    # API endpoints
+    cryptomcompare_endpoints: dict = field(default_factory=lambda: {
+        'exchanges_info': 'exchanges/general',
+        'indexes_info': 'index/list',
+        'assets_info': 'all/coinlist',
+        'markets_info': 'v2/cccagg/pairs',
+        'on-chain_tickers_info': 'blockchain/list',
+        'on-chain_info': 'blockchain/latest?fsym=BTC',
+        'social_info': 'social/coin/histo/day',
+        'news': 'v2/news/?lang=EN',
+        'news_sources': 'news/feeds',
+        'rate_limit_info': 'rate/limit',
+        'top_mkt_cap_info': 'top/mktcapfull?',
+        'indexes': 'index/'
+    })
 
     # api limit URLs
     cryptocompare_api_rate_limit: str = "https://min-api.cryptocompare.com/stats/rate/limit"

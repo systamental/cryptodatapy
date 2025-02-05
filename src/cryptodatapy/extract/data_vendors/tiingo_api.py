@@ -31,6 +31,7 @@ class Tiingo(DataVendor):
                                       "2h", "4h", "8h", "d", "w", "m", "q", "y"],
             base_url: str = data_cred.tiingo_base_url,
             api_key: str = data_cred.tiingo_api_key,
+            api_endpoints: Optional[Dict[str, str]] = None,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
     ):
@@ -63,6 +64,9 @@ class Tiingo(DataVendor):
             '8h', 'd', 'w', 'm']
         base_url: str
             Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
+        api_endpoints: dict, optional, default None
+            Dictionary with available API endpoints. If not provided, default is set to api_endpoints stored in
+            DataCredentials.
         api_key: str
             Api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'. If not provided, default is set to
             api_key stored in DataCredentials.
@@ -74,7 +78,7 @@ class Tiingo(DataVendor):
         """
         super().__init__(
             categories, exchanges, indexes, assets, markets, market_types,
-            fields, frequencies, base_url, api_key, max_obs_per_call, rate_limit
+            fields, frequencies, base_url, api_endpoints, api_key, max_obs_per_call, rate_limit
         )
 
         if api_key is None:

@@ -23,6 +23,7 @@ class DataVendor(ABC):
         fields,
         frequencies,
         base_url,
+        api_endpoints,
         api_key,
         max_obs_per_call,
         rate_limit,
@@ -36,6 +37,7 @@ class DataVendor(ABC):
         self.fields = fields
         self.frequencies = frequencies
         self.base_url = base_url
+        self.api_endpoints = api_endpoints
         self.api_key = api_key
         self.max_obs_per_call = max_obs_per_call
         self.rate_limit = rate_limit
@@ -338,6 +340,25 @@ class DataVendor(ABC):
             raise TypeError(
                 "Base url must be a string containing the data vendor's base URL to which endpoint paths"
                 " are appended."
+            )
+
+    @property
+    def api_endpoints(self):
+        """
+        Returns api endpoints for the data vendor.
+        """
+        return self._api_endpoints
+
+    @api_endpoints.setter
+    def api_endpoints(self, endpoints: Optional[Dict[str, str]]):
+        """
+        Sets api endpoints for the data vendor.
+        """
+        if endpoints is None or isinstance(endpoints, dict):
+            self._api_endpoints = endpoints
+        else:
+            raise TypeError(
+                "API endpoints must be a dict with key-value pairs of {endpoint_name: endpoint_path}."
             )
 
     @property

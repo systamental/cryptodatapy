@@ -35,6 +35,7 @@ class CoinMetrics(DataVendor):
             frequencies: List[str] = ["tick", "block", "1s", "1min", "5min", "10min", "15min", "30min",
                                       "1h", "2h", "4h", "8h", "d", "w", "m", "q"],
             base_url: Optional[str] = data_cred.coinmetrics_base_url,
+            api_endpoints: Optional[Dict[str, str]] = None,
             api_key: Optional[str] = data_cred.coinmetrics_api_key,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
@@ -62,6 +63,9 @@ class CoinMetrics(DataVendor):
             List of available frequencies, e.g. ['tick', '1min', '5min', '10min', '15min', '30min', '1h', '2h', '4h',
         base_url: str, optional, default None
             Base url used for GET requests. If not provided, default is set to base_url stored in DataCredentials.
+        api_endpoints: dict, optional, default None
+            Dictionary with available API endpoints. If not provided, default is set to api_endpoints stored in
+            DataCredentials.
         api_key: str, optional, default None
             Api key, e.g. 'dcf13983adf7dfa79a0dfa35adf'. If not provided, default is set to
             api_key stored in DataCredentials.
@@ -73,13 +77,13 @@ class CoinMetrics(DataVendor):
         """
         super().__init__(
             categories, exchanges, indexes, assets, markets, market_types,
-            fields, frequencies, base_url, api_key, max_obs_per_call, rate_limit
+            fields, frequencies, base_url, api_endpoints, api_key, max_obs_per_call, rate_limit
         )
         self.data_req = None
+        self.data_resp = None
         self.data = pd.DataFrame()
 
-    @staticmethod
-    def req_meta(data_type: str) -> Dict[str, Any]:
+    def req_meta(self, data_type: str) -> Dict[str, Any]:
         """
         Request metadata.
 
@@ -95,14 +99,14 @@ class CoinMetrics(DataVendor):
             Object with metadata.
         """
         try:
-            meta = getattr(client, data_type)()
+            self.data_resp = getattr(client, data_type)()
 
         except AssertionError as e:
             logging.warning(e)
             logging.warning(f"Failed to get metadata for {data_type}.")
 
         else:
-            return meta
+            return self.data_resp
 
     def get_exchanges_info(self, as_list: bool = False) -> Union[List[str], pd.DataFrame]:
         """
@@ -119,9 +123,9 @@ class CoinMetrics(DataVendor):
             List or dataframe with info on supported exchanges.
         """
         # req data
-        exch = self.req_meta(data_type='catalog_exchanges')
+        self.req_meta(data_type='catalog_exchanges')
         # wrangle data resp
-        self.exchanges = WrangleInfo(exch).cm_meta_resp(as_list=as_list, index_name='exchange')
+        self.exchanges = WrangleInfo(self.data_resp).cm_meta_resp(as_list=as_list, index_name='exchange')
 
         return self.exchanges
 
@@ -140,9 +144,9 @@ class CoinMetrics(DataVendor):
             List or dataframe with info on available indexes.
         """
         # req data
-        indexes = self.req_meta(data_type='catalog_indexes')
+        self.req_meta(data_type='catalog_indexes')
         # wrangle data resp
-        self.indexes = WrangleInfo(indexes).cm_meta_resp(as_list=as_list, index_name='ticker')
+        self.indexes = WrangleInfo(self.data_resp).cm_meta_resp(as_list=as_list, index_name='ticker')
 
         return self.indexes
 
@@ -161,9 +165,9 @@ class CoinMetrics(DataVendor):
             List or dataframe with info on available assets.
         """
         # req data
-        assets = self.req_meta(data_type='catalog_assets')
+        self.req_meta(data_type='catalog_assets')
         # wrangle data resp
-        self.assets = WrangleInfo(assets).cm_meta_resp(as_list=as_list, index_name='ticker')
+        self.assets = WrangleInfo(self.data_resp).cm_meta_resp(as_list=as_list, index_name='ticker')
 
         return self.assets
 
@@ -182,9 +186,9 @@ class CoinMetrics(DataVendor):
             List or dataframe with info on available markets, by exchange.
         """
         # req data
-        markets = self.req_meta(data_type='catalog_markets')
+        self.req_meta(data_type='catalog_markets')
         # wrangle data resp
-        self.markets = WrangleInfo(markets).cm_meta_resp(as_list=as_list)
+        self.markets = WrangleInfo(self.data_resp).cm_meta_resp(as_list=as_list)
 
         return self.markets
 
@@ -203,9 +207,9 @@ class CoinMetrics(DataVendor):
             List or dataframe of on-chain info.
         """
         # req data
-        onchain_fields = self.req_meta(data_type='catalog_metrics')
+        self.req_meta(data_type='catalog_metrics')
         # wrangle data resp
-        onchain_fields = WrangleInfo(onchain_fields).cm_meta_resp(as_list=as_list, index_name='fields')
+        onchain_fields = WrangleInfo(self.data_resp).cm_meta_resp(as_list=as_list, index_name='fields')
 
         return onchain_fields
 
@@ -327,15 +331,15 @@ class CoinMetrics(DataVendor):
         url = self.base_url + data_type
 
         # data request
-        data_resp = data_req.get_req(url=url, params=params)
+        self.data_resp = data_req.get_req(url=url, params=params)
 
         # raise error if data is None
-        if data_resp is None:
+        if self.data_resp is None:
             raise Exception("Failed to fetch data after multiple attempts.")
         # retrieve data
         else:
             # data
-            data, next_page_url = data_resp.get('data', []), data_resp.get('next_page_url')
+            data, next_page_url = self.data_resp.get('data', []), self.data_resp.get('next_page_url')
 
             # while loop
             while next_page_url:
@@ -355,8 +359,7 @@ class CoinMetrics(DataVendor):
 
             return df
 
-    @staticmethod
-    def wrangle_data_resp(data_req: DataRequest, data_resp: pd.DataFrame()) -> pd.DataFrame():
+    def wrangle_data_resp(self, data_req: DataRequest, data_resp: pd.DataFrame()) -> pd.DataFrame():
         """
         Wrangle data response.
 
@@ -897,41 +900,38 @@ class CoinMetrics(DataVendor):
                       'candle_usd_volume', 'candle_trades_count']
         oc_list = [field for field in self.fields if field not in ohlcv_list]
 
-        # empty df
-        df = pd.DataFrame()
-
         # get indexes data
         self.get_indexes_info(as_list=True)
         sleep(self.data_req.pause)
         if any([ticker.upper() in self.indexes for ticker in self.data_req.source_tickers]) and any(
                 [field in ohlcv_list for field in self.data_req.source_fields]
         ):
-            df0 = self.get_indexes(data_req)
-            df = pd.concat([df, df0])
+            df = self.get_indexes(data_req)
+            self.data = pd.concat([self.data, df])
 
         # get OHLCV data
         self.get_assets_info(as_list=True)
-        sleep(0.6)
+        sleep(self.data_req.pause)
         if any([ticker in self.assets for ticker in self.data_req.source_tickers]) and any(
                 [field in ohlcv_list for field in self.data_req.source_fields]
         ):
             df1 = self.get_ohlcv(data_req)
-            df = pd.concat([df, df1])
+            self.data = pd.concat([self.data, df1])
 
         # get on-chain data
         if any([ticker in self.assets for ticker in self.data_req.source_tickers]) and any(
                 [field in oc_list for field in self.data_req.source_fields]
         ):
             df2 = self.get_onchain(data_req)
-            df = pd.concat([df, df2], axis=1)
+            self.data = pd.concat([self.data, df2], axis=1)
 
         # check if df empty
-        if df.empty:
+        if self.data.empty:
             raise Exception("No data returned."
                             " Check data request parameters and try again.")
 
         # filter df for desired fields and sort index by date
-        fields = [field for field in data_req.fields if field in df.columns]
-        df = df.loc[:, fields]
+        fields = [field for field in data_req.fields if field in self.data.columns]
+        self.data = self.data.loc[:, fields].sort_index()
 
-        return df.sort_index()
+        return self.data

@@ -24,82 +24,60 @@ class ConvertParams:
         """
         self.data_req = data_req
 
-    def to_cryptocompare(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_cryptocompare(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to CryptoCompare format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            if self.data_req.freq[-3:] == "min":
-                freq = "histominute"
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "histoday"
+            elif self.data_req.freq[-3:] == "min":
+                self.data_req.source_freq = "histominute"
             elif self.data_req.freq[-1] == "h":
-                freq = "histohour"
+                self.data_req.source_freq = "histohour"
             else:
-                freq = "histoday"
-        # convert quote ccy
+                self.data_req.source_freq = "histoday"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "USD"
+            self.data_req.quote_ccy = "USD"
         else:
-            quote_ccy = self.data_req.quote_ccy.upper()
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
         # convert exch
         if self.data_req.exch is None:
-            exch = "CCCAGG"
+            self.data_req.exch = "CCCAGG"
         else:
-            exch = self.data_req.exch
-        # convert start date
+            self.data_req.exch = self.data_req.exch.lower()
+
+        # start date
         if self.data_req.freq[-3:] == "min":  # limit to higher frequency data responses
-            start_date = int((datetime.now() - timedelta(days=7)).timestamp())
-        # no start date
+            self.data_req.source_start_date = int((datetime.now() - timedelta(days=7)).timestamp())
         elif self.data_req.start_date is None:
-            start_date = int(pd.Timestamp("2009-01-03 00:00:00").timestamp())
+            self.data_req.source_start_date = int(pd.Timestamp("2009-01-03 00:00:00").timestamp())
         else:
-            start_date = int(pd.Timestamp(self.data_req.start_date).timestamp())
+            self.data_req.source_start_date = int(pd.Timestamp(self.data_req.start_date).timestamp())
+
         # convert end date
         if self.data_req.end_date is None:
-            end_date = int(pd.Timestamp.utcnow().timestamp())
+            self.data_req.source_end_date = int(pd.Timestamp.utcnow().timestamp())
         else:
-            end_date = int(pd.Timestamp(self.data_req.end_date).timestamp())
+            self.data_req.source_end_date = int(pd.Timestamp(self.data_req.end_date).timestamp())
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='cryptocompare')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='cryptocompare')
+
         # tz
         if self.data_req.tz is None:
-            tz = "UTC"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "UTC"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": 'crypto',
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_coinmetrics(self) -> DataRequest:
         """
@@ -980,7 +958,7 @@ class ConvertParams:
             List of fields in data source format.
 
         """
-        # x fields
+        # fields
         with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_dict_path = f
         fields_df, fields_list = (

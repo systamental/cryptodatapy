@@ -16,7 +16,6 @@ class TestCoinMetrics:
     """
     Test class for CoinMetrics.
     """
-
     @pytest.fixture(autouse=True)
     def cm_default(self):
         self.cm = CoinMetrics()

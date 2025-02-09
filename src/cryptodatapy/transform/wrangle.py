@@ -510,13 +510,13 @@ class WrangleData:
         self.filter_dates()
         # resample
         self.data_resp = self.data_resp.resample(self.data_req.freq).last()
-        # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         # filter dups and NaNs
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+        # type conversion
+        self.data_resp = self.data_resp.convert_dtypes()
 
         return self.data_resp
 

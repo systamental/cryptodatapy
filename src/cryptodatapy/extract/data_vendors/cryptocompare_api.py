@@ -79,6 +79,8 @@ class CryptoCompare(DataVendor):
             raise TypeError("Set your CryptoCompare api key in environment variables as 'CRYPTOCOMPARE_API_KEY' or "
                             "add it as an argument when instantiating the class. To get an api key, visit: "
                             "https://min-api.cryptocompare.com/")
+        self.onchain_fields = None
+        self.social_fields = None
         self.data_req = None
         self.data_resp = None
         self.data = pd.DataFrame()
@@ -220,9 +222,9 @@ class CryptoCompare(DataVendor):
         # data req
         self.req_meta(info_type='on-chain_info')
         # wrangle data resp
-        onchain_fields = WrangleInfo(self.data_resp).cc_onchain_info()
+        self.onchain_fields = WrangleInfo(self.data_resp).cc_onchain_info()
 
-        return onchain_fields
+        return self.onchain_fields
 
     def get_social_info(self) -> list[str]:
         """
@@ -236,9 +238,9 @@ class CryptoCompare(DataVendor):
         # data req
         self.req_meta(info_type='social_info')
         # wrangle data resp
-        social_fields = WrangleInfo(self.data_resp).cc_social_info()
+        self.social_fields = WrangleInfo(self.data_resp).cc_social_info()
 
-        return social_fields
+        return self.social_fields
 
     def get_fields_info(self, data_type: Optional[str] = None) -> list[str]:
         """
@@ -584,6 +586,8 @@ class CryptoCompare(DataVendor):
         # loop through tickers
         for ticker in self.data_req.source_tickers:
 
+            print(ticker)
+
             try:
                 df0 = self.get_tidy_data(data_req, data_type, ticker)
             except Exception as e:
@@ -711,13 +715,18 @@ class CryptoCompare(DataVendor):
         self.get_indexes_info(as_list=True)
         tickers_list = self.assets + self.indexes
 
+        # fields
+        self.get_fields_info()
+        self.get_onchain_info()
+        self.get_social_info()
+
         # tickers
         if not all([ticker in tickers_list for ticker in self.data_req.source_tickers]):
             raise ValueError("Some assets are not available. "
                              "Check available assets and indexes with get_assets_info() or get_indexes_info().")
 
         # fields
-        if not all([field in self.get_fields_info() for field in self.data_req.source_fields]):
+        if not all([field in self.fields for field in self.data_req.source_fields]):
             raise ValueError("Some fields are not available. "
                              "Check available fields with get_fields_info().")
 
@@ -727,12 +736,12 @@ class CryptoCompare(DataVendor):
                              f"Check available frequencies with get_frequencies().")
 
         # on-chain freq
-        if self.data_req.source_fields in self.get_onchain_info() and self.data_req.source_freq != 'histoday':
+        if self.data_req.source_fields in self.onchain_fields and self.data_req.source_freq != 'histoday':
             raise ValueError(f"On-chain data is only available on a daily frequency."
                              f" Change data request frequency to 'd' and try again.")
 
         # social freq
-        if self.data_req.source_fields in self.get_social_info() and self.data_req.source_freq == 'histominute':
+        if self.data_req.source_fields in self.social_fields and self.data_req.source_freq == 'histominute':
             raise ValueError(f"Social media data is only available on a daily and hourly frequency."
                              f" Change data request frequency to 'd' or '1h' and try again.")
 
@@ -751,42 +760,44 @@ class CryptoCompare(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for OHLCV, on-chain and/or
             social fields (cols), in tidy format.
         """
-        logging.info("Retrieving data request from CryptoCompare...")
-
         # check data req params
         self.check_params(data_req)
 
         # get indexes
-        try:
-            df0 = self.get_indexes(data_req)
-        except Exception as e:
-            logging.warning(e)
-        else:
-            self.data = pd.concat([self.data, df0])
+        if any([ticker in self.indexes for ticker in data_req.source_tickers]):
+            try:
+                df0 = self.get_indexes(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                self.data = pd.concat([self.data, df0])
 
         # get ohlcv
-        try:
-            df1 = self.get_ohlcv(data_req)
-        except Exception as e:
-            logging.warning(e)
-        else:
-            self.data = pd.concat([self.data, df1])
+        if any([field in ['open', 'high', 'low', 'close', 'volumefrom'] for field in data_req.source_fields]):
+            try:
+                df1 = self.get_ohlcv(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                self.data = pd.concat([self.data, df1])
 
         # get onchain
-        try:
-            df2 = self.get_onchain(data_req)
-        except Exception as e:
-            logging.warning(e)
-        else:
-            self.data = pd.concat([self.data, df2], axis=1)
+        if any([field in self.onchain_fields for field in data_req.source_fields]):
+            try:
+                df2 = self.get_onchain(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                self.data = pd.concat([self.data, df2], axis=1)
 
         # get social
-        try:
-            df3 = self.get_social(data_req)
-        except Exception as e:
-            logging.warning(e)
-        else:
-            self.data = pd.concat([self.data, df3], axis=1)
+        if any([field in self.social_fields for field in data_req.source_fields]):
+            try:
+                df3 = self.get_social(data_req)
+            except Exception as e:
+                logging.warning(e)
+            else:
+                self.data = pd.concat([self.data, df3], axis=1)
 
         # check if df empty
         if self.data.empty:
@@ -795,7 +806,5 @@ class CryptoCompare(DataVendor):
         # filter df for desired fields and sort index by date
         fields = [field for field in data_req.fields if field in self.data.columns]
         self.data = self.data.loc[:, fields].sort_index()
-
-        logging.info("Data retrieved from CryptoCompare.")
 
         return self.data

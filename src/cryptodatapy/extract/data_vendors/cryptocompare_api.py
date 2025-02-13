@@ -586,8 +586,6 @@ class CryptoCompare(DataVendor):
         # loop through tickers
         for ticker in self.data_req.source_tickers:
 
-            print(ticker)
-
             try:
                 df0 = self.get_tidy_data(data_req, data_type, ticker)
             except Exception as e:

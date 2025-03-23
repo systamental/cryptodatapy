@@ -1044,23 +1044,23 @@ class ConvertParams:
                 else:
                     logging.warning(f"Field {field} not available in dYdX API")
             return {
-            "tickers": tickers,  # List of market tickers
-            "freq": freq,        # Converted frequency
-            "quote_ccy": self.data_req.quote_ccy,
-            "exch": "dydx",
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": markets,     # Market identifiers
-            "start_date": self.data_req.start_date,
-            "end_date": self.data_req.end_date,
-            "fields": fields,    # Converted field names
-            "tz": self.data_req.tz or "UTC",
-            "cat": "crypto",
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+                "tickers": tickers,  # List of market tickers
+                "freq": freq,        # Converted frequency
+                "quote_ccy": self.data_req.quote_ccy,
+                "exch": "dydx",
+                "mkt_type": self.data_req.mkt_type,
+                "mkts": markets,     # Market identifiers
+                "start_date": self.data_req.start_date,
+                "end_date": self.data_req.end_date,
+                "fields": fields,    # Converted field names
+                "tz": self.data_req.tz or "UTC",
+                "cat": "crypto",
+                "trials": self.data_req.trials,
+                "pause": self.data_req.pause,
+                "source_tickers": self.data_req.source_tickers,
+                "source_freq": self.data_req.source_freq,
+                "source_fields": self.data_req.source_fields
+            }
 
     def to_dydx(self) -> DataRequest:
 

@@ -8,7 +8,6 @@ from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
-from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
 from cryptodatapy.extract.web.aqr import AQR
 

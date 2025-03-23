@@ -1,10 +1,10 @@
-from typing import Dict, Optional, Union
-
 import numpy as np
-np.float_ = np.float64
 import pandas as pd
+from typing import Dict, Optional, Union
 from prophet import Prophet
 from statsmodels.tsa.seasonal import STL, seasonal_decompose
+
+np.float_ = np.float64
 
 
 class OutlierDetection:

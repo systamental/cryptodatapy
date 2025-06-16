@@ -510,13 +510,13 @@ class WrangleData:
         self.filter_dates()
         # resample
         self.data_resp = self.data_resp.resample(self.data_req.freq).last()
+        # type conversion
+        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
         # remove bad data
         self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
         # filter dups and NaNs
         self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
-        # type conversion
-        self.data_resp = self.data_resp.convert_dtypes()
 
         return self.data_resp
 
@@ -1176,3 +1176,180 @@ class WrangleData:
             self.data_resp = self.data_resp[(self.data_resp.index <= self.data_req.end_date)]
 
         return self
+
+    def dydx_ohlcv(self) -> pd.DataFrame:
+        """
+        Wrangles dYdX OHLCV data response to dataframe with tidy data format.
+        
+        Ensures consistent timestamp handling and supports different frequencies.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        if isinstance(self.data_resp, pd.DataFrame) and not self.data_resp.empty:
+            df = self.data_resp.copy()
+        else:
+            return pd.DataFrame()
+
+        df['date'] = pd.to_datetime(df['startedAt'])
+        
+        df['date'] = df['date'].dt.round('h')
+        
+        df['ticker'] = df['ticker'].str.replace('-USD', '')
+        
+        df = df[['date', 'ticker', 'open', 'high', 'low', 'close', 'baseTokenVolume']].copy()
+        df.rename(columns={'baseTokenVolume': 'volume'}, inplace=True)
+        
+        price_cols = ['open', 'high', 'low', 'close']
+        for col in price_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        df['volume'] = pd.to_numeric(df['volume'], errors='coerce')
+        
+        df = df.groupby(['date', 'ticker']).last().reset_index()
+        
+        df.set_index(['date', 'ticker'], inplace=True)
+        df.sort_index(inplace=True)
+        
+        if hasattr(self.data_req, 'freq') and self.data_req.freq:
+            freq_map = {
+                '1h': 'h',
+                '4h': '4h',
+                'd': 'D',
+                'w': 'W',
+                'm': 'M',
+                'q': 'Q',
+                'y': 'Y'
+            }
+            
+            pandas_freq = freq_map.get(self.data_req.freq)
+            
+            if pandas_freq and pandas_freq != 'h':
+                agg_rules = {
+                    'open': 'first',
+                    'high': 'max', 
+                    'low': 'min',
+                    'close': 'last',
+                    'volume': 'sum'
+                }
+                
+                df = (
+                    df.groupby('ticker')
+                    .resample(pandas_freq, level='date')
+                    .agg(agg_rules)
+                    .swaplevel('ticker', 'date')
+                    .sort_index()
+                )
+        
+        return df
+
+    def dydx_funding_rates(self) -> pd.DataFrame:
+        """
+        Wrangles dYdX funding rates data response to dataframe with tidy data format.
+        
+        Aligns funding rate timestamps with OHLCV timestamps by rounding to the nearest hour
+        and handles different frequencies (1h, 4h, d, etc.) appropriately.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        if isinstance(self.data_resp, pd.DataFrame) and not self.data_resp.empty:
+            df = self.data_resp.copy()
+        else:
+            return pd.DataFrame()
+
+        df['date'] = pd.to_datetime(df['effectiveAt'])
+        
+        df['date'] = df['date'].dt.round('h')
+        
+        df['ticker'] = df['ticker'].str.replace('-USD', '')
+        
+        df = df[['date', 'ticker', 'rate']].copy()
+        df.rename(columns={'rate': 'funding_rate'}, inplace=True)
+        
+        df['funding_rate'] = pd.to_numeric(df['funding_rate'], errors='coerce')
+        
+        df = df.groupby(['date', 'ticker']).last().reset_index()
+        
+        df.set_index(['date', 'ticker'], inplace=True)
+        df.sort_index(inplace=True)
+        
+        if hasattr(self.data_req, 'freq') and self.data_req.freq:
+            freq_map = {
+                '1h': 'h',
+                '4h': '4h',
+                'd': 'D',
+                'w': 'W',
+                'm': 'M',
+                'q': 'Q',
+                'y': 'Y'
+            }
+            
+            pandas_freq = freq_map.get(self.data_req.freq)
+            
+            if pandas_freq and pandas_freq != 'h':
+                df = (
+                    (1 + df.funding_rate.fillna(0))
+                    .groupby('ticker')
+                    .resample(pandas_freq, level='date', closed='right', label='right')
+                    .prod() - 1
+                ).to_frame('funding_rate').swaplevel('ticker', 'date').sort_index()
+                
+                df.loc[df['funding_rate'] == -1, 'funding_rate'] = pd.NA
+        
+        return df
+
+    def dydx_open_interest(self) -> pd.DataFrame:
+        """
+        Wrangles dYdX open interest data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        if isinstance(self.data_resp, pd.DataFrame) and not self.data_resp.empty:
+            df = self.data_resp.copy()
+            
+            if not isinstance(df.index, pd.MultiIndex):
+                df.set_index(['date', 'ticker'], inplace=True)
+            
+            df.sort_index(inplace=True)
+            return df
+        else:
+            return pd.DataFrame()
+
+    def dydx(self, data_type: str) -> pd.DataFrame:
+        """
+        Wrangles dYdX data response to dataframe with tidy data format.
+
+        Parameters
+        ----------
+        data_type: str
+            Type of data ('ohlcv', 'funding_rates', 'open_interest').
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        if data_type == 'ohlcv':
+            self.tidy_data = self.dydx_ohlcv()
+        elif data_type == 'funding_rates':
+            self.tidy_data = self.dydx_funding_rates()
+        elif data_type == 'open_interest':
+            self.tidy_data = self.dydx_open_interest()
+        else:
+            raise ValueError(f"Data type {data_type} not supported for dYdX.")
+
+        self.tidy_data = self.tidy_data.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
+        if data_type != 'funding_rates':
+            self.tidy_data = self.tidy_data[self.tidy_data != 0] 
+        self.tidy_data = self.tidy_data[~self.tidy_data.index.duplicated()] 
+        self.tidy_data = self.tidy_data.dropna(how='all').dropna(how='all', axis=1)
+
+        return self.tidy_data

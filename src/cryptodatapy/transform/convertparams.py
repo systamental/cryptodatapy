@@ -4,7 +4,6 @@ from importlib import resources
 from typing import Dict, List, Union
 
 import pandas as pd
-import pytz
 
 from cryptodatapy.extract.datarequest import DataRequest
 
@@ -25,82 +24,60 @@ class ConvertParams:
         """
         self.data_req = data_req
 
-    def to_cryptocompare(self) -> Dict[str, Union[list, str, int, float, None]]:
+    def to_cryptocompare(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to CryptoCompare format.
         """
-        # convert tickers
-        if self.data_req.source_tickers is not None:
-            tickers = self.data_req.source_tickers
-            self.data_req.tickers = self.data_req.source_tickers
-        else:
-            tickers = [ticker.upper() for ticker in self.data_req.tickers]
-        # convert freq
-        if self.data_req.source_freq is not None:
-            freq = self.data_req.source_freq
-            self.data_req.freq = self.data_req.source_freq
-        else:
-            if self.data_req.freq[-3:] == "min":
-                freq = "histominute"
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # freq
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "histoday"
+            elif self.data_req.freq[-3:] == "min":
+                self.data_req.source_freq = "histominute"
             elif self.data_req.freq[-1] == "h":
-                freq = "histohour"
+                self.data_req.source_freq = "histohour"
             else:
-                freq = "histoday"
-        # convert quote ccy
+                self.data_req.source_freq = "histoday"
+
+        # quote ccy
         if self.data_req.quote_ccy is None:
-            quote_ccy = "USD"
+            self.data_req.quote_ccy = "USD"
         else:
-            quote_ccy = self.data_req.quote_ccy.upper()
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
         # convert exch
         if self.data_req.exch is None:
-            exch = "CCCAGG"
+            self.data_req.exch = "CCCAGG"
         else:
-            exch = self.data_req.exch
-        # convert start date
+            self.data_req.exch = self.data_req.exch.lower()
+
+        # start date
         if self.data_req.freq[-3:] == "min":  # limit to higher frequency data responses
-            start_date = int((datetime.now() - timedelta(days=7)).timestamp())
-        # no start date
+            self.data_req.source_start_date = int((datetime.now() - timedelta(days=7)).timestamp())
         elif self.data_req.start_date is None:
-            start_date = int(pd.Timestamp("2009-01-03 00:00:00").timestamp())
+            self.data_req.source_start_date = int(pd.Timestamp("2009-01-03 00:00:00").timestamp())
         else:
-            start_date = int(pd.Timestamp(self.data_req.start_date).timestamp())
+            self.data_req.source_start_date = int(pd.Timestamp(self.data_req.start_date).timestamp())
+
         # convert end date
         if self.data_req.end_date is None:
-            end_date = int(pd.Timestamp.utcnow().timestamp())
+            self.data_req.source_end_date = int(pd.Timestamp.utcnow().timestamp())
         else:
-            end_date = int(pd.Timestamp(self.data_req.end_date).timestamp())
+            self.data_req.source_end_date = int(pd.Timestamp(self.data_req.end_date).timestamp())
+
         # fields
-        if self.data_req.source_fields is not None:
-            fields = self.data_req.source_fields
-            self.data_req.fields = self.data_req.source_fields
-        else:
-            fields = self.convert_fields(data_source='cryptocompare')
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='cryptocompare')
+
         # tz
         if self.data_req.tz is None:
-            tz = "UTC"
-        else:
-            tz = self.data_req.tz
+            self.data_req.tz = "UTC"
 
-        return {
-            "tickers": tickers,
-            "freq": freq,
-            "quote_ccy": quote_ccy,
-            "exch": exch,
-            "ctys": None,
-            "mkt_type": self.data_req.mkt_type,
-            "mkts": None,
-            "start_date": start_date,
-            "end_date": end_date,
-            "fields": fields,
-            "tz": tz,
-            "inst": None,
-            "cat": 'crypto',
-            "trials": self.data_req.trials,
-            "pause": self.data_req.pause,
-            "source_tickers": self.data_req.source_tickers,
-            "source_freq": self.data_req.source_freq,
-            "source_fields": self.data_req.source_fields,
-        }
+        return self.data_req
 
     def to_coinmetrics(self) -> DataRequest:
         """
@@ -981,7 +958,7 @@ class ConvertParams:
             List of fields in data source format.
 
         """
-        # get fields
+        # fields
         with resources.path("cryptodatapy.conf", "fields.csv") as f:
             fields_dict_path = f
         fields_df, fields_list = (
@@ -1007,10 +984,86 @@ class ConvertParams:
 
         return fields_list
 
-    def to_dydx(self) -> DataRequest:
+    def to_dydx_dict(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
         Convert parameters from CryptoDataPy to dYdX format.
         """
+        if self.data_req.source_tickers is not None:
+            tickers = self.data_req.source_tickers
+            self.data_req.tickers = self.data_req.source_tickers
+        else:
+            tickers = [ticker.upper() for ticker in self.data_req.tickers]
+        
+        # convert markets (if needed)
+        markets = [f"{ticker}-USD" for ticker in tickers]
+        
+        # convert freq
+        if self.data_req.source_freq is not None:
+            freq = self.data_req.source_freq
+            self.data_req.freq = self.data_req.source_freq
+        else:
+            if self.data_req.freq is None:
+                freq = "1DAY"
+            elif self.data_req.freq == "1min":
+                freq = "1MIN"
+            elif self.data_req.freq == "5min":
+                freq = "5MINS"
+            elif self.data_req.freq == "15min":
+                freq = "15MINS"
+            elif self.data_req.freq == "30min":
+                freq = "30MINS"
+            elif self.data_req.freq == "1h":
+                freq = "1HOUR"
+            elif self.data_req.freq == "4h":
+                freq = "4HOURS"
+            elif self.data_req.freq in ["1d", "d"]:
+                freq = "1DAY"
+            else:
+                freq = "1DAY"  # Default to daily
+            
+        # convert fields
+        if self.data_req.source_fields is not None:
+            fields = self.data_req.source_fields
+            self.data_req.fields = self.data_req.source_fields
+        else:
+            # Map our standard fields to dYdX field names
+            field_mapping = {
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'baseTokenVolume',
+                'funding_rate': 'nextFundingRate',
+                'oi': 'openInterest'
+            }
+            
+            fields = []
+            for field in self.data_req.fields:
+                if field in field_mapping:
+                    fields.append(field_mapping[field])
+                else:
+                    logging.warning(f"Field {field} not available in dYdX API")
+            return {
+                "tickers": tickers,  # List of market tickers
+                "freq": freq,        # Converted frequency
+                "quote_ccy": self.data_req.quote_ccy,
+                "exch": "dydx",
+                "mkt_type": self.data_req.mkt_type,
+                "mkts": markets,     # Market identifiers
+                "start_date": self.data_req.start_date,
+                "end_date": self.data_req.end_date,
+                "fields": fields,    # Converted field names
+                "tz": self.data_req.tz or "UTC",
+                "cat": "crypto",
+                "trials": self.data_req.trials,
+                "pause": self.data_req.pause,
+                "source_tickers": self.data_req.source_tickers,
+                "source_freq": self.data_req.source_freq,
+                "source_fields": self.data_req.source_fields
+            }
+
+    def to_dydx(self) -> DataRequest:
+
         # tickers
         if self.data_req.source_tickers is None:
             self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
@@ -1020,7 +1073,6 @@ class ConvertParams:
             self.data_req.source_markets = [f"{ticker}-USD" 
                                             for ticker in self.data_req.source_tickers]
         
-        # frequency conversion
         if self.data_req.source_freq is None:
             if self.data_req.freq is None:
                 self.data_req.source_freq = "1DAY"
@@ -1039,9 +1091,7 @@ class ConvertParams:
             elif self.data_req.freq in ["1d", "d"]:
                 self.data_req.source_freq = "1DAY"
 
-        # fields conversion
-        if self.data_req.source_fields is None:
-            field_mapping = {
+        field_mapping = {
                 'open': 'open',
                 'high': 'high',
                 'low': 'low',
@@ -1050,63 +1100,4 @@ class ConvertParams:
                 'funding_rate': 'nextFundingRate',
                 'oi': 'openInterest'
             }
-            
-            source_fields = []
-            for field in self.data_req.fields:
-                if field in field_mapping:
-                    source_fields.append(field_mapping[field])
-                else:
-                    logging.warning(f"Field {field} not available in dYdX API")
-            
-            self.data_req.source_fields = source_fields
-
-        # date conversion - convert datetime objects to ISO format for dYdX API
-        # Ensure timezone-aware dates for proper API alignment
-        # Always set actual dates (never None) like CCXT does
-        if self.data_req.source_start_date is None:
-            if self.data_req.start_date is not None:
-                if isinstance(self.data_req.start_date, datetime):
-                    # If timezone-naive, assume UTC
-                    if self.data_req.start_date.tzinfo is None:
-                        start_dt = self.data_req.start_date.replace(tzinfo=pytz.UTC)
-                    else:
-                        start_dt = self.data_req.start_date
-                    self.data_req.source_start_date = start_dt.isoformat()
-                else:
-                    # If it's already a string, try to parse and format it with timezone
-                    try:
-                        parsed_date = pd.to_datetime(self.data_req.start_date)
-                        if parsed_date.tzinfo is None:
-                            parsed_date = parsed_date.tz_localize('UTC')
-                        self.data_req.source_start_date = parsed_date.isoformat()
-                    except Exception:
-                        self.data_req.source_start_date = str(self.data_req.start_date)
-            else:
-                # Default to 30 days ago if no start date provided (like CCXT defaults to 2010)
-                default_start = pd.Timestamp.utcnow() - pd.Timedelta(days=30)
-                self.data_req.source_start_date = default_start.isoformat()
-        
-        if self.data_req.source_end_date is None:
-            if self.data_req.end_date is not None:
-                if isinstance(self.data_req.end_date, datetime):
-                    # If timezone-naive, assume UTC
-                    if self.data_req.end_date.tzinfo is None:
-                        end_dt = self.data_req.end_date.replace(tzinfo=pytz.UTC)
-                    else:
-                        end_dt = self.data_req.end_date
-                    self.data_req.source_end_date = end_dt.isoformat()
-                else:
-                    # If it's already a string, try to parse and format it with timezone
-                    try:
-                        parsed_date = pd.to_datetime(self.data_req.end_date)
-                        if parsed_date.tzinfo is None:
-                            parsed_date = parsed_date.tz_localize('UTC')
-                        self.data_req.source_end_date = parsed_date.isoformat()
-                    except Exception:
-                        self.data_req.source_end_date = str(self.data_req.end_date)
-            else:
-                # Default to current time if no end date provided (like CCXT does)
-                default_end = pd.Timestamp.utcnow()
-                self.data_req.source_end_date = default_end.isoformat()
-
         return self.data_req

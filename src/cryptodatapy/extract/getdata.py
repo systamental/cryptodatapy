@@ -6,8 +6,10 @@ from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
 from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.exchanges.dydx import Dydx
 from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
+from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
 from cryptodatapy.extract.web.aqr import AQR
 
@@ -89,13 +91,15 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
+            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "av-daily": PandasDataReader,
             "av-forex-daily": PandasDataReader,
             "famafrench": PandasDataReader,
-            "aqr": AQR
+            "aqr": AQR,
+            "dydx": Dydx
         }
 
         # available attr and methods
@@ -121,8 +125,6 @@ class GetData:
             "get_assets_info",
             "get_markets_info",
             "get_fields_info",
-            "get_onchain_tickers_info",
-            "get_onchain_info",
             "get_frequencies_info",
             "get_rate_limit_info",
             "get_news_sources",
@@ -199,13 +201,15 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
+            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "av-daily": PandasDataReader,
             "av-forex-daily": PandasDataReader,
             "famafrench": PandasDataReader,
-            "aqr": AQR
+            "aqr": AQR,
+            "dydx": Dydx
         }
 
         # data source
@@ -266,13 +270,15 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
+            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "av-daily": PandasDataReader,
             "av-forex-daily": PandasDataReader,
             "famafrench": PandasDataReader,
-            "aqr": AQR
+            "aqr": AQR,
+            "dydx": Dydx
         }
 
         # data source

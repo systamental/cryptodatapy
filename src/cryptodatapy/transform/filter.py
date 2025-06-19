@@ -159,12 +159,12 @@ class Filter:
             and fields (cols).
         """
         # drop tickers with nobs < ts_obs
-        obs = self.df.groupby(level=1).count().median(axis=1)
+        obs = self.df.groupby(level=1).count().min(axis=1)
         drop_tickers_list = obs[obs < ts_obs].index.to_list()
         self.filtered_df = self.df.drop(drop_tickers_list, level=1, axis=0)
 
         # drop tickers with nobs < cs_obs
-        obs = self.filtered_df.groupby(level=0).count().median(axis=1)
+        obs = self.filtered_df.groupby(level=0).count().min(axis=1)
         idx_start = obs[obs > cs_obs].index[0]
         self.filtered_df = self.filtered_df.loc[idx_start:]
 

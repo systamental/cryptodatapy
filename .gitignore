@@ -7,3 +7,10 @@ __pycache__
 dist/
 docs/_build/
 notebooks/
+
+# Jupyter notebooks for development/testing
+*.ipynb
+.ipynb_checkpoints/
+
+# Environment files
+src/.env

@@ -9,7 +9,6 @@ from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.exchanges.dydx import Dydx
 from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
-from cryptodatapy.extract.libraries.investpy_api import InvestPy
 from cryptodatapy.extract.libraries.pandasdr_api import PandasDataReader
 from cryptodatapy.extract.web.aqr import AQR
 
@@ -91,7 +90,6 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
-            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
@@ -125,6 +123,8 @@ class GetData:
             "get_assets_info",
             "get_markets_info",
             "get_fields_info",
+            "get_onchain_tickers_info",
+            "get_onchain_info",
             "get_frequencies_info",
             "get_rate_limit_info",
             "get_news_sources",
@@ -201,7 +201,6 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
-            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
@@ -270,7 +269,6 @@ class GetData:
             "ccxt": CCXT,
             "glassnode": Glassnode,
             "tiingo": Tiingo,
-            "investpy": InvestPy,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,

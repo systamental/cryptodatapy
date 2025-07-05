@@ -725,8 +725,6 @@ class Tiingo(DataVendor):
             DataFrame with DatetimeIndex (level 0), ticker (level 1), and values for market or series data
             for selected fields (cols), in tidy format.
         """
-        logging.info("Retrieving data request from Tiingo...")
-
         # check data req params
         self.check_params(data_req)
 

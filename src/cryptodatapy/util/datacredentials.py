@@ -37,6 +37,16 @@ class DataCredentials:
         tiingo_api_key: str = os.environ['TIINGO_API_KEY']
     except KeyError:
         tiingo_api_key: str = None
+    # alpha vantage api key
+    try:
+        alpha_vantage_api_key: str = os.environ['ALPHAVANTAGE_API_KEY']
+    except KeyError:
+        alpha_vantage_api_key: str = None
+    # polygon api key
+    try:
+        polygon_api_key: str = os.environ['POLYGON_API_KEY']
+    except KeyError:
+        polygon_api_key: str = None
     # coinmetrics api key
     try:
         coinmetrics_api_key: str = os.environ['COINMETRICS_API_KEY']
@@ -52,6 +62,7 @@ class DataCredentials:
         coinmetrics_base_url: str = 'https://api.coinmetrics.io/v4'
     else:
         coinmetrics_base_url: str = 'https://community-api.coinmetrics.io/v4'
+    polygon_base_url: str = 'https://api.polygon.io/v3/reference/'
 
     # API endpoints
     cryptomcompare_endpoints: dict = field(default_factory=lambda: {

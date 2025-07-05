@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta
 from importlib import resources
 from typing import Dict, List, Union
+import re
 
 import pandas as pd
 
@@ -309,7 +310,7 @@ class ConvertParams:
                 except KeyError:
                     logging.warning(
                         f"{ticker} not found for Tiingo source. Check tickers in"
-                        f" data catalog and try again."
+                        f" data catalog or try using source_tickers parameter."
                     )
 
         # freq
@@ -667,7 +668,7 @@ class ConvertParams:
 
     def to_wb(self) -> Dict[str, Union[list, str, int, float, datetime, None]]:
         """
-        Convert tickers from CryptoDataPy to Yahoo Finance format.
+        Convert tickers from CryptoDataPy to World Bank format.
         """
         # tickers
         with resources.path("cryptodatapy.conf", "tickers.csv") as f:
@@ -780,6 +781,72 @@ class ConvertParams:
 
         return self.data_req
 
+    def to_alphavantage(self) -> DataRequest:
+        """
+        Convert tickers from CryptoDataPy to Alpha Vantage format.
+        """
+        # tickers
+        if self.data_req.source_tickers is None:
+            self.data_req.source_tickers = [ticker.upper() for ticker in self.data_req.tickers]
+
+        # convert quote ccy
+        if self.data_req.quote_ccy is None:
+            self.data_req.quote_ccy = "USD"
+        else:
+            self.data_req.quote_ccy = self.data_req.quote_ccy.upper()
+
+        # start date
+        self.data_req.source_start_date = self.data_req.start_date
+
+        # end date
+        self.data_req.source_end_date = self.data_req.end_date
+
+        # fields
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.data_req.fields
+
+        # tz
+        if self.data_req.tz is None:
+            self.data_req.tz = "America/New_York"
+
+        # freq
+        if self.data_req.cat == 'eqty':
+
+            # freq
+            if self.data_req.source_freq is None:
+                self.data_req.source_freq = 'av-daily'
+            elif self.data_req.freq in ['1min', '5min', '15min', '30min', '1h', '2h', '4h', '6h', '8h']:
+                self.data_req.source_freq = 'av-intraday'
+            elif self.data_req.freq == 'd':
+                self.data_req.source_freq = 'av-daily'
+            elif self.data_req.freq == 'w':
+                self.data_req.source_freq = 'av-weekly'
+            elif self.data_req.freq == 'm':
+                self.data_req.source_freq = 'av-monthly'
+            else:
+                self.data_req.source_freq = 'av-daily'
+
+            # adjusted prices
+            if any(col.endswith('_adj') for col in self.data_req.fields) and self.data_req.freq in ['d', 'w', 'm']:
+                self.data_req.source_freq = self.data_req.source_freq + '-adjusted'
+
+            # markets
+            if self.data_req.source_markets is None:
+                self.data_req.source_markets = self.data_req.source_tickers
+
+        elif self.data_req.cat == 'fx':
+
+            # freq
+            if self.data_req.source_freq is None:
+                self.data_req.source_freq = 'av-forex-daily'
+
+            # markets
+            if self.data_req.source_markets is None:
+                self.data_req.source_markets = [ticker + '/' + self.data_req.quote_ccy
+                                                for ticker in self.data_req.tickers]
+
+        return self.data_req
+
     def to_famafrench(self) -> DataRequest:
         """
         Convert tickers from CryptoDataPy to Fama-French format.
@@ -815,6 +882,84 @@ class ConvertParams:
             self.data_req.source_end_date = datetime.now()
         else:
             self.data_req.source_end_date = self.data_req.end_date
+
+        return self.data_req
+
+    def to_polygon(self) -> DataRequest:
+        """
+        Convert tickers from CryptoDataPy to Polygon format.
+        """
+        # tickers
+        with resources.path("cryptodatapy.conf", "tickers.csv") as f:
+            tickers_path = f
+        tickers_df = pd.read_csv(tickers_path, index_col=0, encoding="latin1")
+
+        if self.data_req.source_tickers is None and self.data_req.cat == 'eqty':
+            self.data_req.source_tickers = []
+            for ticker in self.data_req.tickers:
+                try:
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "tiingo_id"])
+                except KeyError:
+                    logging.warning(
+                        f"{ticker} not found for Polygon source. Check tickers in"
+                        f" data catalog or try using source_tickers parameter."
+                    )
+
+        # freq
+        if self.data_req.source_freq is None:
+            if self.data_req.freq is None:
+                self.data_req.source_freq = "day"
+            elif self.data_req.freq[-1] == "s":
+                self.data_req.source_freq = "second"
+            elif self.data_req.freq[-3:] == "min":
+                self.data_req.source_freq = "minute"
+            elif self.data_req.freq[-1] == "h":
+                self.data_req.source_freq = "hour"
+            elif self.data_req.freq == "w":
+                self.data_req.source_freq = "week"
+            elif self.data_req.freq == "m":
+                self.data_req.source_freq = "month"
+            elif self.data_req.freq == "q":
+                self.data_req.source_freq = "quarter"
+            elif self.data_req.freq == "y":
+                self.data_req.source_freq = "year"
+            else:
+                self.data_req.source_freq = "day"
+
+        # quote ccy
+        if self.data_req.quote_ccy is None:
+            self.data_req.quote_ccy = "usd"
+        else:
+            self.data_req.quote_ccy = self.data_req.quote_ccy.lower()
+
+        # markets
+        if self.data_req.source_markets is None:
+            if self.data_req.cat == 'fx':
+                fx_list = self.convert_fx_tickers(quote_ccy=self.data_req.quote_ccy)
+                self.data_req.source_markets = [ticker.replace("/", "") for ticker in fx_list]
+
+        # start date
+        if self.data_req.start_date is None:
+            two_years_ago = pd.Timestamp.today() - pd.DateOffset(years=2)
+            self.data_req.source_start_date = two_years_ago.strftime("%Y-%m-%d")
+        else:
+            self.data_req.source_start_date = self.data_req.start_date
+
+        # end date
+        if self.data_req.end_date is None:
+            self.data_req.source_end_date = str(pd.Timestamp.utcnow().date())
+        else:
+            self.data_req.source_end_date = self.data_req.end_date
+
+        # fields
+        if self.data_req.source_fields is None:
+            self.data_req.source_fields = self.convert_fields(data_source='polygon')
+
+        # tz
+        if self.data_req.cat == 'eqty' or self.data_req.cat == 'fx':
+            self.data_req.tz = "America/New_York"
+        else:
+            self.data_req.tz = "UTC"
 
         return self.data_req
 
@@ -910,79 +1055,6 @@ class ConvertParams:
             "source_freq": self.data_req.source_freq,
             "source_fields": self.data_req.source_fields,
         }
-
-    def convert_fx_tickers(self, quote_ccy: str) -> List[str]:
-        """
-        Converts base and quote currency tickers to fx pairs following fx quoting convention.
-
-        Parameters
-        ---------
-        quote_ccy: str
-            Quote currency
-
-        Returns
-        -------
-        quote_ccy: str
-            Quote currency.
-        """
-        mkts = []  # fx pairs list
-        # fx groups
-        base_ccys = ["EUR", "GBP", "AUD", "NZD"]
-        # g10_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK']
-        # dm_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK', 'SGD', 'ILS', 'HKD', ]
-        # em_fx = ['ARS', 'BRL', 'CHN', 'CLP', 'CNY', 'COP', 'IDR', 'INR', 'KRW', 'MYR', 'MXN', 'PEN', 'PHP', 'RUB',
-        #          'TRY', 'TWD', 'ZAR']
-
-        for ticker in self.data_req.tickers:
-            if ticker.upper() in base_ccys and quote_ccy.upper() == "USD":
-                mkts.append(ticker.upper() + "/" + quote_ccy.upper())
-            elif quote_ccy.upper() == "USD":
-                mkts.append(quote_ccy.upper() + "/" + ticker.upper())
-            else:
-                mkts.append(ticker.upper() + "/" + quote_ccy.upper())
-
-        return mkts
-
-    def convert_fields(self, data_source: str) -> List[str]:
-        """
-        Converts fields from CryptoDataPy to data source format.
-
-        Parameters
-        ---------
-        data_source: str
-            Name of data source for fields conversions.
-
-        Returns
-        -------
-        fields_list: list
-            List of fields in data source format.
-
-        """
-        # fields
-        with resources.path("cryptodatapy.conf", "fields.csv") as f:
-            fields_dict_path = f
-        fields_df, fields_list = (
-            pd.read_csv(fields_dict_path, index_col=0, encoding="latin1"),
-            [],
-        )
-
-        # when source fields already provided in data req
-        if self.data_req.source_fields is not None:
-            fields_list = self.data_req.source_fields
-
-        # convert to source format
-        else:
-            for field in self.data_req.fields:
-                try:
-                    fields_list.append(fields_df.loc[field, data_source + "_id"])
-                except KeyError as e:
-                    logging.warning(e)
-                    logging.warning(
-                        f"Id for {field} could not be found in the data catalog."
-                        f" Try using source field ids."
-                    )
-
-        return fields_list
 
     def to_dydx_dict(self) -> Dict[str, Union[list, str, int, float, None]]:
         """
@@ -1101,3 +1173,76 @@ class ConvertParams:
                 'oi': 'openInterest'
             }
         return self.data_req
+
+    def convert_fx_tickers(self, quote_ccy: str) -> List[str]:
+        """
+        Converts base and quote currency tickers to fx pairs following fx quoting convention.
+
+        Parameters
+        ---------
+        quote_ccy: str
+            Quote currency
+
+        Returns
+        -------
+        quote_ccy: str
+            Quote currency.
+        """
+        mkts = []  # fx pairs list
+        # fx groups
+        base_ccys = ["EUR", "GBP", "AUD", "NZD"]
+        # g10_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK']
+        # dm_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK', 'SGD', 'ILS', 'HKD', ]
+        # em_fx = ['ARS', 'BRL', 'CHN', 'CLP', 'CNY', 'COP', 'IDR', 'INR', 'KRW', 'MYR', 'MXN', 'PEN', 'PHP', 'RUB',
+        #          'TRY', 'TWD', 'ZAR']
+
+        for ticker in self.data_req.tickers:
+            if ticker.upper() in base_ccys and quote_ccy.upper() == "USD":
+                mkts.append(ticker.upper() + "/" + quote_ccy.upper())
+            elif quote_ccy.upper() == "USD":
+                mkts.append(quote_ccy.upper() + "/" + ticker.upper())
+            else:
+                mkts.append(ticker.upper() + "/" + quote_ccy.upper())
+
+        return mkts
+
+    def convert_fields(self, data_source: str) -> List[str]:
+        """
+        Converts fields from CryptoDataPy to data source format.
+
+        Parameters
+        ---------
+        data_source: str
+            Name of data source for fields conversions.
+
+        Returns
+        -------
+        fields_list: list
+            List of fields in data source format.
+
+        """
+        # fields
+        with resources.path("cryptodatapy.conf", "fields.csv") as f:
+            fields_dict_path = f
+        fields_df, fields_list = (
+            pd.read_csv(fields_dict_path, index_col=0, encoding="latin1"),
+            [],
+        )
+
+        # when source fields already provided in data req
+        if self.data_req.source_fields is not None:
+            fields_list = self.data_req.source_fields
+
+        # convert to source format
+        else:
+            for field in self.data_req.fields:
+                try:
+                    fields_list.append(fields_df.loc[field, data_source + "_id"])
+                except KeyError as e:
+                    logging.warning(e)
+                    logging.warning(
+                        f"Id for {field} could not be found in the data catalog."
+                        f" Try using source field ids."
+                    )
+
+        return fields_list

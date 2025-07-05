@@ -29,9 +29,12 @@ class PandasDataReader(Library):
             markets: Optional[Dict[str, List[str]]] = None,
             market_types: List[str] = ["spot", "future"],
             fields: Optional[Dict[str, List[str]]] = None,
-            frequencies: Optional[Dict[str, List[str]]] = ["d", "w", "m", "q", "y"],
+            frequencies: Optional[Dict[str, List[str]]] = ["d", "w", "m", "q", "y",
+                                                           "av-intraday", "av-daily", "av-weekly", "av-monthly",
+                                                           "av-daily-adjusted", "av-weekly-adjusted",
+                                                           "av-monthly-adjusted", "av-forex-daily"],
             base_url: Optional[str] = None,
-            api_key: Optional[str] = None,
+            api_key: str = data_cred.alpha_vantage_api_key,
             max_obs_per_call: Optional[int] = None,
             rate_limit: Optional[Any] = None,
     ):
@@ -228,7 +231,7 @@ class PandasDataReader(Library):
         # mkt type
         if self.data_req.mkt_type not in self.market_types:
             raise ValueError(
-                f"{self.data_req.mkt_type} is not available for {self.data_req.exch}."
+                f"{self.data_req.mkt_type} is not available."
             )
 
         # check fields
@@ -267,6 +270,20 @@ class PandasDataReader(Library):
                 self.data = yf.download(self.data_req.source_tickers,
                                         self.data_req.source_start_date,
                                         self.data_req.source_end_date)
+
+            # alpha vantage
+            elif self.data_req.source == "alphavantage":
+                for ticker, market in zip(self.data_req.source_tickers, self.data_req.source_markets):
+                    df1 = web.DataReader(market,
+                                         self.data_req.source_freq,
+                                         self.data_req.source_start_date,
+                                         self.data_req.source_end_date,
+                                         api_key=self.api_key)
+                    df1.index.name = 'date'
+                    df1['ticker'] = ticker
+                    df1.set_index(['ticker'], append=True, inplace=True)
+                    # concat df and df1
+                    self.data = pd.concat([self.data, df1])
 
             # fama-french
             elif data_req.source == "famafrench":

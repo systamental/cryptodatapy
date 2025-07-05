@@ -673,6 +673,47 @@ class WrangleData:
 
         return self.data_resp
 
+    def polygon(self) -> pd.DataFrame:
+        """
+        Wrangles Polygon data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+
+        """
+        # create df
+        self.data_resp = pd.DataFrame(self.data_resp)
+
+        # convert cols/fields to lib
+        self.convert_fields_to_lib(data_source='polygon')
+
+        # convert to datetime
+        self.data_resp['date'] = pd.to_datetime(self.data_resp['date'], unit='ms')
+
+        # set index
+        self.data_resp = self.data_resp.set_index('date').sort_index()
+
+        # resample
+        self.data_resp = self.data_resp.resample(self.data_req.freq).last()
+
+        # type conversion
+        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
+
+        # type conversion
+        self.data_resp = self.data_resp.convert_dtypes()
+
+        # remove bad data
+        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
+        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+        self.data_resp = self.data_resp[self.data_resp != 0]
+
+        # keep only requested fields
+        self.data_resp = self.data_resp[self.data_req.fields]
+
+        return self.data_resp
+
     def investpy(self) -> pd.DataFrame:
         """
         Wrangles InvestPy data response to dataframe with tidy data format.
@@ -936,6 +977,38 @@ class WrangleData:
         self.convert_fields_to_lib(data_source='yahoo')
 
         # index
+        self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
+        self.data_resp.set_index(['date', 'ticker'], inplace=True)
+
+        # resample
+        self.data_resp = self.data_resp.groupby('ticker').\
+            resample(self.data_req.freq, level='date').\
+            last().swaplevel('ticker', 'date').sort_index()
+
+        # type conversion
+        self.data_resp = self.data_resp.convert_dtypes()
+
+        # remove bad data
+        self.data_resp = self.data_resp[self.data_resp != 0]  # 0 values
+        self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]  # duplicate rows
+        self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
+
+        # keep only requested fields and sort index
+        self.data_resp = self.data_resp[self.data_req.fields].sort_index()
+
+        return self.data_resp
+
+    def alphavantage(self) -> pd.DataFrame:
+        """
+        Wrangles Alpha Vantage data response to dataframe with tidy data format.
+
+        Returns
+        -------
+        pd.DataFrame
+            Wrangled dataframe into tidy data format.
+        """
+        # index
+        self.data_resp.reset_index(inplace=True)
         self.data_resp['date'] = pd.to_datetime(self.data_resp['date'])
         self.data_resp.set_index(['date', 'ticker'], inplace=True)
 

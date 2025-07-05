@@ -93,8 +93,7 @@ class GetData:
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
-            "av-daily": PandasDataReader,
-            "av-forex-daily": PandasDataReader,
+            "alphavantage": PandasDataReader,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx
@@ -204,8 +203,7 @@ class GetData:
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
-            "av-daily": PandasDataReader,
-            "av-forex-daily": PandasDataReader,
+            "alphavantage": PandasDataReader,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx
@@ -272,8 +270,7 @@ class GetData:
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
-            "av-daily": PandasDataReader,
-            "av-forex-daily": PandasDataReader,
+            "alphavantage": PandasDataReader,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx

@@ -135,6 +135,8 @@ class DataRequest:
             "tiingo",
             "investpy",
             "yahoo",
+            "alphavantage",
+            "polygon",
             "fred",
             "famafrench",
             "dbnomics",

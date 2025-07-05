@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.2.25"
+version = "0.2.26"
 description = "Cryptoasset data library"
 authors = ["Systamental"]
 license = "Apache License 2.0"
@@ -29,6 +29,7 @@ fsspec = ">=2024.6.1"
 pyarrow = ">=17.0.0"
 s3fs = ">=2024.6.1"
 tdqm = ">=0.0.1"
+polygon-api-client = ">=1.14.6"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=7.1.2"

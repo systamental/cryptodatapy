@@ -4,6 +4,7 @@ import pandas as pd
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
+from cryptodatapy.extract.data_vendors.polygon_api import Polygon
 from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
 from cryptodatapy.extract.datarequest import DataRequest
 from cryptodatapy.extract.exchanges.dydx import Dydx
@@ -94,6 +95,7 @@ class GetData:
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "alphavantage": PandasDataReader,
+            "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx
@@ -204,6 +206,7 @@ class GetData:
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "alphavantage": PandasDataReader,
+            "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx
@@ -271,6 +274,7 @@ class GetData:
             "yahoo": PandasDataReader,
             "fred": PandasDataReader,
             "alphavantage": PandasDataReader,
+            "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
             "dydx": Dydx

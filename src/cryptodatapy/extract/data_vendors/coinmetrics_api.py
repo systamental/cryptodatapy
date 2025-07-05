@@ -1,8 +1,8 @@
 import logging
 from time import sleep
 from typing import Any, Dict, List, Optional, Union
-
 import pandas as pd
+
 from coinmetrics.api_client import CoinMetricsClient
 
 from cryptodatapy.extract.data_vendors.datavendor import DataVendor

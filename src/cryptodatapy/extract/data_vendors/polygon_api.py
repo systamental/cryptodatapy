@@ -286,7 +286,7 @@ class Polygon(DataVendor):
                 try:
                     df0 = self.get_tidy_data(self.data_req, market)
                 except Exception as e:
-                    logging.info(f"Failed to get fx data for {ticker} after many attempts: {e}.")
+                    logging.info(f"Failed to get fx data for {market} after many attempts: {e}.")
                 else:
                     # add ticker to index
                     df0['ticker'] = ticker.upper()

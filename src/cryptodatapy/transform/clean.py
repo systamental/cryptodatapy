@@ -1,48 +1,30 @@
 from __future__ import annotations
-from typing import Optional, Union
+from typing import Optional, Union, List
 import pandas as pd
 from cryptodatapy.transform.od import OutlierDetection
 from cryptodatapy.transform.impute import Impute
 from cryptodatapy.transform.filter import Filter
 
 
-def stitch_dataframes(dfs):
+def stitch_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
     """
     Stitches together dataframes with different start dates.
 
     Parameters
     ----------
-    dfs: list
-        List of dataframes to be stitched together.
+    df1: pd.DataFrame
+        First dataframe to be stitched.
+    df2: pd.DataFrame
+        Second dataframe to be stitched.
 
     Returns
     -------
     combined_df: pd.DataFrame
-        Combined dataframe with extended start date.
+        Combined or stitched dataframes with extended data.
     """
-    # check if dfs is a list
-    if not isinstance(dfs, list):
-        raise TypeError("Dataframes must be a list.")
-
-    # check index types
-    if all([isinstance(df.index, pd.MultiIndex) for df in dfs]):
-        dfs.sort(key=lambda df: df.index.levels[0][0], reverse=True)
-    elif all([isinstance(df.index, pd.DatetimeIndex) for df in dfs]):
-        dfs.sort(key=lambda df: df.index[0], reverse=True)
-    else:
-        raise TypeError("Dataframes must be pd.MultiIndex or have DatetimeIndex.")
-
-    # most recent start date
-    combined_df = dfs[0]
-
-    # combine dfs
-    for df in dfs[1:]:
-        combined_df = combined_df.combine_first(df)
-
-    # reorder cols
-    max_columns = max(len(df.columns) for df in dfs)
-    cols = next(df.columns.tolist() for df in dfs if len(df.columns) == max_columns)
-    combined_df = combined_df[cols]
+    # forward fill missing values
+    updated_df = df1.reindex(index=df2.index, columns=df2.columns).fillna(df2)
+    combined_df = df1.combine_first(updated_df)
 
     return combined_df
 

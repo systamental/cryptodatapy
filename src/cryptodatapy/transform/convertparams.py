@@ -898,7 +898,7 @@ class ConvertParams:
             self.data_req.source_tickers = []
             for ticker in self.data_req.tickers:
                 try:
-                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "tiingo_id"])
+                    self.data_req.source_tickers.append(tickers_df.loc[ticker, "polygon_id"])
                 except KeyError:
                     logging.warning(
                         f"{ticker} not found for Polygon source. Check tickers in"
@@ -935,8 +935,8 @@ class ConvertParams:
         # markets
         if self.data_req.source_markets is None:
             if self.data_req.cat == 'fx':
-                fx_list = self.convert_fx_tickers(quote_ccy=self.data_req.quote_ccy)
-                self.data_req.source_markets = [ticker.replace("/", "") for ticker in fx_list]
+                self.data_req.source_markets = [ticker.upper() + self.data_req.quote_ccy.upper()
+                           for ticker in self.data_req.tickers]
 
         # start date
         if self.data_req.start_date is None:

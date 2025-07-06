@@ -699,9 +699,6 @@ class WrangleData:
         self.data_resp = self.data_resp.resample(self.data_req.freq).last()
 
         # type conversion
-        self.data_resp = self.data_resp.apply(pd.to_numeric, errors='coerce').convert_dtypes()
-
-        # type conversion
         self.data_resp = self.data_resp.convert_dtypes()
 
         # remove bad data
@@ -709,8 +706,8 @@ class WrangleData:
         self.data_resp = self.data_resp.dropna(how='all').dropna(how='all', axis=1)  # entire row or col NaNs
         self.data_resp = self.data_resp[self.data_resp != 0]
 
-        # keep only requested fields
-        self.data_resp = self.data_resp[self.data_req.fields]
+        # keep only requested fields and sort index
+        self.data_resp = self.data_resp[self.data_req.fields].sort_index()
 
         return self.data_resp
 

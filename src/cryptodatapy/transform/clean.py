@@ -1,32 +1,9 @@
 from __future__ import annotations
-from typing import Optional, Union, List
+from typing import Optional, Union
 import pandas as pd
 from cryptodatapy.transform.od import OutlierDetection
 from cryptodatapy.transform.impute import Impute
 from cryptodatapy.transform.filter import Filter
-
-
-def stitch_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
-    """
-    Stitches together dataframes with different start dates.
-
-    Parameters
-    ----------
-    df1: pd.DataFrame
-        First dataframe to be stitched.
-    df2: pd.DataFrame
-        Second dataframe to be stitched.
-
-    Returns
-    -------
-    combined_df: pd.DataFrame
-        Combined or stitched dataframes with extended data.
-    """
-    # forward fill missing values
-    updated_df = df1.reindex(index=df2.index, columns=df2.columns).fillna(df2)
-    combined_df = df1.combine_first(updated_df)
-
-    return combined_df
 
 
 class CleanData:

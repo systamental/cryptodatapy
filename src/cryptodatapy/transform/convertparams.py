@@ -1189,12 +1189,14 @@ class ConvertParams:
             Quote currency.
         """
         mkts = []  # fx pairs list
+
         # fx groups
         base_ccys = ["EUR", "GBP", "AUD", "NZD"]
-        # g10_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK']
-        # dm_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK', 'SGD', 'ILS', 'HKD', ]
-        # em_fx = ['ARS', 'BRL', 'CHN', 'CLP', 'CNY', 'COP', 'IDR', 'INR', 'KRW', 'MYR', 'MXN', 'PEN', 'PHP', 'RUB',
-        #          'TRY', 'TWD', 'ZAR']
+        g10_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK']
+        dm_fx = ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'NOK', 'SEK', 'DKK', 'SGD', 'HKD']
+        em_fx = ['ARS', 'BRL', 'CHN', 'CLP', 'CNY', 'COP', 'CZK', 'HUF', 'IDR', 'INR', 'ILS', 'KRW', 'MYR', 'MXN',
+        'PEN', 'PHP', 'PLN', 'RUB', 'THB', 'TRY', 'TWD', 'ZAR']
+        em_ndf_fx = ['ARS', 'BRL', 'CNY', 'CLP', 'COP', 'IDR', 'INR', 'KRW', 'PEN', 'PHP', 'RUB', 'THB', 'TRY', 'TWD']
 
         for ticker in self.data_req.tickers:
             if ticker.upper() in base_ccys and quote_ccy.upper() == "USD":

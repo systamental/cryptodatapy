@@ -1,5 +1,55 @@
 import pandas as pd
 
+from tests.test_impute import filtered_data
+
+
+def compute_reference_price(List: pd.DataFrame,
+                            method: str = 'median',
+                            trim_pct: float = 0.25,
+                            ) -> pd.DataFrame:
+    """
+    Computes the consensus price from a list of dataframes.
+
+    Parameters
+    ----------
+    List: pd.DataFrame
+        List of dataframes containing price data.
+    method: str, optional
+        Method to compute the consensus price. Options are 'median' or 'trimmed_mean'.
+        Default is 'median'.
+    trim_pct: float, optional
+        Percentage of data to trim from both ends for 'trimmed_mean' method.
+        Default is 0.25 (25%).
+    Returns
+    -------
+    pd.DataFrame
+        Dataframe with the consensus price.
+    """
+    if not List:
+        raise ValueError("The input list is empty.")
+
+    # Concatenate all dataframes in the list
+    stacked_df = pd.concat(List)
+
+    # Compute consensus price based on the specified method
+    if method == 'median':
+        consensus_price = stacked_df.groupby(['date', 'ticker']).median()
+
+    elif method == 'trimmed_mean':
+        # Calculate trimmed mean with specified bounds
+        lower_bound = stacked_df.groupby(level=[0, 1]).quantile(trim_pct)
+        upper_bound = stacked_df.groupby(level=[0, 1]).quantile(1 - trim_pct)
+
+        # Filter out values outside the bounds
+        filtered_df = stacked_df[(stacked_df >= lower_bound.reindex(stacked_df.index)) &
+                                 (stacked_df <= upper_bound.reindex(stacked_df.index))]
+
+        consensus_price = filtered_df.groupby(level=[0, 1]).mean()
+    else:
+        raise ValueError("Method must be either 'median' or 'trimmed_mean'.")
+
+    return consensus_price.sort_index()
+
 
 def stitch_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
     """
@@ -53,7 +103,6 @@ def rebase_fx_to_foreign_vs_usd(df) -> pd.DataFrame:
             raise ValueError(f"Unexpected ticker format: {ticker}")
 
     if isinstance(df.index, pd.MultiIndex):
-        # MultiIndex: (date, ticker)
         tickers = df.index.get_level_values(1)
         inverted = tickers.str.startswith("USD")
 

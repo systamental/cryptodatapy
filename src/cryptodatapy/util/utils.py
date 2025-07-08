@@ -1,9 +1,8 @@
 import pandas as pd
+from typing import List
 
-from tests.test_impute import filtered_data
 
-
-def compute_reference_price(List: pd.DataFrame,
+def compute_reference_price(dfs: List[pd.DataFrame],
                             method: str = 'median',
                             trim_pct: float = 0.25,
                             ) -> pd.DataFrame:
@@ -12,7 +11,7 @@ def compute_reference_price(List: pd.DataFrame,
 
     Parameters
     ----------
-    List: pd.DataFrame
+    dfs: pd.DataFrame
         List of dataframes containing price data.
     method: str, optional
         Method to compute the consensus price. Options are 'median' or 'trimmed_mean'.
@@ -29,7 +28,7 @@ def compute_reference_price(List: pd.DataFrame,
         raise ValueError("The input list is empty.")
 
     # Concatenate all dataframes in the list
-    stacked_df = pd.concat(List)
+    stacked_df = pd.concat(dfs)
 
     # Compute consensus price based on the specified method
     if method == 'median':

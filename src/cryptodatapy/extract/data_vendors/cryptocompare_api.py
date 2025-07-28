@@ -711,7 +711,8 @@ class CryptoCompare(DataVendor):
         # tickers list
         self.get_assets_info(as_list=True)
         self.get_indexes_info(as_list=True)
-        tickers_list = self.assets + self.indexes
+        oc_tickers = self.get_onchain_tickers_info(as_list=True)
+        tickers_list = self.assets + self.indexes + oc_tickers
 
         # fields
         self.get_fields_info()

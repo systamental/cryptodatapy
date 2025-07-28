@@ -1796,7 +1796,7 @@ GB_M0,"UK M0 Money Supply, NSA","Monthly average amount outstanding of total ste
 GB_M1,"UK M1 Money Supply, NSA","Monthly average amount outstanding of total sterling notes and coin in circulation, excluding backing assets for commercial banknote issue in Scotland and Northern Ireland (in sterling millions) seasonally adjusted",,GB,GBR,United Kingdom,DM,macro,money,,m,,GBP ,GBP ,,,,,MANMM101GBM189N,,,,
 US_M2,"United States M2, Money Supply, SA",,,US,USA,United States,DM,macro,money,,m,,billion usd,USD,,,,,M2SL,FED/H6_H6_M2/M2.M,,,
 CN_M2,"China M2, Money Supply, NSA",,,CN,CHN,China,EM,macro,money,,m,,100 million yuan,CNY,,,,,MYAGM2CNM189N,NBS/M_A0D01/A0D0101,M2 Money Stock (YoY),,
-EZ_M2,"Eurozone M2, Money Supply, SA",,,EZ,EMU,Euro zone,Euro zone,macro,money,,m,,million euro,EUR,,,,,MABMM301EZM189S,ECB/BSI/M.U2.Y.V.M20.X.1.U2.2300.Z01.E,,,
+EZ_M2,"Eurozone M2, Money Supply, SA",,,EZ,EMU,Euro zone,Euro zone,macro,money,,m,,million euro,EUR,,,,,MYAGM2EZM196N,ECB/BSI/M.U2.N.V.M20.X.1.U2.2300.Z01.E,,,
 JP_M2,"Japan M2, Total, SA",,,JP,JPN,Japan,DM,macro,money,,m,,JPY ,JPY ,,,,,MYAGM2JPM189S,ECB/RTD/M.JP.Y.M_M2.J,,,
 GB_M3,"UK M3, Total, SA",,,GB,GBR,United Kingdom,DM,macro,money,,m,,GBP ,GBP ,,,,,MABMM301GBM189S,BOE/7989/LPMVWXL,,,
 GB_M4,"UK M4, Total, SA",,,GB,GBR,United Kingdom,DM,macro,money,,m,,GBP ,GBP ,,,,,,BOE/36785/LPMAUYN,,,

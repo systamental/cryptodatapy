@@ -12,6 +12,7 @@ def fred_data_resp():
     df.index = pd.to_datetime(df.index)
     return df
 
+
 @pytest.fixture
 def yahoo_data_resp():
     df = pd.read_csv('data/yahoo_df.csv', header=[0, 1], index_col=0)
@@ -47,7 +48,10 @@ class TestPandasDataReader:
         self.pdr_instance.get_frequencies_info()
 
         assert isinstance(self.pdr_instance.frequencies, list), "Frequencies info is not a list."
-        assert self.pdr_instance.frequencies == ["d", "w", "m", "q", "y"], "Frequencies are incorrect."
+        assert self.pdr_instance.frequencies == ["d", "w", "m", "q", "y", "av-intraday", "av-daily",
+                                                 "av-weekly", "av-monthly", "av-daily-adjusted",
+                                                 "av-weekly-adjusted", "av-monthly-adjusted",
+                                                 "av-forex-daily"], "Frequencies are incorrect."
 
     def test_convert_params_error(self) -> None:
         """
@@ -73,15 +77,15 @@ class TestPandasDataReader:
         Test wrangle data response method.
         """
         data_req = DataRequest(source='yahoo', tickers=['SPY', 'TLT', 'GLD'],
-                               fields=['open', 'high', 'low', 'close', 'close_adj', 'volume'], cat='eqty')
+                               fields=['open', 'high', 'low', 'close', 'volume'], cat='eqty')
         df = self.pdr_instance.wrangle_data_resp(data_req, yahoo_data_resp)
 
         assert not df.empty, "Dataframe was returned empty."
         assert (df == 0).sum().sum() == 0, "Dataframe has missing values."
         assert isinstance(df.index, pd.MultiIndex), "Dataframe should be MultiIndex."
         assert set(df.index.droplevel(0).unique()) == {'GLD', 'SPY', 'TLT'}, "Columns are missing or incorrect."
-        assert set(df.columns) == {'close', 'close_adj', 'high', 'low', 'open', 'volume'}, "Missing columns."
-        assert (df[['open', 'high', 'low', 'close', 'close_adj']].dtypes == 'Float64').all(), \
+        assert set(df.columns) == {'close', 'high', 'low', 'open', 'volume'}, "Missing columns."
+        assert (df[['open', 'high', 'low', 'close']].dtypes == 'Float64').all(), \
             "Dataframe should have Float64 dtype."
         assert (df['volume'].dtypes == 'Int64'), "Dataframe should have Int64 dtype."
 

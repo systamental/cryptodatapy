@@ -2717,20 +2717,24 @@ xml = ["lxml (>=4.9.2)"]
 
 [[package]]
 name = "pandas-datareader"
-version = "0.10.0"
-description = "Data readers extracted from the pandas codebase,should be compatible with recent pandas versions"
+version = "0.1.dev875+g60f5484"
+description = "Pandas-compatible data readers. Formerly a component of pandas."
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.9"
 groups = ["main"]
-files = [
-    {file = "pandas-datareader-0.10.0.tar.gz", hash = "sha256:9fc3c63d39bc0c10c2683f1c6d503ff625020383e38f6cbe14134826b454d5a6"},
-    {file = "pandas_datareader-0.10.0-py3-none-any.whl", hash = "sha256:0b95ff3635bc3ee1a6073521b557ab0e3c39d219f4a3b720b6b0bc6e8cdb4bb7"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 lxml = "*"
-pandas = ">=0.23"
+pandas = ">=1.5.3"
 requests = ">=2.19.0"
+
+[package.source]
+type = "git"
+url = "https://github.com/systamental/pandas-datareader.git"
+reference = "main"
+resolved_reference = "60f54849b2d0012d04b01e2c8b3261f3bbdeed43"
 
 [[package]]
 name = "pandocfilters"
@@ -4966,4 +4970,4 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "df07c137150f39b02e6434a0c0b992f7ca90f7470c69f59c26b4190e47f96124"
+content-hash = "54b7a01bc85665b8e48f8bc0f18c7077dbd5b8f7be247eac99dbfacf4a91836c"

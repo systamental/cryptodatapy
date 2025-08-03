@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.2.30"
+version = "0.2.31"
 description = "Cryptoasset data library"
 authors = ["Systamental"]
 license = "Apache License 2.0"
@@ -20,7 +20,8 @@ prophet = {version = ">=1.1", python = ">=3.7"}
 selenium = ">=4.4.3"
 numpy = ">=1.23.2"
 pandas = ">=2.2.3"
-pandas-datareader = ">=0.10.0"
+#pandas-datareader = ">=0.10.0"
+pandas-datareader = { git = "https://github.com/systamental/pandas-datareader.git", rev = "main" }
 responses = ">=0.21.0"
 yfinance = "0.2.64"
 openpyxl = ">=3.1.2"

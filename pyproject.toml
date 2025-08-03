@@ -21,7 +21,7 @@ selenium = ">=4.4.3"
 numpy = ">=1.23.2"
 pandas = ">=2.2.3"
 #pandas-datareader = ">=0.10.0"
-pandas-datareader = { git = "https://github.com/systamental/pandas-datareader.git", rev = "main" }
+cryptodatapy-pandas-datareader = ">=0.10.1"
 responses = ">=0.21.0"
 yfinance = "0.2.64"
 openpyxl = ">=3.1.2"

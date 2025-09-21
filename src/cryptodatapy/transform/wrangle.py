@@ -839,10 +839,10 @@ class WrangleData:
         # resample
         if self.data_req.freq in ['d', 'w', 'm', 'q', 'y']:
             self.tidy_data = (
-                    (1 + self.tidy_data.funding_rate)
+                    self.tidy_data.funding_rate
                     .groupby('ticker')
                     .resample('d', level='date')
-                    .prod() - 1
+                    .sum()
             ).to_frame().swaplevel('ticker', 'date').sort_index()
 
         return self.tidy_data

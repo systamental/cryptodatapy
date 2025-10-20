@@ -857,10 +857,7 @@ class WrangleData:
             Dataframe with tidy data format.
         """
         # add tickers
-        for i in range(len(self.data_req.source_markets)):
-            df = pd.DataFrame(self.data_resp[i])
-            self.tidy_data = pd.concat([self.tidy_data, df])
-        self.tidy_data = self.tidy_data[['symbol', 'openInterestAmount', 'datetime']]
+        self.tidy_data = pd.DataFrame(self.data_resp)[['symbol', 'openInterestAmount', 'datetime']]
         self.data_resp = self.tidy_data
 
         # convert to lib fields

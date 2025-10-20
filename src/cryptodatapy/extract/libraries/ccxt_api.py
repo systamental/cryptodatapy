@@ -1042,6 +1042,26 @@ class CCXT(Library):
         attempts = 0
         data_resp = []
 
+        # Maximum historical range for Binance OI is 30 days
+        # 30 days in milliseconds: 30 * 24 * 60 * 60 * 1000 = 2,592,000,000 ms
+        SAFE_OI_RANGE_MS = 25 * 24 * 60 * 60 * 1000
+
+        # inst exch
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
+
+        # --- Binance 30-day Limit Enforcement ---
+        if exch.lower() == 'binanceusdm':  # Binance USDM Futures
+            requested_range_ms = end_date - start_date
+            if requested_range_ms > SAFE_OI_RANGE_MS:
+                # Adjust start_date to fit within the 30-day window ending at end_date
+                new_start_date = end_date - SAFE_OI_RANGE_MS
+                logging.warning(
+                    f"Exchange '{exch}' Open Interest historical data is limited to 30 days. "
+                    f"Adjusting start_date for {ticker} from {start_date} to {new_start_date}."
+                )
+                start_date = new_start_date
+
         # inst exch
         if self.exchange_async is None:
             self.exchange_async = getattr(ccxt_async, exch)()
@@ -1124,8 +1144,25 @@ class CCXT(Library):
         attempts = 0
         data_resp = []
 
+        # Maximum historical range for Binance OI is 30 days
+        # 30 days in milliseconds: 30 * 24 * 60 * 60 * 1000 = 2,592,000,000 ms
+        SAFE_OI_RANGE_MS = 25 * 24 * 60 * 60 * 1000
+
         # inst exch
-        self.exchange = getattr(ccxt, exch)()
+        if self.exchange_async is None:
+            self.exchange_async = getattr(ccxt_async, exch)()
+
+        # --- Binance 30-day Limit Enforcement ---
+        if exch.lower() == 'binanceusdm':  # Binance USDM Futures
+            requested_range_ms = end_date - start_date
+            if requested_range_ms > SAFE_OI_RANGE_MS:
+                # Adjust start_date to fit within the 30-day window ending at end_date
+                new_start_date = end_date - SAFE_OI_RANGE_MS
+                logging.warning(
+                    f"Exchange '{exch}' open interest historical data is limited to 30 days. "
+                    f"Adjusting start_date for {ticker} from {start_date} to {new_start_date}."
+                )
+                start_date = new_start_date
 
         # fetch data
         if self.exchange.has['fetchOpenInterestHistory']:

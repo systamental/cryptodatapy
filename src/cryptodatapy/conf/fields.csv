@@ -27,7 +27,7 @@ vwap,volume-weighted avg price,average volume-weighted price of quote asset with
 dividend,dividend,dividend paid out on ex-ante date,market,ohlc_bars,d,quote currency units,Float64,,,,,,divCash,,,,,,,,
 split,split,"factor used to adjust prices when a company splits, reverse splits, or pays a distribution",market,ohlc_bars,d,factor,Float64,,,,,,splitFactor,,,,,,,,
 ref_rate_usd,reference rate in USD,price of asset in USD using an aggregation methodology,market,ohlc_bars,d,quote currency units,Float64,,ReferenceRateUSD,,,,,,,,,,,,
-oi,open interest,number of outstanding futures contracts that are open and have yet to be settled,market,derivatives,"1min, 5min, 10min, 15min, 30min, 1h, 2h, 4h, 8h, d, w, m, q",number of contracts,Float64,,contract_count,,,,,,,,,,,,
+oi,open interest,number of outstanding futures contracts that are open and have yet to be settled,market,derivatives,"1min, 5min, 10min, 15min, 30min, 1h, 2h, 4h, 8h, d, w, m, q",number of contracts,Float64,,contract_count,openInterestAmount,,,,,,,,,,,
 funding_rate,funding rate,interest rate for holding derivative contract within time interval,market,derivatives,"1h, 2h, 4h, 8h, d, w, m, q",interest rate over time interval,Float64,,rate,fundingRate,derivatives/futures_funding_rate_perpetual,,,,,,,,,,
 mkt_cap,market capitalization,usd value of circulating supply,market,market capitalization,"d, w, m, q",usd,Float64,,CapMrktCurUSD,,market/marketcap_usd,,,,,,,,,,
 mkt_cap_real,"market capitalization, reaized","The sum USD value based on the USD closing price on the day that a native unit last moved (i.e., last transacted) for all native units",market,market capitalization,"d, w, m, q",usd,Float64,,CapRealUSD,,,,,,,,,,,,

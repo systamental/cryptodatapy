@@ -37,6 +37,9 @@ class CCXT(Library):
             api_key: Optional[str] = None,
             max_obs_per_call: Optional[int] = 1000,
             rate_limit: Optional[Any] = None,
+            ip_ban_wait_time_s: float = 320.0,  # 5.3 minutes for IP ban
+            recovery_base_delay_s: float = 2.0,  # base delay for exponential backoff
+            max_recovery_delay_s: float = 60.0  # max delay for exponential backoff
     ):
         """
         Constructor
@@ -71,6 +74,12 @@ class CCXT(Library):
             api_limit stored in DataCredentials.
         rate_limit: Any, optional, Default None
             Number of API calls made and left, by time frequency.
+        ip_ban_wait_time_s: float, default 320.0
+            Time in seconds to wait if IP ban is detected (HTTP 403).
+        recovery_base_delay_s: float, default 2.0
+            Base delay in seconds for exponential backoff strategy.
+        max_recovery_delay_s: float, default 60.0
+            Maximum delay in seconds for exponential backoff strategy.
         """
         super().__init__(
             categories, exchanges, indexes, assets, markets, market_types,
@@ -79,6 +88,11 @@ class CCXT(Library):
         self.exchange = None
         self.exchange_async = None
         self.data_req = None
+
+        self.ip_ban_wait_time_s = ip_ban_wait_time_s
+        self.recovery_base_delay_s = recovery_base_delay_s
+        self.max_recovery_delay_s = max_recovery_delay_s
+
         self.data_resp = []
         self.data = pd.DataFrame()
 
@@ -313,17 +327,170 @@ class CCXT(Library):
         if self.rate_limit is None:
             self.rate_limit = self.exchange.rateLimit
 
-    @staticmethod
-    def exponential_backoff_with_jitter(base_delay: float, max_delay: int, attempts: int) -> None:
-        delay = min(max_delay, base_delay * (2 ** attempts))
-        delay_with_jitter = delay + random.uniform(0, delay * 0.5)
-        sleep(delay_with_jitter)
+    # @staticmethod
+    # def exponential_backoff_with_jitter(base_delay: float, max_delay: int, attempts: int) -> None:
+    #     delay = min(max_delay, base_delay * (2 ** attempts))
+    #     delay_with_jitter = delay + random.uniform(0, delay * 0.5)
+    #     sleep(delay_with_jitter)
+    #
+    # @staticmethod
+    # async def exponential_backoff_with_jitter_async(base_delay: float, max_delay: int, attempts: int) -> None:
+    #     delay = min(max_delay, base_delay * (2 ** attempts))
+    #     delay_with_jitter = delay + random.uniform(0, delay * 0.5)
+    #     await asyncio.sleep(delay_with_jitter)
+    #
 
-    @staticmethod
-    async def exponential_backoff_with_jitter_async(base_delay: float, max_delay: int, attempts: int) -> None:
+    def exponential_backoff_with_jitter(
+            self,
+            attempts: int,
+            status_code: Optional[int] = None
+    ) -> float:
+        """
+        Calculates and applies exponential backoff with full jitter, honoring
+        specific error codes (403/429) using configurable instance properties.
+
+        Args:
+            attempts: The current retry number (starting at 1 after the first failure).
+            status_code: The HTTP status code received (e.g., 403, 429).
+
+        Returns:
+            The actual time slept in seconds.
+        """
+
+        # 1. CRITICAL: Hard IP ban handling (403)
+        if status_code == 403:
+            sleep_time = self.ip_ban_wait_time_s
+            logging.error(
+                f"🚨 CRITICAL: HTTP 403 Forbidden (IP Ban) detected. Pausing for mandatory {sleep_time} seconds.")
+            sleep(sleep_time)
+            return sleep_time
+
+        # 2. Standard Exponential Backoff for 429 or generic exceptions
+        base_delay = self.recovery_base_delay_s
+        max_delay = self.max_recovery_delay_s
+
+        # Calculate exponential growth
         delay = min(max_delay, base_delay * (2 ** attempts))
-        delay_with_jitter = delay + random.uniform(0, delay * 0.5)
-        await asyncio.sleep(delay_with_jitter)
+
+        # Add full jitter (random delay between 0 and the calculated delay)
+        sleep_time = random.uniform(0, delay)
+
+        logging.warning(
+            f"Applying recovery backoff (Attempt {attempts}, Code {status_code if status_code else 'N/A'}): "
+            f"{sleep_time:.2f} seconds."
+        )
+
+        sleep(sleep_time)
+        return sleep_time
+
+    async def exponential_backoff_with_jitter_async(
+            self,
+            attempts: int,
+            status_code: Optional[int] = None
+    ) -> float:
+        """
+        Async version of exponential_backoff_with_jitter, using configurable instance properties.
+        """
+
+        # 1. CRITICAL: Hard IP ban handling (403)
+        if status_code == 403:
+            sleep_time = self.ip_ban_wait_time_s
+            logging.error(
+                f"🚨 CRITICAL: HTTP 403 Forbidden (IP Ban) detected. Pausing for mandatory {sleep_time} seconds.")
+            await asyncio.sleep(sleep_time)
+            return sleep_time
+
+        # 2. Standard Exponential Backoff for 429 or generic exceptions
+        base_delay = self.recovery_base_delay_s
+        max_delay = self.max_recovery_delay_s
+
+        # Calculate exponential growth
+        delay = min(max_delay, base_delay * (2 ** attempts))
+
+        # Add full jitter (random delay between 0 and the calculated delay)
+        sleep_time = random.uniform(0, delay)
+
+        logging.warning(
+            f"Applying recovery backoff (Attempt {attempts}, Code {status_code if status_code else 'N/A'}): "
+            f"{sleep_time:.2f} seconds."
+        )
+
+        await asyncio.sleep(sleep_time)
+        return sleep_time
+
+    # --- New Exception Helper Methods for Modularity ---
+
+    def _handle_exception_and_backoff(self, e: Exception, attempts: int) -> bool:
+        """
+        Analyzes a synchronous exception, applies backoff if recoverable, and logs the result.
+
+        Returns:
+            True if the error was recoverable (retries should continue).
+            False if the error is terminal (retries should stop).
+        """
+        # 1. CRITICAL: 403 IP Ban Check (Must parse string due to CCXT wrapping)
+        error_message = str(e)
+        if '403' in error_message or 'Forbidden' in error_message:
+            logging.error(f"CCXT Exception: Critical 403 IP Ban detected via parsing.")
+            self.exponential_backoff_with_jitter(attempts, status_code=403)
+            return True  # Recoverable with mandatory long pause
+
+        # 2. Recoverable CCXT Exceptions (Standard Backoff: proxy 429)
+        if isinstance(e, (
+                ccxt.RequestTimeout,
+                ccxt.RateLimitExceeded,
+                ccxt.DDoSProtection,
+                ccxt.ExchangeNotAvailable,
+                ccxt.OperationFailed,
+        )):
+            logging.warning(f"CCXT Exception: Recoverable error ({e.__class__.__name__}) on attempt {attempts}.")
+            self.exponential_backoff_with_jitter(attempts, status_code=429)
+            return True  # Recoverable, continue retries
+
+        # 3. Unrecoverable CCXT Errors (Terminal: e.g., bad symbol)
+        if isinstance(e, ccxt.ExchangeError):
+            logging.error(f"CCXT Exception: Terminal ExchangeError ({e.__class__.__name__}). Halting retries.")
+            return False  # Unrecoverable, stop retries
+
+        # 4. Other/Unknown Exceptions (Terminal)
+        logging.error(f"CCXT Exception: Unhandled error ({e.__class__.__name__}). Halting retries: {e}")
+        return False
+
+    async def _handle_exception_and_backoff_async(self, e: Exception, attempts: int) -> bool:
+        """
+        Analyzes an asynchronous exception, applies backoff if recoverable, and logs the result.
+
+        Returns:
+            True if the error was recoverable (retries should continue).
+            False if the error is terminal (retries should stop).
+        """
+        # 1. CRITICAL: 403 IP Ban Check (Must parse string due to CCXT wrapping)
+        error_message = str(e)
+        if '403' in error_message or 'Forbidden' in error_message:
+            logging.error(f"CCXT Exception: Critical 403 IP Ban detected via parsing.")
+            await self.exponential_backoff_with_jitter_async(attempts, status_code=403)
+            return True  # Recoverable with mandatory long pause
+
+        # 2. Recoverable CCXT Exceptions (Standard Backoff: proxy 429)
+        if isinstance(e, (
+                ccxt.RequestTimeout,
+                ccxt.RateLimitExceeded,
+                ccxt.DDoSProtection,
+                ccxt.ExchangeNotAvailable,
+                ccxt.OperationFailed,
+        )):
+            logging.warning(f"CCXT Exception: Recoverable error ({e.__class__.__name__}) on attempt {attempts}.")
+            await self.exponential_backoff_with_jitter_async(attempts, status_code=429)
+            return True  # Recoverable, continue retries
+
+        # 3. Unrecoverable CCXT Errors (Terminal: e.g., bad symbol)
+        if isinstance(e, ccxt.ExchangeError):
+            logging.error(f"CCXT Exception: Terminal ExchangeError ({e.__class__.__name__}). Halting retries.")
+            return False  # Unrecoverable, stop retries
+
+        # 4. Other/Unknown Exceptions (Terminal)
+        logging.error(f"CCXT Exception: Unhandled error ({e.__class__.__name__}). Halting retries: {e}")
+        return False
 
     async def _fetch_ohlcv_async(self,
                                  ticker: str,
@@ -332,7 +499,6 @@ class CCXT(Library):
                                  end_date: int,
                                  exch: str,
                                  trials: int = 3,
-                                 pause: int = 1
                                  ) -> Union[List, None]:
         """
         Fetches OHLCV data for a specific ticker.
@@ -351,8 +517,6 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 60
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -383,17 +547,15 @@ class CCXT(Library):
 
                     # add data to list
                     if data:
+                        # noinspection PyUnusedLocal
                         start_date = data[-1][0] + 1
                         data_resp.extend(data)
                     else:
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get OHLCV data from {self.exchange_async.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
                             f"Failed to get OHLCV data from {self.exchange_async.id} "
@@ -401,17 +563,17 @@ class CCXT(Library):
                         )
                         break
 
-                finally:
-                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
-                                                                     pause,
-                                                                     attempts)
+                    # exception handling
+                    if not await self._handle_exception_and_backoff_async(e, attempts):
+                        # If the helper returns False, the error is terminal (ExchangeError, etc.)
+                        break
 
-            await self.exchange_async.close()
-            return data_resp
+                await self.exchange_async.close()
+                return data_resp
 
-        else:
-            logging.warning(f"OHLCV data is not available for {self.exchange_async.id}.")
-            return None
+            else:
+                logging.warning(f"OHLCV data is not available for {self.exchange_async.id}.")
+                return None
 
     def _fetch_ohlcv(self,
                      ticker: str,
@@ -420,7 +582,6 @@ class CCXT(Library):
                      end_date: str,
                      exch: str,
                      trials: int = 3,
-                     pause: int = 1
                      ) -> Union[List, None]:
         """
         Fetches OHLCV data for a specific ticker.
@@ -439,8 +600,6 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 60
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -480,11 +639,8 @@ class CCXT(Library):
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get OHLCV data from {self.exchange.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
                             f"Failed to get OHLCV data from {self.exchange.id} "
@@ -492,8 +648,10 @@ class CCXT(Library):
                         )
                         break
 
-                finally:
-                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
+                    # exception handling
+                    if not self._handle_exception_and_backoff(e, attempts):
+                        # If the helper returns False, the error is terminal (ExchangeError, etc.)
+                        break
 
             return data_resp
 
@@ -609,7 +767,6 @@ class CCXT(Library):
                                          end_date: int,
                                          exch: str,
                                          trials: int = 3,
-                                         pause: int = 1
                                          ) -> Union[List, None]:
         """
         Fetches funding rates data for a specific ticker.
@@ -624,8 +781,6 @@ class CCXT(Library):
             End date in integers in milliseconds since Unix epoch.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 1
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -661,11 +816,8 @@ class CCXT(Library):
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get funding rates from {self.exchange_async.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
                             f"Failed to get funding rates from {self.exchange_async.id} "
@@ -673,10 +825,9 @@ class CCXT(Library):
                         )
                         break
 
-                finally:
-                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
-                                                                     pause,
-                                                                     attempts)
+                    # exception handling
+                    if not await self._handle_exception_and_backoff_async(e, attempts):
+                        break
 
             await self.exchange_async.close()
             return data_resp
@@ -691,7 +842,6 @@ class CCXT(Library):
                              end_date: int,
                              exch: str,
                              trials: int = 3,
-                             pause: int = 1
                              ) -> Union[List, None]:
         """
         Fetches funding rates data for a specific ticker.
@@ -706,8 +856,6 @@ class CCXT(Library):
             End date in integers in milliseconds since Unix epoch.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 1
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -743,11 +891,8 @@ class CCXT(Library):
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get funding rates from {self.exchange.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
                             f"Failed to get funding rates from {self.exchange.id} "
@@ -755,8 +900,9 @@ class CCXT(Library):
                         )
                         break
 
-                finally:
-                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
+                    # exception handling
+                    if not self._handle_exception_and_backoff(e, attempts):
+                        break
 
             return data_resp
 
@@ -868,7 +1014,6 @@ class CCXT(Library):
                                          end_date: int,
                                          exch: str,
                                          trials: int = 3,
-                                         pause: int = 1
                                          ) -> Union[List, None]:
         """
         Fetches open interest data for a specific ticker.
@@ -887,8 +1032,6 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 1
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -926,28 +1069,24 @@ class CCXT(Library):
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get open interest from {self.exchange_async.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
-                            f"Failed to get open interest from {self.exchange_async.id} "
+                            f"Failed to get funding rates from {self.exchange_async.id} "
                             f"for {ticker} after {trials} attempts."
                         )
                         break
 
-                finally:
-                    await self.exponential_backoff_with_jitter_async(self.exchange_async.rateLimit / 1000,
-                                                                     pause,
-                                                                     attempts)
+                    # exception handling
+                    if not await self._handle_exception_and_backoff_async(e, attempts):
+                        break
 
             await self.exchange_async.close()
             return data_resp
 
         else:
-            logging.warning(f"Open interest is not available for {self.exchange_async.id}.")
+            logging.warning(f"Funding rates are not available for {self.exchange_async.id}.")
             return None
 
     def _fetch_open_interest(self,
@@ -957,7 +1096,6 @@ class CCXT(Library):
                              end_date: int,
                              exch: str,
                              trials: int = 3,
-                             pause: int = 1
                              ) -> Union[List, None]:
         """
         Fetches open interest data for a specific ticker.
@@ -976,8 +1114,6 @@ class CCXT(Library):
             Name of exchange.
         trials: int, default 3
             Number of attempts to fetch data.
-        pause: int, default 1
-            Pause in seconds to respect the rate limit.
 
         Returns
         -------
@@ -1014,25 +1150,23 @@ class CCXT(Library):
                         break
 
                 except Exception as e:
-                    logging.warning(
-                        f"Failed to get open interest from {self.exchange.id} for {ticker} "
-                        f"on attempt #{attempts + 1}: {e}."
-                    )
                     attempts += 1
+
                     if attempts >= trials:
                         logging.warning(
-                            f"Failed to get open interest from {self.exchange.id} "
+                            f"Failed to get funding rates from {self.exchange.id} "
                             f"for {ticker} after {trials} attempts."
                         )
                         break
 
-                finally:
-                    self.exponential_backoff_with_jitter(self.exchange.rateLimit / 1000, pause, attempts)
+                    # exception handling
+                    if not self._handle_exception_and_backoff(e, attempts):
+                        break
 
             return data_resp
 
         else:
-            logging.warning(f"Open interest is not available for {self.exchange.id}.")
+            logging.warning(f"Funding rates are not available for {self.exchange.id}.")
             return None
 
     async def _fetch_all_open_interest_async(self,

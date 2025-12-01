@@ -2,7 +2,6 @@ import logging
 from datetime import datetime, timedelta
 from importlib import resources
 from typing import Dict, List, Union
-import re
 
 import pandas as pd
 

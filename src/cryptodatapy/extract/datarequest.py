@@ -649,7 +649,9 @@ class DataRequest:
                 "Source fields must be a string or list of strings (fields) in data source's format."
             )
 
-    def get_req(self, url: str, params: Dict[str, Union[str, int]],
+    def get_req(self,
+                url: str,
+                params: Dict[str, Union[str, int]],
                 headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
         """
         Submits get request to API.

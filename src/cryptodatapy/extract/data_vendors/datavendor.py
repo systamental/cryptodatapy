@@ -428,6 +428,7 @@ class DataVendor(ABC):
         Submits get data request to API.
         """
         # to be implemented by subclasses
+
     @staticmethod
     @abstractmethod
     def wrangle_data_resp(data_req: DataRequest, data_resp: Union[Dict[str, Any], pd.DataFrame], **kwargs) \

@@ -645,25 +645,26 @@ tests = ["flake8", "mypy", "pylint", "pytest", "pytest-cov", "pytest-order", "te
 
 [[package]]
 name = "coinmetrics-api-client"
-version = "2022.9.22.15"
+version = "2024.12.23.19"
 description = "Python client for Coin Metrics API v4."
 optional = false
-python-versions = ">=3.7.1,<4.0.0"
+python-versions = "<4.0.0,>=3.9.0"
 groups = ["main"]
 files = [
-    {file = "coinmetrics-api-client-2022.9.22.15.tar.gz", hash = "sha256:dfbb6e643b0640099b59210673bae3ad7b42a12c6e04ddcc0cc9a3587af4792e"},
-    {file = "coinmetrics_api_client-2022.9.22.15-py3-none-any.whl", hash = "sha256:1b98972322fe74815a7d11836408302bb10ccd7aefe6c1ed14c33cafd35699be"},
+    {file = "coinmetrics_api_client-2024.12.23.19-py3-none-any.whl", hash = "sha256:10626fcc1327d6953786d343cd8f08d8804bc87f76e1b1e7809a77468dc720eb"},
+    {file = "coinmetrics_api_client-2024.12.23.19.tar.gz", hash = "sha256:017f94150f94b2af4ccdb9e56636505f0f5c3fa7e13bbf2216c8742ac6d97f0e"},
 ]
 
 [package.dependencies]
 orjson = ">=3.6.0,<4.0.0"
 python-dateutil = ">=2.8.2,<3.0.0"
 requests = ">=2.24.0,<3.0.0"
-typer = ">=0.6.1,<0.7.0"
-websocket-client = ">=1.2.1,<2.0.0"
+tqdm = ">=4.64.1,<5.0.0"
+typer = ">=0.7.0"
+websocket-client = ">=1.6.0,<2.0.0"
 
 [package.extras]
-pandas = ["pandas (>=1.3.3,<2.0.0)"]
+pandas = ["pandas (>=2.0.0,<3.0.0)"]
 
 [[package]]
 name = "colorama"
@@ -2017,7 +2018,7 @@ version = "2.1.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = ">=3.7"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "markdown-it-py-2.1.0.tar.gz", hash = "sha256:cf7e59fed14b5ae17c0006eff14a2d9a00ed5f3a846148153899a0224e2c07da"},
     {file = "markdown_it_py-2.1.0-py3-none-any.whl", hash = "sha256:93de681e5c021a432c63147656fe21790bc01231e0cd2da73626f1aa3ac0fe27"},
@@ -2193,7 +2194,7 @@ version = "0.1.2"
 description = "Markdown URL utilities"
 optional = false
 python-versions = ">=3.7"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
@@ -3249,7 +3250,7 @@ version = "2.13.0"
 description = "Pygments is a syntax highlighting package written in Python."
 optional = false
 python-versions = ">=3.6"
-groups = ["dev"]
+groups = ["main", "dev"]
 files = [
     {file = "Pygments-2.13.0-py3-none-any.whl", hash = "sha256:f643f331ab57ba3c9d89212ee4a2dabc6e94f117cf4eefde99a0574720d14c42"},
     {file = "Pygments-2.13.0.tar.gz", hash = "sha256:56a8508ae95f98e2b9bdf93a6be5ae3f7d8af858b43e02c5a2ff083726be40c1"},
@@ -3685,6 +3686,25 @@ urllib3 = ">=1.25.10"
 tests = ["coverage (>=6.0.0)", "flake8", "mypy", "pytest (>=7.0.0)", "pytest-asyncio", "pytest-cov", "pytest-localserver", "types-mock", "types-requests"]
 
 [[package]]
+name = "rich"
+version = "13.2.0"
+description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
+optional = false
+python-versions = ">=3.7.0"
+groups = ["main"]
+files = [
+    {file = "rich-13.2.0-py3-none-any.whl", hash = "sha256:7c963f0d03819221e9ac561e1bc866e3f95a02248c1234daa48954e6d381c003"},
+    {file = "rich-13.2.0.tar.gz", hash = "sha256:f1a00cdd3eebf999a15d85ec498bfe0b1a77efe9b34f645768a54132ef444ac5"},
+]
+
+[package.dependencies]
+markdown-it-py = ">=2.1.0,<3.0.0"
+pygments = ">=2.6.0,<3.0.0"
+
+[package.extras]
+jupyter = ["ipywidgets (>=7.5.1,<8.0.0)"]
+
+[[package]]
 name = "s3fs"
 version = "2024.6.1"
 description = "Convenient Filesystem interface over S3"
@@ -3802,6 +3822,18 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-
 enabler = ["pytest-enabler (>=2.2)"]
 test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21) ; python_version >= \"3.9\" and sys_platform != \"cygwin\"", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "jaraco.test", "packaging (>=23.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.*)", "pytest-home (>=0.5)", "pytest-perf ; sys_platform != \"cygwin\"", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel (>=0.44.0)"]
 type = ["importlib-metadata (>=7.0.2) ; python_version < \"3.10\"", "jaraco.develop (>=7.21) ; sys_platform != \"cygwin\"", "mypy (==1.11.*)", "pytest-mypy"]
+
+[[package]]
+name = "shellingham"
+version = "1.5.4"
+description = "Tool to Detect Surrounding Shell"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686"},
+    {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
+]
 
 [[package]]
 name = "six"
@@ -4400,24 +4432,21 @@ wsproto = ">=0.14"
 
 [[package]]
 name = "typer"
-version = "0.6.1"
+version = "0.20.0"
 description = "Typer, build great CLIs. Easy to code. Based on Python type hints."
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "typer-0.6.1-py3-none-any.whl", hash = "sha256:54b19e5df18654070a82f8c2aa1da456a4ac16a2a83e6dcd9f170e291c56338e"},
-    {file = "typer-0.6.1.tar.gz", hash = "sha256:2d5720a5e63f73eaf31edaa15f6ab87f35f0690f8ca233017d7d23d743a91d73"},
+    {file = "typer-0.20.0-py3-none-any.whl", hash = "sha256:5b463df6793ec1dca6213a3cf4c0f03bc6e322ac5e16e13ddd622a889489784a"},
+    {file = "typer-0.20.0.tar.gz", hash = "sha256:1aaf6494031793e4876fb0bacfa6a912b551cf43c1e63c800df8b1a866720c37"},
 ]
 
 [package.dependencies]
-click = ">=7.1.1,<9.0.0"
-
-[package.extras]
-all = ["colorama (>=0.4.3,<0.5.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
-dev = ["autoflake (>=1.3.1,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "pre-commit (>=2.17.0,<3.0.0)"]
-doc = ["mdx-include (>=1.4.1,<2.0.0)", "mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)"]
-test = ["black (>=22.3.0,<23.0.0)", "coverage (>=5.2,<6.0)", "isort (>=5.0.6,<6.0.0)", "mypy (==0.910)", "pytest (>=4.4.0,<5.4.0)", "pytest-cov (>=2.10.0,<3.0.0)", "pytest-sugar (>=0.9.4,<0.10.0)", "pytest-xdist (>=1.32.0,<2.0.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
+click = ">=8.0.0"
+rich = ">=10.11.0"
+shellingham = ">=1.3.0"
+typing-extensions = ">=3.7.4.3"
 
 [[package]]
 name = "typing-extensions"
@@ -4593,20 +4622,20 @@ files = [
 
 [[package]]
 name = "websocket-client"
-version = "1.4.1"
+version = "1.9.0"
 description = "WebSocket client for Python with low level API options"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "websocket-client-1.4.1.tar.gz", hash = "sha256:f9611eb65c8241a67fb373bef040b3cf8ad377a9f6546a12b620b6511e8ea9ef"},
-    {file = "websocket_client-1.4.1-py3-none-any.whl", hash = "sha256:398909eb7e261f44b8f4bd474785b6ec5f5b499d4953342fe9755e01ef624090"},
+    {file = "websocket_client-1.9.0-py3-none-any.whl", hash = "sha256:af248a825037ef591efbf6ed20cc5faa03d3b47b9e5a2230a529eeee1c1fc3ef"},
+    {file = "websocket_client-1.9.0.tar.gz", hash = "sha256:9e813624b6eb619999a97dc7958469217c3176312b3a16a4bd1bc7e08a46ec98"},
 ]
 
 [package.extras]
-docs = ["Sphinx (>=3.4)", "sphinx-rtd-theme (>=0.5)"]
+docs = ["Sphinx (>=6.0)", "myst-parser (>=2.0.0)", "sphinx_rtd_theme (>=1.1.0)"]
 optional = ["python-socks", "wsaccel"]
-test = ["websockets"]
+test = ["pytest", "websockets"]
 
 [[package]]
 name = "websockets"
@@ -4966,4 +4995,4 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "2f8928df36c16e75dd75a76f9c709992680757cb6cfa53faafe6969b21e25b13"
+content-hash = "23889c654f6d1d93f4b2523de9caf5add27f00218f036e0d90d8c30ba7c3f54f"

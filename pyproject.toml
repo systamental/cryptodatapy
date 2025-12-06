@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cryptodatapy"
-version = "0.2.34"
+version = "0.3.0"
 description = "Cryptoasset data library"
 authors = ["Systamental"]
 license = "Apache License 2.0"
@@ -10,7 +10,7 @@ readme = "README.md"
 python = ">=3.9,<4.0"
 matplotlib = ">=3.5.2"
 requests = {version = ">=2.28.0", python = ">=3.7"}
-coinmetrics-api-client = {version = ">=2022.6.17", python = ">=3.7"}
+coinmetrics-api-client = {version = "2024.12.23.19", python = ">=3.7"}
 investpy = ">=1.0.8"
 DBnomics = ">=1.2.3"
 ccxt = ">=1.91.52"
@@ -32,7 +32,7 @@ s3fs = ">=2024.6.1"
 tdqm = ">=0.0.1"
 polygon-api-client = ">=1.14.6"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = ">=7.1.2"
 pytest-cov = ">=3.0.0"
 jupyter = ">=1.0.0"
@@ -41,8 +41,6 @@ isort = ">=5.10.1"
 myst-nb = {version = ">=0.16.0", python = ">=3.8, <4.0"}
 sphinx-autoapi = ">=1.9.0"
 sphinx-rtd-theme = ">=1.0.0"
-
-[tool.poetry.group.dev.dependencies]
 pytest-asyncio = ">=0.24.0"
 
 [tool.pytest.ini_options]

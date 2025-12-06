@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import time
 import logging
-from tqdm import tqdm # Import tqdm for the progress bar
+from tqdm import tqdm
 
-from cryptodatapy.extract.adapters.vendors.base_api_vendor import BaseAPIVendorAdapter
+from cryptodatapy.extract.adapters.base_adapter import BaseAPIAdapter
 from cryptodatapy.util.datacredentials import DataCredentials
 from cryptodatapy.core.data_request import DataRequest
 from cryptodatapy.extract.params.vendors.defillama_param_converter import DefiLlamaParamConverter
@@ -19,31 +19,40 @@ logger = logging.getLogger(__name__)
 data_cred = DataCredentials()
 
 
-class DefiLlamaAdapter(BaseAPIVendorAdapter):
+class DefiLlamaAdapter(BaseAPIAdapter):
     """
     Adapter class for retrieving data from DefiLlama API.
-    Implements the BaseAPIVendorAdapter contract.
+    Implements the BaseAdapter contract via BaseAPIAdapter.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
-        """Initializes vendor-specific connection configuration."""
+        """
+        Initializes vendor-specific connection configuration.
 
-        # Consolidate configuration using defaults from DataCredentials
+        Parameters
+        ----------
+        config : Optional[Dict[str, Any]], optional
+            Configuration dictionary for the adapter (guaranteed to be DefiLlama specific).
+        """
+
+        # 1. Define hardcoded defaults
         default_config = {
             'api_key': data_cred.defillama_api_key,
             'base_url': data_cred.defillama_base_url,
             'api_endpoints': data_cred.defillama_endpoints,
-            'max_obs_per_call': 2000,
-            'rate_limit_rpm': 10
+            'rate_limit_rpm': 10  # Default RPM setting
         }
 
-        # Merge provided config with defaults
+        # 2. Merge: User-provided config (if any) overrides the defaults.
+        # This works correctly because DataClient now only passes the 'defillama' slice.
         final_config = {**default_config, **(config or {})}
 
-        # Call the BaseAPIVendorAdapter __init__ with simplified config
+        # 3. Initialize BaseAdapter/BaseAPIAdapter with the merged configuration
         super().__init__(final_config)
 
-        self._config = final_config
+        # self._config is now set in the base class and contains the final, merged configuration.
+        # You can remove the redundant line `self._config = final_config` if the base class handles it.
+
         self.assets = None
         self.fields = None
         self.stablecoins = None
@@ -236,8 +245,18 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
     @staticmethod
     def _normalize_protocols(protocols_df: pd.DataFrame) -> pd.DataFrame:
         """
-        1. Processes raw protocols endpoint data, selecting only high-value (Rating 4+) fields
+        Processes raw protocols endpoint data, selecting only high-value (Rating 4+) fields
         for identification, classification, and cross-referencing.
+
+        Parameters
+        ----------
+        protocols_df : pd.DataFrame
+            Raw protocols DataFrame from DefiLlama.
+
+        Returns
+        -------
+        pd.DataFrame
+            Normalized protocols DataFrame.
         """
         # reset index
         df_protocols = protocols_df.reset_index()
@@ -279,8 +298,18 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
     @staticmethod
     def _normalize_chains(chains_df: pd.DataFrame) -> pd.DataFrame:
         """
-        2. Normalizes the raw chain data, adds the 'dataEndpoint' tag,
-           and applies manual ticker corrections (e.g., TRON -> TRX).
+        Normalizes the raw chain data, adds the 'dataEndpoint' tag,
+        and applies manual ticker corrections (e.g., TRON -> TRX).
+
+        Parameters
+        ----------
+        chains_df : pd.DataFrame
+            Raw chains DataFrame from DefiLlama.
+
+        Returns
+        -------
+        pd.DataFrame
+            Normalized chains DataFrame.
         """
         # reset index
         df = chains_df.reset_index()
@@ -321,11 +350,67 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         return df_normalized_chains
 
     @staticmethod
+    def _normalize_stablecoins(stablecoins_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Normalizes the raw stablecoins data.
+
+        Parameters
+        ----------
+        stablecoins_df : pd.DataFrame
+            Raw stablecoins DataFrame from DefiLlama.
+
+        Returns
+        -------
+        pd.DataFrame
+            Normalized stablecoins DataFrame.
+        """
+        # reset index
+        df = stablecoins_df.reset_index()
+
+        # rename cols
+        df = df.rename(columns={
+            'name': 'name',
+            'symbol': 'ticker',
+            'gecko_id': 'geckoId',
+            'pegType': 'category',
+            'chains': 'chainsSupported',
+            'id': 'slug',
+        })
+
+        # new cols
+        df['type'] = 'stablecoin'
+        df['mktCap'] = df.circulating.apply(lambda x: sum(x.values())) * df.price.astype(float)
+
+        # reorder cols
+        stablecoin_cols = [
+            'ticker', 'name',
+            'type', 'category', 'slug',
+            'geckoId', 'mktCap', 'chainsSupported'
+        ]
+
+        # keep only sc cols
+        stablecoins_df = df[stablecoin_cols].set_index('ticker')
+
+        return stablecoins_df
+
+    @staticmethod
     def _unify_assets(df_protocols: pd.DataFrame, df_chains: pd.DataFrame) -> pd.DataFrame:
         """
-        4. Merges and concatenates protocols and chains data, applying
-           the slug hierarchy, resolving collisions, and establishing
-           a canonical Ticker precedence based on Type, Category, and TVL.
+        Merges and concatenates protocols and chains data, applying the slug hierarchy,
+        resolving collisions, and establishing a canonical ticker precedence
+        based on Type, Category, and TVL.
+
+        Parameters
+        ----------
+        df_protocols : pd.DataFrame
+            Normalized protocols DataFrame.
+        df_chains : pd.DataFrame
+            Normalized chains DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            Unified assets DataFrame with canonical tickers.
         """
         # keep protocol slug
         # if protocol, use parentSlug if not None, else use protocolSlug
@@ -397,10 +482,11 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         """
         Get DefiLlama assets information.
 
-        Note that DefiLlama does not have a direct "assets" endpoint. This method synthesizes the assets list by
-        combining and normalizing data from the protocols and chains endpoints.
-        It applies a hierarchy to resolve slugs and ticker collisions, establishing a canonical ticker based on
-        asset type, category, and TVL.
+        Note that DefiLlama does not have a direct "assets" endpoint.
+        This method synthesizes the assets list by combining and normalizing data from the protocols
+        and chains endpoints.
+        It applies a hierarchy to resolve slugs and ticker collisions, establishing a canonical ticker
+        based on asset type, category, and TVL.
 
         Returns
         -------
@@ -413,13 +499,33 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         # fetch raw data for protocols and chains
         protocols_df = self.get_protocols_info()
         chains_df = self.get_chains_info()
+        stablecoins_df = self.get_stablecoins_info()
 
         # normalize protocols and chains
         df_protocols_normalized = self._normalize_protocols(protocols_df)
         df_chains_normalized = self._normalize_chains(chains_df)
+        df_stablecoins_normalized = self._normalize_stablecoins(stablecoins_df)
 
         # unify assets
-        self.assets = self._unify_assets(df_protocols_normalized, df_chains_normalized)
+        unified_df = self._unify_assets(df_protocols_normalized, df_chains_normalized)
+
+        # add stablecoins
+        assets_df = pd.concat([unified_df, df_stablecoins_normalized])
+
+        # fill NaNs
+        assets_df.loc[:, ['tvlUsd', 'mktCap']] = assets_df.loc[:, ['tvlUsd', 'mktCap']].fillna(0)
+
+        # create the combined score from tvl and mkt cap
+        assets_df['score'] = assets_df[['tvlUsd', 'mktCap']].max(axis=1)
+
+        # sort by score
+        assets_sorted = assets_df.sort_values(
+            by='score',
+            ascending=False
+        ).drop(columns=['score'])
+
+        # assets with dupes removed, ranked by highest tvl or mkt cap
+        self.assets = assets_sorted[~assets_sorted.index.duplicated()]
 
         return self.assets
 
@@ -438,24 +544,39 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         # fields mapping (add more as needed)
         fields = {
             'tvl_usd': {
+                'all': 'v2/historicalChainTvl',
+                'stablecoin': None,
                 'chain': 'v2/historicalChainTvl/',
                 'protocol': 'protocol/',
                 'params': {}
             },
             'fees_usd': {
+                'all': 'overview/fees',
+                'stablecoin': None,
                 'chain': 'summary/fees/',
                 'protocol': 'summary/fees/',
                 'params': {'dataType': 'dailyFees'}
             },
             'rev_usd': {
+                'all': 'overview/fees',
+                'stablecoin': None,
                 'chain': 'summary/fees/',
                 'protocol': 'summary/fees/',
                 'params': {'dataType': 'dailyRevenue'}
             },
             'rev_holders_usd': {
+                'all': 'overview/fees',
+                'stablecoin': None,
                 'chain': None,
                 'protocol': 'summary/fees/',
                 'params': {'dataType': 'dailyHoldersRevenue'}
+            },
+            'mkt_cap': {
+                'all': 'stablecoincharts/all',
+                'stablecoin': 'stablecoin/',
+                'chain': None,
+                'protocol': None,
+                'params': {}
             }
         }
 
@@ -467,12 +588,16 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         """DefiLlama credits left in the api key, these reset on the 1st of each month."""
         url = 'pro-api.llama.fi/usage/APIKEY'
 
-        try:
-            raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-            return raw_data
-        except Exception as e:
-            logging.error(f"Error fetching rate limit info: {e}")
+        if self._api_key is None:
+            logging.warning("No API key provided; cannot fetch rate limit info.")
             return None
+        else:
+            try:
+                raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
+                return raw_data
+            except Exception as e:
+                logging.error(f"Error fetching rate limit info: {e}")
+                return None
 
     # --------------------------------------------------------------------------
     # --- 3. --- Helper Methods: Data Requests --- URL Builders & Fetchers ---
@@ -496,7 +621,12 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
         tuple[str, Dict[str, Any]]
             A tuple containing the full URL and the parameters dictionary for the request.
         """
-        base_url = self._base_url
+        # determine base URL
+        if single_request_dict['field'] == 'mkt_cap':
+            # Stablecoin market cap uses a different base URL
+            base_url = 'https://stablecoins.llama.fi/'
+        else:
+            base_url = self._base_url
         api_key = self._api_key
 
         # url: base_url + endpoint + slug
@@ -510,6 +640,16 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
     def _fetch_all_raw_data(self, requests_list: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Fetches raw data for all requests in the list, implementing rate limiting.
+
+        Parameters
+        ----------
+        requests_list : List[Dict[str, Any]]
+            A list of request dictionaries generated by the converter.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            A list of raw data responses corresponding to each request.
         """
         all_data = []
         num_requests = len(requests_list)
@@ -520,7 +660,7 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
 
         backoff_delay = 0.0  # Exponential backoff factor
 
-        logger.info(f"Starting batch fetch of {num_requests} requests. Conservative delay: {min_delay_seconds:.2f}s.")
+        logger.info(f"Starting batch fetch of {num_requests} requests.")
 
         # Wrap the iterable with tqdm for progress visualization
         pbar_desc = f"Fetching DefiLlama Data (Delay: {min_delay_seconds:.2f}s)"
@@ -594,8 +734,18 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
     # --------------------------------------------------------------------------
     def _convert_params_to_vendor(self, data_req: DataRequest) -> Dict[str, Any]:
         """
-        CONVERT: Converts the DataRequest object into the vendor's specific API parameters.
-        DefiLlama URLs rely heavily on asset name being part of the path.
+        Converts the DataRequest object into the vendor's specific API parameters.
+        DefiLlama URLs rely heavily on protocol or chain name being part of the path.
+
+        Parameters
+        ----------
+        data_req : DataRequest
+            The standardized DataRequest object containing user-specified parameters.
+
+        Returns
+        -------
+        Dict[str, Any]
+            A dictionary of vendor-specific parameters including the full request list.
         """
         vendor_params = {}
 
@@ -614,262 +764,46 @@ class DefiLlamaAdapter(BaseAPIVendorAdapter):
 
     def _fetch_raw_data(self, params: Dict[str, Any]) -> Union[Dict[str, Any], List[Dict[str, Any]]]:
         """
-        EXTRACT: Submits the vendor-specific parameters to the API and returns the raw response.
+        Submits the vendor-specific parameters to the API and returns the raw responses.
+
+        Parameters
+        ----------
+        params : Dict[str, Any]
+            The vendor-specific parameters including the full request list.
+
+        Returns
+        -------
+        Union[Dict[str, Any], List[Dict[str, Any]]]
+            The raw data responses from DefiLlama.
         """
-        # TODO : Implement batch fetching with rate limiting
-        return  self._fetch_all_raw_data(requests_list=params['requests'])
+        return self._fetch_all_raw_data(requests_list=params['requests'])
 
     def _transform_raw_response(self, data_req: DataRequest, raw_data: Any) -> pd.DataFrame:
         """
-        TRANSFORM: Processes the raw data response into the package's standardized tidy DataFrame format
+        Processes the raw data responses into the package's standardized tidy DataFrame format
         using the dedicated DefiLlamaWrangler.
+
+        Parameters
+        ----------
+        data_req : DataRequest
+            The original DataRequest object.
+        raw_data : Any
+            The raw data response from DefiLlama.
+
+        Returns
+        -------
+        pd.DataFrame
+            The transformed tidy DataFrame.
         """
-        # Note: The wrangling logic is now delegated entirely to the separate Wrangler class
         wrangler = DefiLlamaWrangler(data_req=data_req, data_resp=raw_data)
 
         df = wrangler.wrangle()
 
         return df
 
-    # --- tvl ---
-
-    # chains
-    def _fetch_agg_chains_tvl(self) -> List[Dict[str, Any]]:
-        """
-        Helper method to fetch TVL data for all chains.
-        """
-        url = self._base_url + self._api_endpoints.get('all_chains_tvl', 'v2/historicalChainTvl')
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    def _fetch_chain_tvl(self, chain: str) -> List[Dict[str, Any]]:
-        """
-        Helper method to fetch TVL data for a specific chain.
-
-        Parameters
-        ----------
-        chain : str
-            The chain identifier (e.g., 'ethereum', 'bitcoin', 'solana').
-        """
-        path = self._api_endpoints.get('chain_tvl', 'v2/historicalChainTvl/')
-        url = self._base_url + path + chain
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    # protocols
-    def _fetch_protocol_tvl(self, protocol: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch TVL data for a specific protocol.
-
-        Parameters
-        ----------
-        protocol : str
-            The protocol identifier (e.g., 'aave', 'uniswap', 'compound').
-        """
-        path = self._api_endpoints.get('protocol_tvl', 'protocol/')
-        url = self._base_url + path + protocol
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    # --- fees ---
-
-    def _fetch_agg_fees(self) -> Dict[str, Any]:
-        """
-        Helper method to fetch aggregated fees data.
-        """
-        path = self._api_endpoints.get('agg_fees', 'overview/fees')
-        url = self._base_url + path
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    def _fetch_chain_fees(self, chain: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch fees data for a specific chain.
-
-        Parameters
-        ----------
-        chain : str
-            The chain identifier (e.g., 'ethereum', 'bitcoin', 'solana').
-        """
-        path = self._api_endpoints.get('chain_fees', 'summary/fees/')
-        url = self._base_url + path + chain
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    def _fetch_app_fees(self, app: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch fees data for a specific application.
-
-        Parameters
-        ----------
-        app : str
-            The application identifier (e.g., 'uniswap', 'aave', 'compound').
-        """
-        path = self._api_endpoints.get('app_fees', 'overview/fees/')
-        url = self._base_url + path + app
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    # --- revenue ---
-    def _fetch_agg_revenue(self) -> Dict[str, Any]:
-        """
-        Helper method to fetch aggregated revenue data.
-        """
-        path = self._api_endpoints.get('agg_revenue', 'overview/fees')
-        url = self._base_url + path
-        params = {'api_key': self._api_key, 'dataType': 'dailyRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    def _fetch_chain_revenue(self, chain: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch revenue data for a specific chain.
-
-        Parameters
-        ----------
-        chain : str
-            The chain identifier (e.g., 'ethereum', 'bitcoin', 'solana').
-        """
-        path = self._api_endpoints.get('chain_revenue', 'summary/fees/')
-        url = self._base_url + path + chain
-        params = {'api_key': self._api_key, 'dataType': 'dailyRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    def _fetch_app_revenue(self, app: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch revenue data for a specific application.
-
-        Parameters
-        ----------
-        app : str
-            The application identifier (e.g., 'uniswap', 'aave', 'compound').
-        """
-        path = self._api_endpoints.get('app_revenue', 'overview/fees/')
-        url = self._base_url + path + app
-        params = {'api_key': self._api_key, 'dataType': 'dailyRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    # --- revenue holders ---
-
-    def _fetch_agg_holders_revenue(self) -> Dict[str, Any]:
-        """
-        Helper method to fetch aggregated revenue holders data.
-        """
-        path = self._api_endpoints.get('holders_revenue', 'overview/fees')
-        url = self._base_url + path
-        params = {'api_key': self._api_key, 'dataType': 'dailyHoldersRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    def _fetch_chain_holders_revenue(self, chain: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch revenue holders data for a specific chain.
-
-        Parameters
-        ----------
-        chain : str
-            The chain identifier (e.g., 'ethereum', 'bitcoin', 'solana').
-        """
-        path = self._api_endpoints.get('chain_holders_revenue', 'summary/fees/')
-        url = self._base_url + path + chain
-        params = {'api_key': self._api_key, 'dataType': 'dailyHoldersRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    def _fetch_app_holders_revenue(self, app: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch revenue holders data for a specific application.
-
-        Parameters
-        ----------
-        app : str
-            The application identifier (e.g., 'uniswap', 'aave', 'compound').
-        """
-        path = self._api_endpoints.get('app_holders_revenue', 'overview/fees/')
-        url = self._base_url + path + app
-        params = {'api_key': self._api_key, 'dataType': 'dailyHoldersRevenue'}
-
-        raw_data = APIRequester.get_request(url=url, params=params)
-        return raw_data
-
-    def _fetch_agg_stablecoin_mktcap(self) -> Dict[str, Any]:
-        """
-        Helper method to fetch aggregated stablecoins data.
-        """
-        url = 'https://stablecoins.llama.fi/stablecoincharts/all'
-
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    def _fetch_stablecoin_mktcap(self, stablecoin_id: str) -> Dict[str, Any]:
-        """
-        Helper method to fetch stablecoin market cap/supply data for a specific stablecoin.
-
-        Parameters
-        ----------
-        stablecoin_id : str
-            The stablecoin identifier (e.g., 'tether', 'usd-coin', 'dai').
-        """
-        url = f'https://stablecoins.llama.fi/stablecoin//{stablecoin_id}'
-
-        raw_data = APIRequester.get_request(url=url, params={'api_key': self._api_key})
-        return raw_data
-
-    def _convert_ticker_to_slug(self, ticker: str) -> str:
-        """
-        Helper method to convert a ticker symbol to a DefiLlama protocol slug.
-        This would typically involve looking up the ticker in the protocols info DataFrame.
-        """
-        assets_df = self.get_assets_info()
-
-        # if not matching_protocols.empty:
-        #     return matching_protocols.iloc[0]['slug']
-        # else:
-        #     raise ValueError(f"Ticker '{ticker}' not found in DefiLlama protocols.")
-
-    # 1) convert ticker to slug
-    # 2) convert field to endpoint/path
-    # 3) build url
-    # 4) fetch data
-
-    # tickers
-    # protocols
-
-    # fields
-    # tvl, chain_fees, app_fees, chain_rev, app_rev, chain_hold_rev app_hold_rev
-    # mkt_cap:
-
-    # stablecoins
-    # list, done
-    # agg stablecoins market cap, done
-    # individual stablecoin market cap
-    # convert ticker to stablecoin id
-
-    # yields
-    # list, done
-    # individual yield pool data
-    # convert ticker to pool id
-
-    # dexs
-    # ToDO
-
-    # perps
-    # ToDO
-
-    # active users
-    # pro api
-
-    # unlocks
-    # pro api
-
-    # etfs
-    # pro api
-    # list metrics, historical flows
+    # --------------------------------------------------------------------------
+    # --- 5. Additional Vendor-Specific Data Requests ---
+    # --------------------------------------------------------------------------
+    # TODO: implement additional vendor-specific data requests as needed
+    # yields, DEXs, perps, active users, unlocks, etfs
 

@@ -4,6 +4,7 @@ import pandas as pd
 from cryptodatapy.extract.data_vendors.coinmetrics_api import CoinMetrics
 from cryptodatapy.extract.data_vendors.cryptocompare_api import CryptoCompare
 from cryptodatapy.extract.data_vendors.glassnode_api import Glassnode
+from cryptodatapy.extract.adapters.vendors.defillama_adapter import DefiLlamaAdapter
 from cryptodatapy.extract.data_vendors.polygon_api import Polygon
 from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
 from cryptodatapy.extract.datarequest import DataRequest
@@ -90,6 +91,7 @@ class GetData:
             "coinmetrics": CoinMetrics,
             "ccxt": CCXT,
             "glassnode": Glassnode,
+            "defillama": DefiLlamaAdapter,
             "tiingo": Tiingo,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
@@ -141,6 +143,7 @@ class GetData:
             ds = ds(api_key=self.api_key)
         else:
             ds = ds()
+
         # get property or method from data source obj
         if attr in valid_attr:
             meta = getattr(ds, attr)
@@ -201,6 +204,7 @@ class GetData:
             "coinmetrics": CoinMetrics,
             "ccxt": CCXT,
             "glassnode": Glassnode,
+            "defillama": DefiLlamaAdapter,
             "tiingo": Tiingo,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
@@ -214,11 +218,13 @@ class GetData:
 
         # data source
         ds = data_source_dict[self.data_req.source]
+
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)
         else:
             ds = ds()
+
         # get data
         df = getattr(ds, method)(self.data_req)
 
@@ -269,6 +275,7 @@ class GetData:
             "coinmetrics": CoinMetrics,
             "ccxt": CCXT,
             "glassnode": Glassnode,
+            "defillama": DefiLlamaAdapter,
             "tiingo": Tiingo,
             "dbnomics": DBnomics,
             "yahoo": PandasDataReader,
@@ -282,11 +289,13 @@ class GetData:
 
         # data source
         ds = data_source_dict[self.data_req.source]
+
         # instantiate ds obj
         if self.api_key is not None:
             ds = ds(api_key=self.api_key)
         else:
             ds = ds()
+
         # get data
         df = await getattr(ds, method)(self.data_req)
 

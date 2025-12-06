@@ -23,10 +23,21 @@ class DataCredentials:
     mongo_db_name: str = None
 
     # API keys
+    # cryptocompare api key
     try:
         cryptocompare_api_key: str = os.environ['CRYPTOCOMPARE_API_KEY']
     except KeyError:
         cryptocompare_api_key: str = None
+    # defillama api key
+    try:
+        defillama_api_key: str = os.environ['DEFILLAMA_API_KEY']
+    except KeyError:
+        defillama_api_key: str = None
+    # coin gecko api key
+    try:
+        coingecko_api_key: str = os.environ['COINGECKO_API_KEY']
+    except KeyError:
+        coingecko_api_key: str = None
     # glassnode api key
     try:
         glassnode_api_key: str = os.environ['GLASSNODE_API_KEY']
@@ -63,6 +74,10 @@ class DataCredentials:
     else:
         coinmetrics_base_url: str = 'https://community-api.coinmetrics.io/v4'
     polygon_base_url: str = 'https://api.polygon.io/v3/reference/'
+    if defillama_api_key is not None:
+        defillama_base_url: str = 'https://pro-api.llama.fi/'
+    else:
+        defillama_base_url: str = 'https://api.llama.fi/'
 
     # API endpoints
     cryptomcompare_endpoints: dict = field(default_factory=lambda: {
@@ -78,6 +93,12 @@ class DataCredentials:
         'rate_limit_info': 'rate/limit',
         'top_mkt_cap_info': 'top/mktcapfull?',
         'indexes': 'index/'
+    })
+
+    defillama_endpoints: dict = field(default_factory=lambda: {
+        'protocols': 'protocols',
+        'chains': 'v2/chains',
+        'fees': 'overview/fees'
     })
 
     # api limit URLs

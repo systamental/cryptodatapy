@@ -244,8 +244,6 @@ class BaseParamConverter(ABC):
 
         return source_fields
 
-        # --- SIMPLIFIED DATE CONVERSION UTILITIES ---
-
     def _get_standardized_timestamp(
             self,
             date_input: Optional[Union[str, datetime]],

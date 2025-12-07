@@ -50,15 +50,26 @@ class DefiLlamaParamConverter(BaseParamConverter):
             A dictionary with ticker as key and a dict of DefiLlama-specific identifiers.
         """
         # convert to upper
-        tickers = self._convert_case_tickers()
+        tickers = self.data_req.tickers
+        self.assets.loc['ALL'] = {'type': 'all', 'category': 'all', 'slug': ''}
+        all_tickers = self.assets.index.tolist()
+        dl_tickers, missing = [], []
 
         # check tickers
-        if not all(ticker in self.assets.index for ticker in tickers):
-            missing = [ticker for ticker in tickers if ticker not in self.assets.index]
+        for ticker in tickers:
+            # case sensitive
+            if ticker in all_tickers:
+                dl_tickers.append(ticker)
+            elif ticker.upper() in all_tickers:
+                dl_tickers.append(ticker.upper())
+            else:
+                missing.append(ticker)
+
+        if missing:
             logger.error(f"Tickers not found in DefiLlama assets: {missing}")
             raise ValueError(f"Tickers not found in DefiLlama assets: {missing}")
 
-        return self.assets.loc[tickers, ['type', 'category', 'slug']].to_dict('index')
+        return self.assets.loc[dl_tickers, ['type', 'category', 'slug']].to_dict('index')
 
     def _convert_fields(self) -> Dict[str, dict]:
         """
@@ -93,12 +104,11 @@ class DefiLlamaParamConverter(BaseParamConverter):
         ticker_map = self._convert_tickers()
         field_map = self._convert_fields()
 
-        # requests list
+        # requests
         request_list: List[Dict[str, Any]] = []
 
         for ticker, t_meta in ticker_map.items():
 
-            # identify the asset type (e.g., 'chain' or 'protocol') used for path lookup
             asset_type = t_meta['type']
 
             for field in self.data_req.fields:
@@ -121,7 +131,7 @@ class DefiLlamaParamConverter(BaseParamConverter):
                     continue
 
                 # Construct the concrete request definition
-                request_def = {
+                request_dict = {
                     "ticker": ticker,
                     "field": field,
                     "type": asset_type,
@@ -131,6 +141,6 @@ class DefiLlamaParamConverter(BaseParamConverter):
                     "query_params": query_params.copy()  # Use .copy() for safety
                 }
 
-                request_list.append(request_def)
+                request_list.append(request_dict)
 
         return request_list

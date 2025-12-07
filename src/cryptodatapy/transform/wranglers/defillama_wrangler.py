@@ -173,11 +173,18 @@ class DefiLlamaWrangler(BaseDataWrangler):
         # check if data is valid
         # list
         if isinstance(data, list) and data:
-            df = pd.DataFrame(data).copy()
+            if metadata['field'] == 'mkt_cap':
+                df = pd.DataFrame(data)
+                df['mkt_cap'] = df['totalCirculatingUSD'].apply(lambda x: sum(x.values()))
+            else:
+                df = pd.DataFrame(data).copy()
         # dict
         elif isinstance(data, dict) and data:
             if metadata['type'] == 'protocol' and metadata['field'] == 'tvl_usd':
                 df = pd.DataFrame(data['tvl'])
+            elif metadata['type'] == 'stablecoin' and metadata['field'] == 'mkt_cap':
+                df = pd.DataFrame(data['tokens'])
+                df['mkt_cap'] = df['circulating'].apply(lambda x: sum(x.values()))
             else:
                 df = pd.DataFrame(data['totalDataChart'])
         else:
@@ -186,22 +193,25 @@ class DefiLlamaWrangler(BaseDataWrangler):
 
         # Convert date field from Unix timestamp (seconds)
         if 'date' in df.columns:
-            # Drop the timezone data if it exists
-            df['date'] = pd.to_datetime(df['date'], unit='s').dt.normalize()
+            # drop the timezone data if it exists
+            df['date'] = pd.to_datetime(pd.to_numeric(df['date']), unit='s').dt.normalize()
         else:
             df['date'] = pd.to_datetime(df[0], unit='s').dt.normalize()
+
+        # convert value column to standard field name
+        if metadata['field'] in df.columns:
+            pass
+        else:
+            old_col_name = df.columns[1]
+            df = df.rename(columns={old_col_name: metadata['field']})
 
         # Add metadata columns
         df['ticker'] = metadata['ticker']
         df['type'] = metadata['type']
         df['category'] = metadata['category']
 
-        # convert value column to standard field name
-        old_col_name = df.columns[1]
-        df = df.rename(columns={old_col_name: metadata['field']})
-
         # keep only relevant fields
-        df = df.reset_index()[['date', 'ticker', 'type', 'category', metadata['field'],]]
+        df = df[['date', 'ticker', 'type', 'category', metadata['field']]]
 
         return df
 

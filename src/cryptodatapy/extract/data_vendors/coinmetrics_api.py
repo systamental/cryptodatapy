@@ -230,8 +230,8 @@ class CoinMetrics(DataVendor):
             List or dataframe with info on available fields.
         """
         # req data
-        ohlcv_fields = ['price_open', 'price_close', 'price_high', 'price_low', 'vwap', 'volume', 'candle_usd_volume',
-                        'candle_trades_count']  # get market fields
+        ohlcv_fields = ['price_open', 'price_close', 'price_high', 'price_low',
+                        'vwap', 'volume', 'candle_usd_volume', 'candle_trades_count']  # get market fields
         onchain_fields = self.get_onchain_fields_info()  # get onchain fields
 
         # fields df
@@ -317,7 +317,9 @@ class CoinMetrics(DataVendor):
         ----------
         data_req: DataRequest
             Parameters of data request in CryptoDataPy format.
-        data_type: str
+        data_type: str, {'/timeseries/index-levels', '/timeseries/institution-metrics',
+            '/timeseries/market-candles', '/timeseries/asset-metrics', '/timeseries/market-open-interest',
+            '/timeseries/market-funding-rates', '/timeseries/market-trades', '/timeseries/market-quotes'}
             Data type to retrieve.
         params: dict
             Dictionary containing parameter values for get request.

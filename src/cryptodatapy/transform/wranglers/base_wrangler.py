@@ -67,7 +67,7 @@ class BaseDataWrangler(ABC):
     def _convert_fields_to_lib(self, data_source: str) -> None:
         """
         Convert columns from vendor field names to CryptoDataPy standard field names
-        using the pre-loaded dictionary map. Mutates self.data_resp.
+        using the dictionary map. Mutates self.data_resp.
         """
         vendor_map = self._FIELD_MAP.get(data_source)
         if not vendor_map:
@@ -75,7 +75,6 @@ class BaseDataWrangler(ABC):
             return
 
         rename_dict: Dict[str, str] = {}
-        columns_to_drop: List[str] = []
 
         # Identify columns to rename and columns that are unmapped/should be dropped
         mapped_target_fields = set()
@@ -88,27 +87,60 @@ class BaseDataWrangler(ABC):
                 mapped_target_fields.add(target_name)
             else:
                 # Handle special/unmapped columns.
-                # If they are not in the map and not explicitly requested, they can be dropped later.
-                if col_lower not in ['ticker', 'institution', 'date']:
-                    columns_to_drop.append(col)
+                # ticker
+                if col_lower in ['symbol', 'asset', 'market', 'ticker']:
+                    rename_dict[col] = 'ticker'
 
         self.data_resp.rename(columns=rename_dict, inplace=True)
 
-        # Drop columns that were not mapped and are not critical identifiers
-        cols_to_keep_final = set(self.data_resp.columns) - set(columns_to_drop)
-        self.data_resp = self.data_resp.loc[:, list(cols_to_keep_final)]
-
     def _set_index_and_sort(self, index_cols: Union[str, List[str]] = 'date') -> None:
-        """Sets the index and sorts the DataFrame by the index."""
-        if isinstance(self.data_resp.index, pd.MultiIndex):
-            self.data_resp.sort_index(inplace=True)
+        """
+        Sets the index and sorts the DataFrame by the index.
+
+        It ensures that if 'date' is part of the index, it is converted to a
+        date-only Timestamp (time component set to 00:00:00) while retaining
+        the datetime64[ns] dtype for optimal index performance.
+        """
+        df = self.data_resp
+
+        # already existing MultiIndex (just sort and return)
+        if isinstance(df.index, pd.MultiIndex) or isinstance(df.index, pd.DatetimeIndex):
+            df.sort_index(inplace=True)
             return
 
-        if all(col in self.data_resp.columns for col in ([index_cols] if isinstance(index_cols, str) else index_cols)):
-            self.data_resp.set_index(index_cols, inplace=True)
-            self.data_resp.sort_index(inplace=True)
+        # ensure index_cols is a list for consistent checking
+        if isinstance(index_cols, str):
+            index_cols = [index_cols]
+
+        # check if all required columns exist
+        if all(col in df.columns for col in index_cols):
+
+            # standardize 'date' to UTC DatetimeIndex
+            if 'date' in index_cols and 'date' in df.columns:
+                try:
+                    dt_series = pd.to_datetime(df['date'], errors='coerce')
+
+                    # ensure the time component is midnight for daily data consistency
+                    dt_series = dt_series.dt.normalize()
+
+                    # if tz aware, convert to UTC
+                    if dt_series.dt.tz is not None:
+                        dt_series = dt_series.dt.tz_convert('UTC')
+                    # if tz naive (like from a simple Unix timestamp or date string), localize it to UTC
+                    else:
+                        dt_series = dt_series.dt.tz_localize('UTC')
+
+                    df['date'] = dt_series
+
+                except Exception as e:
+                    logging.warning(f"Failed to convert 'date' column to UTC DatetimeIndex: {e}.")
+
+            # set the index and sort
+            df.set_index(index_cols, inplace=True)
+            df.sort_index(inplace=True)
+
         else:
-            logging.warning(f"Index columns {index_cols} not found for setting index.")
+            logging.warning(f"Index columns {index_cols} not found for setting index. Index not modified.")
 
     def _filter_dates(self) -> None:
         """Filters data response based on start and end dates in data_req."""
@@ -125,7 +157,7 @@ class BaseDataWrangler(ABC):
         Resamples a MultiIndex DataFrame, grouping by all index levels except 'date',
         and applies the resampling to the 'date' level.
 
-        The expected index is typically (ticker, type, date).
+        The expected index is typically (date, index).
 
         Parameters
         ----------
@@ -158,22 +190,28 @@ class BaseDataWrangler(ABC):
         if 'date' not in self.data_resp.index.names:
             logger.error("DataFrame must have a 'date' level in its MultiIndex for resampling.")
 
-        # group by index levels (e.g., 'ticker', 'type')
-        group_levels = [name for name in self.data_resp.index.names if name != 'date']
-        grouped_data = self.data_resp.groupby(level=group_levels)
-
         # apply the resampling and aggregation
         if agg_func in ['sum', 'mean', 'last', 'first']:
-            self.data_resp = getattr(grouped_data.resample(freq, level='date'), agg_func)()
+            # self.data_resp = getattr(grouped_data.resample(freq, level='date'), agg_func)()
+            self.data_resp = getattr(self.data_resp.groupby([pd.Grouper(level='date', freq=freq),
+                                                             pd.Grouper(level='ticker')]), agg_func)()
         else:
             logger.warning(f"Unsupported aggregation function '{agg_func}'. Returning original DataFrame.")
 
         # forward fill for higher freq
         self.data_resp = self.data_resp.groupby('ticker').ffill()
+        # reorder index
+        self.data_resp = self.data_resp.reorder_levels(['date', 'ticker']).sort_index()
 
-        # reorder the index back
-        ordered_levels = ['date'] + group_levels
-        self.data_resp = self.data_resp.reorder_levels(ordered_levels).sort_index()
+    def _reorder_columns(self) -> None:
+        """Reorders columns based on the provided column order list."""
+        if self.data_req.source_fields is None:
+            returned_fields = [field for field in self.data_req.fields if field in self.data_resp.columns]
+            missing_fields = [field for field in self.data_resp.columns if field not in self.data_req.fields]
+            reordered_fields = returned_fields + missing_fields
+            self.data_resp = self.data_resp[reordered_fields]
+        else:
+            self.data_req.fields = self.data_resp.columns.tolist()
 
     def _clean_data(self) -> None:
         """Removes duplicates, NaNs (full row/col), and 0 values."""
@@ -190,16 +228,33 @@ class BaseDataWrangler(ABC):
         self.data_resp = self.data_resp.dropna(how='all', axis=1)  # Drop columns
 
     def _convert_types(self) -> None:
-        """Converts columns to appropriate numeric types and uses pandas dtypes."""
+        """
+        Converts columns to appropriate numeric types, explicitly excluding known
+        string/metadata columns, and uses standard pandas dtypes.
+        """
+        # define categorical columns that should NEVER be converted to numeric
+        EXCLUDE_COLS = ['date', 'time', 'ticker', 'symbol', 'name', 'type', 'category', 'status', 'period']
+
         try:
-            # Apply numeric conversion to numeric columns
-            num_cols = [col for col in self.data_resp.columns
-                        if col in self.data_resp.select_dtypes(include='number').columns]
-            self.data_resp[num_cols] = self.data_resp[num_cols].apply(pd.to_numeric, errors='coerce')
-            # Use pandas standard dtypes
-            self.data_resp = self.data_resp.convert_dtypes(convert_string=False, convert_integer=False)
+            df = self.data_resp
+
+            # identify numeric columns using a blacklist approach
+            candidate_num_cols = [col for col in df.columns if col not in EXCLUDE_COLS]
+
+            # 'coerce' error handling ensures non-numeric values (like 'N/A')
+            # are turned into NaN, which is essential for data cleaning.
+            df[candidate_num_cols] = df[candidate_num_cols].apply(
+                pd.to_numeric, errors='coerce'
+            )
+
+            self.data_resp = df.convert_dtypes(
+                convert_string=False,
+                convert_integer=False,
+                convert_boolean=True  # Optional: can be set to True
+            )
+
         except Exception as e:
-            logging.warning(f"Error during final type conversion: {e}")
+            logger.warning(f"Error during final type conversion: {e}")
 
     @abstractmethod
     def wrangle(self) -> pd.DataFrame:

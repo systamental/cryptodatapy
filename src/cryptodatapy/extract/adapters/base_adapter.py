@@ -24,12 +24,12 @@ class BaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_assets_info(self) -> pd.DataFrame:
+    def get_assets_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """Fetch canonical asset metadata (e.g., protocols, chains, tickers)."""
         pass
 
     @abstractmethod
-    def get_fields_info(self) -> pd.DataFrame:
+    def get_fields_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """Fetch available field/metric definitions."""
         pass
 

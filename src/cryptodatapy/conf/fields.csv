@@ -26,6 +26,7 @@ er,excess return,,market,returns,"1min, 5min, 10min, 15min, 30min, 1h, 2h, 4h, 8
 vwap,volume-weighted avg price,average volume-weighted price of quote asset within time interval,market,ohlc_bars,"1min, 5min, 10min, 15min, 30min, 1h, 2h, 4h, 8h, d, w, m, q",quote currency units,Float64,,vwap,,,,,none,vwap,,,,,,,
 dividend,dividend,dividend paid out on ex-ante date,market,ohlc_bars,d,quote currency units,Float64,,,,,,,divCash,,,,,,,,
 split,split,"factor used to adjust prices when a company splits, reverse splits, or pays a distribution",market,ohlc_bars,d,factor,Float64,,,,,,,splitFactor,,,,,,,,
+price_usd,close fixing/reference rate in USD,"The fixed closing price of the asset as of 00:00 UTC the following day (i.e., midnight UTC of the current day) denominated in USD.",market,ohlc_bars,d,quote currency units,Float64,,PriceUSD,
 ref_rate_usd,reference rate in USD,price of asset in USD using an aggregation methodology,market,ohlc_bars,d,quote currency units,Float64,,ReferenceRateUSD,,,,,,,,,,,,,
 oi,open interest,number of outstanding futures contracts that are open and have yet to be settled,market,derivatives,"1min, 5min, 10min, 15min, 30min, 1h, 2h, 4h, 8h, d, w, m, q",number of contracts,Float64,,contract_count,,openInterestAmount,,,,,,,,,,,
 funding_rate,funding rate,interest rate for holding derivative contract within time interval,market,derivatives,"1h, 2h, 4h, 8h, d, w, m, q",interest rate over time interval,Float64,,rate,,fundingRate,derivatives/futures_funding_rate_perpetual,,,,,,,,,,
@@ -44,8 +45,8 @@ add_zero_bal,addresses with zero balance count,number of unique addresses  with 
 tx_count,transactions count,number of transactions in the network within time interval,on-chain,transactions,"d, w, m, q",transactions,Int64,transaction_count,TxCnt,,,transactions/count,,,,,,,,,,
 tx_rate,transactions rate,number of transactions per second,on-chain,transactions,"d, w, m, q",transactions per second,Float64,,TxCntSec,,,transactions/rate,,,,,,,,,,
 tx_bytes_mean,transaction size,mean size of transactions within time interval,on-chain,transactions,"d, w, m, q",bytes,Float64,,TxMeanByte,,,transactions/size_mean,,,,,,,,,,
-tx_fees,transaction fees,The sum of all fees paid by transactors that interval,on-chain,transactions,"d, w, m, q",asset units,Float64,,FeeTotNtv
-tx_fees_usd,"transaction fees, USD",The sum USD value of all fees paid by transactors that interval.,on-chain,transactions,"d, w, m, q",USD,Float64,,FeeTotUSD,dailyFees
+tx_fees,transaction fees,The sum of all fees paid by transactors that interval,on-chain,transactions,"d, w, m, q",asset units,Float64,,FeeTotNtv,,,fees/volume_sum
+tx_fees_usd,"transaction fees, USD",The sum USD value of all fees paid by transactors that interval.,on-chain,transactions,"d, w, m, q",USD,Float64,,FeeTotUSD,dailyFees,,fees/volume_sum
 tx_fee_mean,mean transaction fee,mean fee per transaction within time interval,on-chain,transactions,"d, w, m, q",transactions,Float64,,FeeMeanNtv,,,fees/volume_mean,,,,,,,,,,
 tx_fee_mean_usd,mean transaction fee in usd,"mean fee per transaction within time interval, in usd",on-chain,transactions,"d, w, m, q",transactions,Float64,,FeeMeanUSD,,,fees/volume_mean,,,,,,,,,,
 tfr_count,transfers count,number of transfers in the network within time interval,on-chain,transactions,"d, w, m, q",asset units,Float64,,TxTfrCnt,,,transactions/transfers_count,,,,,,,,,,
@@ -81,8 +82,8 @@ block_size_mean,mean block size,mean size of blocks created within time interval
 block_time_mean,mean block time,mean time for block to be created within time interval,on-chain,mining,"d, w, m, q",seconds,Float64,block_time,BlkIntMean,,,blockchain/block_interval_mean,,,,,,,,,,
 miner_rev,miner revenue,"total miner revenue, fees plus newly minted coins within time interval",on-chain,mining,"d, w, m, q",asset units,Float64,,RevNtv,,,mining/revenue_sum,,,,,,,,,,
 miner_rev_usd,miner revenue in usd,"total miner revenue, fees plus newly minted coins within time interval, in usd",on-chain,mining,"d, w, m, q",usd,Float64,,RevUSD,,,mining/revenue_sum,,,,,,,,,,
-miner_rev_fees,miner revenue,miner revenue dervied from fees within time interval,on-chain,mining,"d, w, m, q",asset units,Float64,,FeeTotNtv,,,fees/volume_sum,,,,,,,,,,
-miner_rev_fees_usd,miner revenue from fees,"miner revenue dervied from fees within time interval, in usd",on-chain,mining,"d, w, m, q",usd,Float64,,FeeTotUSD,,,fees/volume_sum,,,,,,,,,,
+miner_rev_fees,miner revenue,miner revenue dervied from fees within time interval,on-chain,mining,"d, w, m, q",asset units,Float64,,,,,,,,,,,,,,,
+miner_rev_fees_usd,miner revenue from fees,"miner revenue dervied from fees within time interval, in usd",on-chain,mining,"d, w, m, q",usd,Float64,,,,,,,,,,,,,,,
 miner_rev_block_rwd,miner revenue from block rewards,miner revenue dervied from block rewards within time interval,on-chain,mining,"d, w, m, q",asset units,Float64,,,,,mining/volume_mined_sum,,,,,,,,,,
 miner_rev_total_usd,total miner revenue in usd,"total miner revenue, fees plus newly minted coins in usd at the end of the period",on-chain,mining,"d, w, m, q",usd,Float64,,RevAllTimeUSD,,,,,,,,,,,,,
 supply_circ,circulating supply,total number of asset units issued/created on the ledger at the end of the period,on-chain,supply,"d, w, m, q",asset units,Float64,current_supply,SplyCur,,,supply/current,,,,,,,,,,

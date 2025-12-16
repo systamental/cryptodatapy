@@ -15,7 +15,7 @@ class BaseAPIVendorAdapter(ABC):
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initializes vendor-specific connection configuration."""
         config = config or {}
-        # Only initialize essential, vendor-specific connection details here
+        # initialize essential, vendor-specific connection details here
         self._api_key: Optional[str] = config.get('api_key')
         self._base_url: Optional[str] = config.get('base_url')
         self._api_endpoints: Optional[Dict[str, str]] = config.get('api_endpoints')

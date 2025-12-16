@@ -69,15 +69,22 @@ class DataCredentials:
     glassnode_base_url: str = 'https://api.glassnode.com/v1/metrics/'
     tiingo_base_url: str = 'https://api.tiingo.com/tiingo/'
     aqr_base_url: str = 'https://www.aqr.com/-/media/AQR/Documents/Insights/Data-Sets/'
-    if coinmetrics_api_key is not None:
-        coinmetrics_base_url: str = 'https://api.coinmetrics.io/v4'
-    else:
-        coinmetrics_base_url: str = 'https://community-api.coinmetrics.io/v4'
     polygon_base_url: str = 'https://api.polygon.io/v3/reference/'
     if defillama_api_key is not None:
         defillama_base_url: str = 'https://pro-api.llama.fi/'
     else:
         defillama_base_url: str = 'https://api.llama.fi/'
+
+    @property
+    def coinmetrics_base_url(self) -> str:
+        """
+        Dynamically sets the CoinMetrics base URL based on whether an API key is provided.
+        Uses the paid V4 endpoint if a key is present, otherwise defaults to the community V4 endpoint.
+        """
+        if self.coinmetrics_api_key is not None:
+            return 'https://api.coinmetrics.io/v4'
+        else:
+            return 'https://community-api.coinmetrics.io/v4'
 
     # API endpoints
     cryptomcompare_endpoints: dict = field(default_factory=lambda: {

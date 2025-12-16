@@ -90,7 +90,7 @@ class BaseParamConverter(ABC):
         ccy = self.data_req.quote_ccy
 
         if ccy is None:
-            return default_ccy
+            ccy = default_ccy
 
         if case == 'upper':
             return ccy.upper()
@@ -181,7 +181,7 @@ class BaseParamConverter(ABC):
         """
         try:
             # get fields.csv in cryptodatapy.conf
-            with resources.path("cryptodatapy.conf", "fields.csv") as f:
+            with resources.path("cryptodatapy.metadata", "fields.csv") as f:
                 fields_path = f
 
             # The field mapping file should contain columns like:
@@ -222,27 +222,32 @@ class BaseParamConverter(ABC):
         # load the field mapping DataFrame
         fields_df = self._load_field_map(data_source)
 
-        if fields_df.empty:
+        if self.data_req.source_fields is not None:
+            # If source_fields are already provided, use them directly
+            return self.data_req.source_fields
+
+        elif fields_df.empty:
             # if mapping fails or is unavailable, use parameter fields
             return self.data_req.fields
 
-        # create a mapping dictionary: {field: source_field}
-        mapping_dict = fields_df[f"{data_source}_id"].to_dict()
+        else:
+            # create a mapping dictionary: {field: source_field}
+            mapping_dict = fields_df[f"{data_source}_id"].to_dict()
 
-        # map each field in data_req.fields to source field
-        source_fields = []
-        for field in self.data_req.fields:
-            source_field = mapping_dict.get(field, field)
+            # map each field in data_req.fields to source field
+            source_fields = []
+            for field in self.data_req.fields:
+                source_field = mapping_dict.get(field, field)
 
-            # append if the field is not a missing value placeholder (like NaN or 'None')
-            if pd.notna(source_field) and source_field is not None:
-                source_fields.append(str(source_field))
-            else:
-                logger.warning(
-                    f"Field '{field}' has no mapping for {data_source} and will be ignored."
-                )
+                # append if the field is not a missing value placeholder (like NaN or 'None')
+                if pd.notna(source_field) and source_field is not None:
+                    source_fields.append(str(source_field))
+                else:
+                    logger.warning(
+                        f"Field '{field}' has no mapping for {data_source} and will be ignored."
+                    )
 
-        return source_fields
+            return source_fields
 
     def _get_standardized_timestamp(
             self,
@@ -266,10 +271,14 @@ class BaseParamConverter(ABC):
             The normalized Timestamp, or None if no date is provided and no default applies.
         """
         if date_input is not None:
-            # Convert input to Timestamp, attempting to handle timezones gracefully
+            # convert input to Timestamp, attempting to handle timezones gracefully
             try:
-                # First, ensure it's a Timestamp, then convert/remove timezone for uniformity
-                return pd.Timestamp(date_input).tz_convert('UTC').tz_localize(None)
+                ts = pd.Timestamp(date_input)
+                if ts.tzinfo is None:
+                    # assume UTC if no timezone is provided
+                    ts = ts.tz_localize('UTC')
+                # convert/remove timezone for uniformity
+                return ts.tz_convert('UTC').tz_localize(None)
             except Exception as e:
                 logger.error(f"Failed to normalize date input '{date_input}': {e}")
                 return None
@@ -352,7 +361,7 @@ class BaseParamConverter(ABC):
         return converted_start, converted_end
 
     @abstractmethod
-    def convert(self) -> Dict[str, Any]:
+    def convert(self, **kwargs: Any) -> Dict[str, Any]:
         """
         Abstract method that must be implemented by all subclasses.
 
@@ -360,9 +369,18 @@ class BaseParamConverter(ABC):
         freq, dates, etc.) from the standard DataRequest format into a
         dictionary of parameters expected by the specific data vendor's API.
 
+        The adapter is responsible for passing any necessary metadata
+        (like lists of known assets/metrics/indexes) via **kwargs.
+
+        Parameters
+        ----------
+        **kwargs : Any
+            Additional keyword arguments for flexibility, typically vendor metadata.
+
         Returns
         -------
         Dict[str, Any]
-            A dictionary containing the vendor-specific parameters.
+            A dictionary containing the vendor-specific parameters, which may
+            include a list of requests under a key like 'requests'.
         """
         raise NotImplementedError("Subclasses must implement the convert method.")

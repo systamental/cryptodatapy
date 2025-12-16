@@ -1,9 +1,10 @@
 import pandas as pd
-from typing import Dict, Type, Any, Optional
+from typing import Dict, Type, Any, Optional, Union
 
 from cryptodatapy.core.data_request import DataRequest
 from cryptodatapy.extract.adapters.base_adapter import BaseAdapter
 from cryptodatapy.extract.adapters.vendors.defillama_adapter import DefiLlamaAdapter
+from cryptodatapy.extract.adapters.vendors.coinmetrics_adapter import CoinMetricsAdapter
 
 
 class DataClient:
@@ -15,6 +16,7 @@ class DataClient:
     # The type hint refers to the universal BaseAdapter interface.
     ADAPTER_MAPPING: Dict[str, Type[BaseAdapter]] = {
         'defillama': DefiLlamaAdapter,
+        'coinmetrics': CoinMetricsAdapter,
         # 'ccxt': CCXTAdapter,  # Example of a Library Adapter
     }
 
@@ -72,7 +74,7 @@ class DataClient:
     # These methods delegate to the *instantiated* adapter, allowing access
     # to all methods defined in the BaseAdapter contract.
 
-    def get_assets_info(self, vendor: str = 'defillama') -> pd.DataFrame:
+    def get_assets_info(self, vendor: str, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """
         Delegates the request for canonical asset metadata to the specified vendor adapter.
 
@@ -80,6 +82,8 @@ class DataClient:
         ----------
         vendor : str
             The data vendor to use for fetching asset info. Default is 'defillama'.
+        as_list : bool
+            If True, returns a list of asset identifiers instead of a DataFrame.
 
         Returns
         -------
@@ -87,9 +91,9 @@ class DataClient:
             A DataFrame containing asset metadata.
         """
         adapter = self._get_adapter(vendor)
-        return adapter.get_assets_info()
+        return adapter.get_assets_info(as_list=as_list)
 
-    def get_fields_info(self, vendor: str = 'defillama') -> pd.DataFrame:
+    def get_fields_info(self, vendor: str, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """
         Delegates the request for field (metric) definitions to the specified vendor adapter.
 
@@ -97,6 +101,8 @@ class DataClient:
         ----------
         vendor : str
             The data vendor to use for fetching field info. Default is 'defillama'.
+        as_list : bool
+            If True, returns a list of field/metric names instead of a DataFrame.
 
         Returns
         -------
@@ -104,4 +110,4 @@ class DataClient:
             A DataFrame containing field/metric definitions.
         """
         adapter = self._get_adapter(vendor)
-        return adapter.get_fields_info()
+        return adapter.get_fields_info(as_list=as_list)

@@ -130,6 +130,7 @@ class DataRequest:
             "cryptocompare",
             "coinmetrics",
             "ccxt",
+            'defillama',
             "dydx",
             "glassnode",
             "tiingo",

@@ -144,3 +144,5 @@ class DefiLlamaParamConverter(BaseParamConverter):
                 request_list.append(request_dict)
 
         return request_list
+
+        # return {"requests": request_list}

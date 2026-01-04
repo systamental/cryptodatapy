@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Optional
 from importlib import resources
 import pandas as pd
 
@@ -48,6 +48,20 @@ class BaseDataWrangler(ABC):
     Handles common data cleaning, filtering, and field mapping operations.
     """
     _FIELD_MAP = _load_field_map()  # Load map once
+    _DEFAULT_AGG_MAP = {
+        # OHLCV
+        'open': 'first',
+        'high': 'max',
+        'low': 'min',
+        'close': 'last',
+        'volume': 'sum',
+        'base_volume': 'sum',
+        'quote_volume': 'sum',
+        # Derivatives/Perpetuals
+        'funding_rate': 'sum',
+        'oi': 'last',
+        'oi_value': 'last',
+    }
 
     def __init__(self, data_req: DataRequest, data_resp: Union[Dict, pd.DataFrame]):
         """
@@ -152,64 +166,79 @@ class BaseDataWrangler(ABC):
         if end_date and self.data_resp.index.names[0] == 'date':
             self.data_resp = self.data_resp.loc[:end_date, :]
 
-    def _resample(self, agg_func='last') -> None:
+    def _resample(self, agg_func: Optional[Union[str, Dict[str, str]]] = None) -> None:
         """
-        Resamples a MultiIndex DataFrame, grouping by all index levels except 'date',
-        and applies the resampling to the 'date' level.
+        Resamples the DataFrame to the frequency in the data_req.
 
-        The expected index is typically (date, index).
+        Logic:
+        1. If agg_func is a string ('last', 'sum'), it applies to all columns.
+        2. If agg_func is None, it uses the DEFAULT_AGG_MAP for known columns.
+        3. If a column isn't in the map, it defaults to 'last'.
 
         Parameters
         ----------
-        agg_func : str, optional
-            The aggregation function to use during resampling. Defaults to 'sum'.
+        agg_func: str or dict, optional
+            Aggregation function(s) to use during resampling. If a string is provided,
+            it applies to all columns. If a dict is provided, it should map column names to aggregation functions.
+            If None, the default aggregation map is used.
+
         """
         freq = self.data_req.freq
 
-        if freq == 'tick':
-            return  # No resampling needed for tick data
+        if freq == 'tick' or self.data_resp.empty:
+            return
 
-        # freq map
-        freq_mapping = {
-            'b': 'B',
-            'd': 'D',
-            'w': 'W',
-            'ms': 'MS',
-            'm': 'ME',
-            'qs': 'QS',
-            'q': 'QE',
-            'ys': 'YS',
-            'y': 'YE'
-        }
+            # 1. Handle Frequency Mapping
+        freq_mapping = {'b': 'B', 'd': 'D', 'w': 'W', 'ms': 'MS', 'm': 'ME', 'q': 'QE', 'y': 'YE'}
+        pd_freq = freq_mapping.get(freq.lower(), freq)
 
-        # map freq to pandas
-        if freq in freq_mapping.keys():
-            freq = freq_mapping[freq]
-
-        # check date
-        if 'date' not in self.data_resp.index.names:
-            logger.error("DataFrame must have a 'date' level in its MultiIndex for resampling.")
-
-        # apply the resampling and aggregation
-        if agg_func in ['sum', 'mean', 'last', 'first']:
-            # self.data_resp = getattr(grouped_data.resample(freq, level='date'), agg_func)()
-            self.data_resp = getattr(self.data_resp.groupby([pd.Grouper(level='date', freq=freq),
-                                                             pd.Grouper(level='ticker')]), agg_func)()
+        # aggregation function mapping
+        if isinstance(agg_func, dict):
+            final_agg_map = agg_func
+        elif isinstance(agg_func, str):
+            final_agg_map = {col: agg_func for col in self.data_resp.columns}
         else:
-            logger.warning(f"Unsupported aggregation function '{agg_func}'. Returning original DataFrame.")
+            final_agg_map = {}
+            for col in self.data_resp.columns:
+                # use map if exists, otherwise default to 'last' (safest for snapshots)
+                final_agg_map[col] = self._DEFAULT_AGG_MAP.get(col, 'last')
 
-        # forward fill for higher freq
-        self.data_resp = self.data_resp.groupby('ticker').ffill()
-        # reorder index
-        self.data_resp = self.data_resp.reorder_levels(['date', 'ticker']).sort_index()
+        # apply resampling
+        try:
+            # group by date (resampled) and ticker to maintain the panel structure
+            grouped = self.data_resp.groupby([
+                pd.Grouper(level='date', freq=pd_freq),
+                pd.Grouper(level='ticker')
+            ])
 
-    def _reorder_columns(self) -> None:
-        """Reorders columns based on the provided column order list."""
+            self.data_resp = grouped.agg(final_agg_map)
+
+            # post-processing: forward fill within tickers to handle gaps
+            self.data_resp = self.data_resp.groupby('ticker').ffill()
+
+            # restore index order
+            self.data_resp = self.data_resp.reorder_levels(['date', 'ticker']).sort_index()
+
+        except Exception as e:
+            logger.error(f"Failed to resample data: {e}")
+
+    def _reorder_columns(self, requested_fields: bool = False) -> None:
+        """Reorders columns based on the provided column order list.
+
+        Parameters
+        ----------
+        requested_fields: bool
+            If True, only requested fields are kept and ordered. If False, all columns are kept.
+        """
         if self.data_req.source_fields is None:
             returned_fields = [field for field in self.data_req.fields if field in self.data_resp.columns]
             missing_fields = [field for field in self.data_resp.columns if field not in self.data_req.fields]
-            reordered_fields = returned_fields + missing_fields
+            if requested_fields:
+                reordered_fields = returned_fields
+            else:
+                reordered_fields = returned_fields + missing_fields
             self.data_resp = self.data_resp[reordered_fields]
+
         else:
             self.data_req.fields = self.data_resp.columns.tolist()
 
@@ -219,9 +248,6 @@ class BaseDataWrangler(ABC):
         # Remove duplicate index entries (duplicate rows)
         if self.data_resp.index.duplicated().any():
             self.data_resp = self.data_resp[~self.data_resp.index.duplicated()]
-
-        # Remove 0 values (often erroneous in financial time series)
-        self.data_resp = self.data_resp[self.data_resp != 0]
 
         # Remove rows and columns consisting entirely of NaNs
         self.data_resp = self.data_resp.dropna(how='all', axis=0)  # Drop rows

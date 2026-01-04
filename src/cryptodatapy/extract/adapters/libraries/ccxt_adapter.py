@@ -10,7 +10,7 @@ from tqdm.asyncio import tqdm as tqdm_async
 from cryptodatapy.extract.adapters.base_adapter import BaseLibraryAdapter
 from cryptodatapy.util.datacredentials import DataCredentials
 from cryptodatapy.core.data_request import DataRequest
-from cryptodatapy.extract.params.libraries.ccxt_param_converter import CCXTParamConverter
+from cryptodatapy.extract.params import CCXTParamConverter
 from cryptodatapy.transform.wranglers.ccxt_wrangler import CCXTWrangler
 
 

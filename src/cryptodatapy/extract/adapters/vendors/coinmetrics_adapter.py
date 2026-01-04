@@ -219,7 +219,7 @@ class CoinMetricsAdapter(BaseAPIAdapter):
         return None
 
     # --------------------------------------------------------------------------
-    # --- 2. Internal Data Fetcher (Consolidated and improved pagination) ---
+    # --- 2. Internal Data Fetcher  ---
     # --------------------------------------------------------------------------
 
     def _fetch_all_raw_data(self,

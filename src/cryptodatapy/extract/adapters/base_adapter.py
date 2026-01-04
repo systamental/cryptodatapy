@@ -5,8 +5,6 @@ import pandas as pd
 from cryptodatapy.core.data_request import DataRequest
 
 
-# Any adapter (vendor, library, exchange, web) must adhere to this interface.
-
 class BaseAdapter(ABC):
     """
     The Universal Adapter Interface (Abstract Base Class).
@@ -24,12 +22,12 @@ class BaseAdapter(ABC):
         pass
 
     @abstractmethod
-    def get_assets_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
+    def get_assets_info(self, as_list: bool = False, **kwargs) -> Union[pd.DataFrame, list]:
         """Fetch canonical asset metadata (e.g., protocols, chains, tickers)."""
         pass
 
     @abstractmethod
-    def get_fields_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
+    def get_fields_info(self, as_list: bool = False, **kwargs) -> Union[pd.DataFrame, list]:
         """Fetch available field/metric definitions."""
         pass
 
@@ -92,13 +90,45 @@ class BaseAPIAdapter(BaseAdapter):
 
 class BaseLibraryAdapter(BaseAdapter):
     """
-    Specialized base class for vendors that wrap Python libraries (e.g., CCXT, DbNomics).
-    Handles common logic for library client initialization and exception mapping.
+    Refactored Base for Library Wrappers.
+    Focuses on client management and bridging sync/async execution.
     """
-
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         super().__init__(config)
-        # Placeholder for library client instance (e.g., self._client = self._init_library_client())
+        self._client = None  # Storage for the library instance
+
+    @abstractmethod
+    def _init_client(self, **kwargs) -> Any:
+        """Logic to instantiate the library's client object."""
+        pass
+
+    @abstractmethod
+    def get_rate_limit_info(self) -> Optional[Any]:
+        pass
+
+    @abstractmethod
+    def get_markets_info(self, as_list: bool = False, **kwargs) -> Union[pd.DataFrame, list]:
+        pass
+
+    # --- ETL Steps remain abstract for implementation in concrete classes ---
+    @abstractmethod
+    def _convert_params_to_vendor(self, data_req: DataRequest) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def _fetch_raw_data(self, vendor_params: Dict[str, Any]) -> Any:
+        pass
+
+    @abstractmethod
+    def _transform_raw_response(self, data_req: DataRequest, raw_data: Any) -> pd.DataFrame:
+        pass
+
+    def get_data(self, data_req: DataRequest) -> pd.DataFrame:
+        """The Template Method for library-based data retrieval."""
+        # Library adapters might need to init client on the fly if params change
+        vendor_params = self._convert_params_to_vendor(data_req)
+        raw_data = self._fetch_raw_data(vendor_params)
+        return self._transform_raw_response(data_req, raw_data)
 
 
 class BaseWebAdapter(BaseAdapter):

@@ -11,8 +11,6 @@ class CCXTParamConverter(BaseParamConverter):
     Converts a standard DataRequest object into the specific set of parameters
     required by a CCXT-supported exchange (e.g., Binance, KuCoin).
 
-    The implementation is stateless, with conversion logic returning data
-    instead of relying on a mutable class attribute (self.params).
     """
 
     def __init__(self, data_req: DataRequest):
@@ -100,3 +98,10 @@ class CCXTParamConverter(BaseParamConverter):
             'exch': exch,
             'tz': req.tz if req.tz else "UTC",
         }
+
+    # exch_name = vendor_params.get('exchange'),
+    # method = vendor_params.get('method'),
+    # tickers = vendor_params.get('tickers'),
+    # freq = vendor_params.get('timeframe'),
+    # start_ts = vendor_params.get('since'),
+    # end_ts = vendor_params.get('end_ts')

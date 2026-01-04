@@ -35,7 +35,7 @@ class DefiLlamaAdapter(BaseAPIAdapter):
             Configuration dictionary for the adapter (guaranteed to be DefiLlama specific).
         """
 
-        # 1. Define hardcoded defaults
+        # hardcoded defaults
         default_config = {
             'api_key': data_cred.defillama_api_key,
             'base_url': data_cred.defillama_base_url,
@@ -43,16 +43,11 @@ class DefiLlamaAdapter(BaseAPIAdapter):
             'rate_limit_rpm': 10  # Default RPM setting
         }
 
-        # 2. Merge: User-provided config (if any) overrides the defaults.
-        # This works correctly because DataClient now only passes the 'defillama' slice.
+        # user-provided config (if any) overrides the defaults
         final_config = {**default_config, **(config or {})}
 
-        # 3. Initialize BaseAdapter/BaseAPIAdapter with the merged configuration
+        # initialize BaseAdapter/BaseAPIAdapter with the merged configuration
         super().__init__(final_config)
-
-        # self._config is now set in the base class and contains the final, merged configuration.
-        # You can remove the redundant line `self._config = final_config` if the base class handles it.
-
         self.assets = None
         self.fields = None
         self.stablecoins = None
@@ -65,7 +60,6 @@ class DefiLlamaAdapter(BaseAPIAdapter):
     def _fetch_raw_meta(self, info_type: str) -> Dict[str, Any]:
         """
         Helper method to fetch raw metadata (chains, protocols, fees, etc.)
-        Refactored from req_meta and moved logic to be adapter-local.
 
         Parameters
         ----------
@@ -478,7 +472,7 @@ class DefiLlamaAdapter(BaseAPIAdapter):
     # --- 2. Adapter Contract: Metadata Getters ---
     # --------------------------------------------------------------------------
 
-    def get_assets_info(self) -> pd.DataFrame:
+    def get_assets_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """
         Get DefiLlama assets information.
 
@@ -487,6 +481,11 @@ class DefiLlamaAdapter(BaseAPIAdapter):
         and chains endpoints.
         It applies a hierarchy to resolve slugs and ticker collisions, establishing a canonical ticker
         based on asset type, category, and TVL.
+
+        Parameters
+        ----------
+        as_list : bool, default False
+            If True, returns the assets information as a list.
 
         Returns
         -------
@@ -527,11 +526,19 @@ class DefiLlamaAdapter(BaseAPIAdapter):
         # assets with dupes removed, ranked by highest tvl or mkt cap
         self.assets = assets_sorted[~assets_sorted.index.duplicated()]
 
+        if as_list:
+            return list(self.assets.index)
+
         return self.assets
 
-    def get_fields_info(self) -> pd.DataFrame:
+    def get_fields_info(self, as_list: bool = False) -> Union[pd.DataFrame, list]:
         """
         Gets DefiLlama fields information.
+
+        Parameters
+        ----------
+        as_list : bool, default False
+            If True, returns the fields information as a list.
 
         Returns
         -------
@@ -581,6 +588,9 @@ class DefiLlamaAdapter(BaseAPIAdapter):
         }
 
         self.fields = pd.DataFrame(fields).T
+
+        if as_list:
+            return list(self.fields.index)
 
         return self.fields
 
@@ -730,7 +740,7 @@ class DefiLlamaAdapter(BaseAPIAdapter):
         return all_data
 
     # --------------------------------------------------------------------------
-    # --- 4. Adapter Contract: ETL Pipeline Steps (Implementations) ---
+    # --- 4. Adapter Contract: ETL Pipeline Steps ---
     # --------------------------------------------------------------------------
     def _convert_params_to_vendor(self, data_req: DataRequest) -> Dict[str, Any]:
         """
@@ -806,4 +816,3 @@ class DefiLlamaAdapter(BaseAPIAdapter):
     # --------------------------------------------------------------------------
     # TODO: implement additional vendor-specific data requests as needed
     # yields, DEXs, perps, active users, unlocks, etfs
-

@@ -171,24 +171,25 @@ class DefiLlamaWrangler(BaseDataWrangler):
         data = raw_resp['data']
 
         # check if data is valid
-        # list
-        if isinstance(data, list) and data:
-            if metadata['field'] == 'mkt_cap':
-                df = pd.DataFrame(data)
+        if not (isinstance(data, list) or isinstance(data, dict) and data):
+            logger.warning(f"No time series data found for {metadata.get('ticker', 'Unknown')}/"
+                           f"{metadata.get('field', 'Unknown')}.")
+            return pd.DataFrame()
+
+        # Handle specific response data structures
+        if isinstance(data, list):
+            df = pd.DataFrame(data).copy()
+            if metadata.get('field') == 'mkt_cap':
                 df['mkt_cap'] = df['totalCirculatingUSD'].apply(lambda x: sum(x.values()))
-            else:
-                df = pd.DataFrame(data).copy()
-        # dict
-        elif isinstance(data, dict) and data:
-            if metadata['type'] == 'protocol' and metadata['field'] == 'tvl_usd':
+        elif isinstance(data, dict):
+            if metadata.get('type') == 'protocol' and metadata.get('field') == 'tvl_usd':
                 df = pd.DataFrame(data['tvl'])
-            elif metadata['type'] == 'stablecoin' and metadata['field'] == 'mkt_cap':
+            elif metadata.get('type') == 'stablecoin' and metadata.get('field') == 'mkt_cap':
                 df = pd.DataFrame(data['tokens'])
                 df['mkt_cap'] = df['circulating'].apply(lambda x: sum(x.values()))
             else:
-                df = pd.DataFrame(data['totalDataChart'])
+                df = pd.DataFrame(data.get('totalDataChart', []))
         else:
-            logger.warning(f"No time series data found for {metadata['ticker']}/{metadata['field']}.")
             return pd.DataFrame()
 
         # Convert date field from Unix timestamp (seconds)
@@ -199,19 +200,21 @@ class DefiLlamaWrangler(BaseDataWrangler):
             df['date'] = pd.to_datetime(df[0], unit='s').dt.normalize()
 
         # convert value column to standard field name
-        if metadata['field'] in df.columns:
-            pass
+        field = metadata['field']
+        if field not in df.columns and len(df.columns) > 1:
+            df = df.rename(columns={df.columns[1]: field})
+
+        # add metadata columns and select final fields
+        df['ticker'] = metadata.get('ticker')
+        df['type'] = metadata.get('type')
+        df['category'] = metadata.get('category')
+
+        # ensure the field column exists before selecting
+        if field in df.columns:
+            df = df[['date', 'ticker', 'type', 'category', field]].copy()
         else:
-            old_col_name = df.columns[1]
-            df = df.rename(columns={old_col_name: metadata['field']})
-
-        # Add metadata columns
-        df['ticker'] = metadata['ticker']
-        df['type'] = metadata['type']
-        df['category'] = metadata['category']
-
-        # keep only relevant fields
-        df = df[['date', 'ticker', 'type', 'category', metadata['field']]]
+            logger.warning(f"Value field '{field}' not found in processed DataFrame.")
+            return pd.DataFrame()
 
         return df
 
@@ -268,6 +271,9 @@ class DefiLlamaWrangler(BaseDataWrangler):
 
         if isinstance(self.data_resp, pd.DataFrame):
             # generic wrangling steps from BaseDataWrangler class
+            if isinstance(self.data_resp.index, pd.MultiIndex):
+                self.data_resp = self.data_resp.reset_index()
+            self._set_index_and_sort(index_cols=['date', 'ticker'])
             self._filter_dates()
             self._resample()
             self._clean_data()

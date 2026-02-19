@@ -31,6 +31,7 @@ pyarrow = ">=17.0.0"
 s3fs = ">=2024.6.1"
 tdqm = ">=0.0.1"
 polygon-api-client = ">=1.14.6"
+pyswisseph = ">=2.10.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.1.2"

@@ -9,6 +9,7 @@ from cryptodatapy.extract.adapters.vendors.defillama_adapter import DefiLlamaAda
 from cryptodatapy.extract.data_vendors.polygon_api import Polygon
 from cryptodatapy.extract.data_vendors.tiingo_api import Tiingo
 from cryptodatapy.extract.datarequest import DataRequest
+from cryptodatapy.extract.adapters.libraries.ephemeris_adapter import EphemerisAdapter
 from cryptodatapy.extract.exchanges.dydx import Dydx
 from cryptodatapy.extract.libraries.ccxt_api import CCXT
 from cryptodatapy.extract.libraries.dbnomics_api import DBnomics
@@ -101,7 +102,8 @@ class GetData:
             "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
-            "dydx": Dydx
+            "dydx": Dydx,
+            "ephemeris": EphemerisAdapter,
         }
 
         # available attr and methods
@@ -214,7 +216,8 @@ class GetData:
             "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
-            "dydx": Dydx
+            "dydx": Dydx,
+            "ephemeris": EphemerisAdapter,
         }
 
         # data source
@@ -285,7 +288,8 @@ class GetData:
             "polygon": Polygon,
             "famafrench": PandasDataReader,
             "aqr": AQR,
-            "dydx": Dydx
+            "dydx": Dydx,
+            "ephemeris": EphemerisAdapter,
         }
 
         # data source

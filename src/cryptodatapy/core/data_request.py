@@ -151,7 +151,8 @@ class DataRequest:
             "famafrench",
             "dbnomics",
             "wb",
-            "aqr"
+            "aqr",
+            "ephemeris"
         ]
 
         if source in valid_data_sources:

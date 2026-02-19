@@ -6,6 +6,7 @@ from cryptodatapy.extract.adapters.base_adapter import BaseAdapter
 from cryptodatapy.extract.adapters.vendors.defillama_adapter import DefiLlamaAdapter
 from cryptodatapy.extract.adapters.vendors.coinmetrics_adapter import CoinMetricsAdapter
 from cryptodatapy.extract.adapters.libraries.ccxt_adapter import CCXTAdapter
+from cryptodatapy.extract.adapters.libraries.ephemeris_adapter import EphemerisAdapter
 
 
 class DataClient:
@@ -19,6 +20,7 @@ class DataClient:
         'defillama': DefiLlamaAdapter,
         'coinmetrics': CoinMetricsAdapter,
         'ccxt': CCXTAdapter,
+        'ephemeris': EphemerisAdapter,
     }
 
     def __init__(self, source_config: Optional[Dict[str, Dict[str, Any]]] = None):
